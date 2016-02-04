@@ -1,8 +1,41 @@
 s3ui = {instances: [], instanceid: -1}; // stores functions used in multiple files
 
-s3ui.parsePixelsToInt = function (q) {
-    return parseFloat(q.slice(0, q.length - 2));
+function MrPlotter(container, options, cb1, cb2) {
+    this.domelem = container;
+    
+    /* In Meteor, this is where the constructor argument would go. I'm doing
+       the same thing since the code assumes it would be like this. */
+    this.data = [options, cb1, cb2];
 }
+
+// Meteor provided these two functions on a template, to search inside of it
+MrPlotter.prototype.find = function (expr) {
+        return this.domelem.querySelector(expr);
+    };
+
+MrPlotter.prototype.$ = function (expr) {
+        return $(this.domelem.querySelectorAll(expr));
+    };
+
+/** Instantiates Mr. Plotter as a child of the provided DOM element.
+    OPTIONS is an object containing options to create the chart.
+    CB1 and CB2 are callback overrides for the two callbacks, the first of
+    which executes after the graph is built, and the second of which executes
+    after the interactive features have been added. */
+function mr_plotter(parent, options, cb1, cb2) {
+    // This is the one place in the entire code that I use the ID of an element
+    var template = document.getElementById("mrplotter");
+    var docfrag = document.importNode(template.content, true);
+    var container = document.createElement("div");
+    container.appendChild(docfrag);
+    parent.appendChild(container);
+    var instance = new MrPlotter(container, options, cb1, cb2);
+    s3ui.__init__(instance);
+}
+
+s3ui.parsePixelsToInt = function (q) {
+        return parseFloat(q.slice(0, q.length - 2));
+    };
 
 s3ui.default_cb1 = function (inst) {
         $(inst.find(".dispTable")).colResizable({
@@ -19,10 +52,12 @@ s3ui.default_cb2 = function (inst) {
         }
     };
 
+/*
 Template.s3plot.rendered = function () {
         s3ui.__init__(this);
     };
-    
+*/
+
 s3ui.exec_permalink = function (self, link_id) {
         Meteor.call("retrievePermalink", link_id, function (error, result) {
                 if (error == undefined && result != undefined) {
@@ -296,6 +331,8 @@ function init_graph(self, c1, c2) {
     s3ui.updatePlotMessage(self);
     
     /* When a user logs in or logs out, we need to update the stream tree. */
+    // For now, I've commented this out, so that the stream tree doesn't load (since I don't have that working yet)
+    /*
     Tracker.autorun(function () {
             Meteor.userId(); // so it runs reactively when the currently logged in user changes
             var curr_state = s3ui.createPermalink(self, true);
@@ -304,6 +341,7 @@ function init_graph(self, c1, c2) {
                 s3ui.executePermalink(self, curr_state, true); // reselect the streams from before, to the best of our ability
             }
         });
+    */
     
     // Second callback
     if (typeof c2 == "function") {

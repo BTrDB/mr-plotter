@@ -20,8 +20,8 @@ function init_plot(self) {
     self.idata.WIDTH = undefined;
     self.idata.widthmin = 450;
 
-    // Selection of the element to display progress
-    self.idata.$loadingElem = self.$('.plotLoading');
+    // Selection of the element to display progress is in self.idat
+    self.idata.$loadingElem = $(self.find('.plotLoading'));
 
     // Parameters of the last update
     self.idata.oldStartDate = undefined;
@@ -515,7 +515,6 @@ function initPlot(self) {
         .attr("transform", "translate(" + self.idata.margin.left + ", " + self.idata.margin.top + ")")
         .attr("class", "cursorgroup");
     self.idata.$background = $("svg.chart > .clickscreen, svg.chart .data-density-background, svg.chart .y-axis-background-left, svg.chart .y-axis-background-right");
-    self.idata.$loadingElem = $(self.find('.plotLoading'));
     self.idata.initialized = true;
 }
 
