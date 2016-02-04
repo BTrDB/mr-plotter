@@ -93,7 +93,7 @@ function processBracketResponse(self, uuids, response) {
     }
     for (var i = 0; i < uuids.length; i++) {
         prevLast = self.idata.lastTimes[uuids[i]];
-        newLast = Math.floor(response.Brackets[i][1] / 1000000);
+        newLast = Math.floor(response.Brackets[i][1][0]);
         if (prevLast == undefined) {
             self.idata.lastTimes[uuids[i]] = newLast;
         } else if (prevLast < newLast) {
