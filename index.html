@@ -1,0 +1,277 @@
+<template name="s3plot">
+    <noscript>You must enable Javascript to interact with the plotting tool.</noscript>
+    {{> s3plot_plotStyles}}
+    <style class="dynamicStyles">
+    </style>
+    <table class="dispTable" width="99%">
+        <tr>
+            <td width="20%">
+                <div class="leftColumn">
+                    <div class="btn-group-vertical" style="width: 100%">
+                        <div class="plotButton btn btn-primary">Apply and Plot</div>
+                        <div class="resetZoom btn btn-default">Reset Zoom</div>
+                        <div class="showAll btn btn-success">Plot all Data</div>
+                    </div>
+                    <div class="plotLoading" style="width: 100%; margin-top: 20px; font-size: 1.25em;"></div> <!-- Displays details about how the plot is loading -->
+                    {{> s3plot_timeSelection}}
+                    {{> s3plot_streamSelection}}
+                </div>
+            </td>
+            <td width="80%">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="well chartContainer">
+                                {{> s3plot_chart}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="well">
+                        <div class="row">
+                            <div class="col-md-5">
+                                {{> s3plot_streamLegend}} 
+                            </div>
+                            <div class="col-md-7">
+                                {{> s3plot_axisLegend}}
+                            </div>
+                        </div>
+                        <div class="row">
+                            &nbsp;&nbsp;{{> s3plot_automaticUpdate}}
+                        </div>
+                    </div>
+                    <div class="well">
+                        <div class="row">
+                            <div class="col-md-4 metadataDisplay"></div>
+                            <div class="col-md-3">
+                                {{> s3plot_export}}
+                            </div>
+                            <div class="col-md-5">
+                                {{> s3plot_permalink}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+</template>
+
+<template name="s3plot_plotStyles">
+    <style class="plotStyles">
+        polyline.streamRange {
+            fill: inherit;
+            fill-opacity: inherit;
+            stroke: none;
+        }
+        polyline.streamMean {
+            fill: none;
+            stroke: inherit;
+            stroke-opacity: 1;
+            stroke-width: inherit;
+        }
+        circle.streamPoint {
+            fill: inherit;
+            stroke: inherit;
+            fill-opacity: 1;
+            stroke-opacity: 1;
+            stroke-width: inherit;
+        }
+        rect.scrollDisabled {
+            visiblity: hidden;
+        }
+        path, line {
+            fill: none;
+            stroke: black;
+            shape-rendering: crispEdges;
+        }
+        text.title {
+            font-size: 20px;
+        }
+        text.label {
+            font-size: 12px;
+        }
+        text.cursorlabel {
+            font-size: 16px;
+        }
+        g.tick text {
+            font-size: 16px;
+        }
+        g.data-density-axis text {
+            font-size: 14px;
+        }
+        rect.clickscreen {
+            pointer-events: visibleFill;
+            fill: none;
+        }
+    </style>
+</template>
+
+<template name="s3plot_permalink">
+    <div class="permalinkGenerate">
+        <div class="getPermalink btn btn-default">Generate Permalink</div>
+        <input type="checkbox" class="includeMetadata" />
+        <span>Embed Stream Metadata</span>
+        <div class="permalink"></div>
+    </div>
+</template>
+
+<template name="s3plot_export">
+    <div class="graphExport">
+        <div class="btn-group-vertical">
+            <div class="makecsv btn btn-default">Export Graph to CSV File</div>
+            <div class="makeGraph btn btn-default">Export Graph to SVG Image</div>
+        </div>
+        <div class="download-graph"></div>
+        <div class="modal fade csv-modal" role="dialog" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></div>
+                        <div class="csv-settings">
+                            <h4>1. Select the streams to include in the CSV file.</h4>
+                            <div class="csv-streams"></div>
+                            <h4>2. Select the resolution at which to get the data.</h4>
+                            <div class="csv-pointwidth">
+                                <input type="range" class="pointwidth-selector" min="0" max="62" />
+                                <div class="selected-pointwidth"></div>
+                                <div class="selected-pw-desc"></div>
+                            </div>
+                            <h4>3. Click the "Create CSV File" button to generate the CSV file.</h4>
+                            <form class="csv-form" method="post" style="display: none;" target="_blank">
+                                <input class="csv-form-data" name="body" />
+                                <input class="csv-form-url" name="dest" />
+                            </form>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="btn btn-default" data-dismiss="modal">Close</div>
+                        <div class="csv-button btn btn-primary">Create CSV File</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template name="s3plot_chart">
+    <svg class="chart" width="800" height="430" background="white">
+        <rect width="800" height="430" class="background-rect" fill="white"></rect>  <!-- The background is white, not transparent. -->
+        <g class="plotDirections" transform="translate(30, 30)" style="display: none">
+            <text transform="translate(0, 0)">1. Select streams in the tree to the left. You may need to log in to see all of the streams.</text>
+            <text transform="translate(0, 30)">2. If desired, change axis settings using the box below.</text>
+            <text transform="translate(0, 60)">
+                                        3. Select a time range to load data, and click "Apply and Plot Data" to see the plot. Or,
+                <tspan x="0" dy="1.2em">you can just click "Plot all Data" to infer the time range automatically.</tspan>
+            </text>
+            <text transform="translate(0, 110)">
+                                        4. Click and drag the graph to scroll, and use the mousewheel (or double-click and use the
+                <tspan x="0" dy="1.2em">Shift key) to scroll.</tspan>
+            </text>
+            <text transform="translate(0, 160)">
+                                        5. If you prefer, change the display settings. By default, all changes to settings will be
+                <tspan x="0" dy="1.2em">applied immediately. If you uncheck the appropriate checkbox below, you must click the</tspan>
+                <tspan x="0" dy="1.2em">"Apply Settings" button to apply changes.</tspan>
+            </text>
+            <text transform="translate(0, 230)">
+                                        6. Click below the graph to create vertical cursors and to the left or right of the graph to
+                <tspan x="0" dy="1.2em">create horizontal cursors. You can use cursors, in conjunction with selecting streams in the</tspan>
+                <tspan x="0" dy="1.2em">legend below, to gain quantitative information about the data.</tspan>
+            </text>
+            <text transform="translate(0, 300)">
+                                         7. You may generate a CSV file containing the data in the current plot by clicking "Export
+                <tspan x="0" dy="1.2em">Graph to CSV File" below. You may also create an SVG image of the current plot by clicking</tspan>
+                <tspan x="0" dy="1.2em">"Export Graph to SVG Image" below.</tspan>
+            </text>
+            <text transform="translate(0, 370)">
+                                        8. You may generate a permalink to the current plot by clicking "Generate Permalink". You
+                <tspan x="0" dy="1.2em">can share this link with others to share the current state of the graph.</tspan>
+            </text>
+        </g>
+    </svg>
+    <noscript>You must enable Javascript in order to use this plotting tool.</noscript>
+</template>
+
+<template name="s3plot_streamLegend">
+    <div class="streamLegend">
+        <h3>Legend</h3>
+        <table>
+            <tbody class="legend"></tbody>
+        </table>
+    </div>
+</template>
+
+<template name="s3plot_axisLegend">
+    <div class="axisLegend">
+        <h3>Axes</h3>
+        <div class="addAxis btn btn-success">Add a Y-Axis</div>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Streams</th>
+                    <th>Units</th>
+                    <th>Settings</th>
+                </tr>
+            </thead>
+            <tbody class="axes"></tbody>
+        </table>
+    </div>
+</template>
+
+<template name="s3plot_automaticUpdate">
+    <span class="automaticUpdate">
+        <input type="checkbox" class="automaticAxisSetting" checked />
+        <span>Automatically apply changes to settings</span>
+    </span>
+    <div class="btn btn-primary applySettingsButton" style="display: none;">
+        Apply Settings
+    </div>
+</template>
+
+
+<template name="s3plot_timeSelection">
+    <div class="timeSelection">
+        <form role="form">
+            <div class="row">
+                <div class="form-group col-lg3 col-md4">
+                    <label>Start date</label>
+                    <div class="input-group" style="width:100%">
+                        <input type="text" class="form-control datefield startdate" />
+                        <div class="m1yButton btn input-group-addon" style="width:4em">-1Y</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group col-lg2 col-md3">
+                    <label>End date</label>
+                    <div class="input-group" style="width:100%">
+                        <input type="text" class="form-control datefield enddate">
+                        <div class="nowButton btn input-group-addon" style="width:4em">Now</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group col-lg2 col-md3">
+                    <label>Timezone</label>
+                    <div class="input-group" style="width:100%">
+                        <select class="timezoneSelect form-control">
+                            <option value="America/Los_Angeles">America/Los_Angeles</option>
+                            <option value="UTC">UTC</option>
+                            <option value="OTHER">Other:</option>
+                        </select>
+                        <div class="dstButton btn input-group-addon" style="width:4em" data-toggle="button" aria-pressed="false">DST</div>
+                    </div>
+                    <input type="text" class="otherTimezone form-control" style="visibility: hidden;" />
+                </div>
+            </div>
+        </form>
+    </div>
+</template>
+
+<template name="s3plot_streamSelection">
+    <div class="streamSelection">
+        <h3>Select Streams</h3>
+        <div class="updateStreamList btn btn-default">Deselect All and Refresh</div>
+        <div class="streamTree well" style="background: white;"></div>
+    </div>
+</template>
