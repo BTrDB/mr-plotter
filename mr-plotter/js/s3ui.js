@@ -38,8 +38,8 @@ s3ui.__init__ = function (self) {
         self.imethods = {}; // an object to store instance methods
         
         self.idata.instanceid = ++s3ui.instanceid;
-        if (s3ui.instanceid == 4503599627370495) {
-            s3ui.instanceid = -4503599627370495;
+        if (s3ui.instanceid == 4503599627370496) {
+            s3ui.instanceid = -4503599627370496;
         }
         
         $(self.find("div.streamLegend")).removeClass("streamLegend").addClass("streamLegend-" + self.idata.instanceid);

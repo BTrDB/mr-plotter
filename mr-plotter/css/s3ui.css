@@ -1,0 +1,82 @@
+.outline {
+    border: 1px solid black;
+    margin: 1px;
+}
+td.checkboxlabel {
+    font-weight: bold;
+}
+input.datefield {
+    width: 200px;
+}
+input.axisname {
+    width: 75px;
+}
+td.axisrangeselect {
+    text-align: right;
+}
+svg.chart {
+    font-size: 16px;
+    font-family: serif;
+}
+.unclickedchart {
+    cursor: url(../img/openhand.cur), move;
+    cursor: -moz-grab;
+    cursor: -webkit-grab;
+    cursor: grab;
+}
+.clickedchart {
+    cursor: url(../img/closedhand.cur), move;
+    cursor: -moz-grabbing;
+    cursor: -webkit-grabbing;
+    cursor: grabbing;
+}
+.jstree-contextmenu {
+    z-index: 99999; /* So the context menu isn't hidden. */
+}
+.jstree-node {
+    position: relative;
+}
+div.permalink, .legend .streamName, .axes .axisstreams {
+    word-wrap: break-word;
+}
+.legend td {
+    padding: 2px;
+}
+.streamName {
+    cursor: pointer;
+}
+.metadataDisplay > h3 {
+    margin-top: 0px;
+}
+input.thin-margin-text {
+    padding-left: 5px;
+    padding-right: 5px;
+}
+table.dispTable > tr > td, tbody.axes > tr > td {
+    vertical-align: top;
+}
+.axissettingtable > tr, .axissettingtable > tr > td {
+    text-align: center;
+}
+.axissettingtable > tr > div, .axissettingtable > tr > td {
+    width: 100%;
+}
+.axissettingtable {
+    table-layout: fixed;
+}
+rect.vertCursor {
+    cursor: col-resize;
+}
+rect.horizCursor {
+    cursor: row-resize;
+}
+div.streamTree {
+    padding-left: 0px;
+}
+div.leftColumn {
+    margin-left: 10px;
+}
+div.timeSelection {
+    margin-left: 15px;
+    margin-right: 15px;
+}
