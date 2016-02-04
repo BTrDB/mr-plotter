@@ -32,6 +32,10 @@
  * Peter Bergström (pbergstr@mac.com)
  * Long Ho
  */
+ 
+ /* Added by Sam: Since we're in strict mode in the below function, we need to
+   export the timezoneJS object, hence the below declaration. */
+var timezoneJS;
 
  /*jshint laxcomma:true, laxbreak:true, expr:true*/
 (function () {

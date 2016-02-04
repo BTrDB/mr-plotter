@@ -39,7 +39,7 @@ function startPollingBrackets(self) {
     self.idata.pollingBrackets = true;
     if (self.idata.selectedStreams.length > 0) {
             var uuids = self.idata.selectedStreams.map(function (s) { return s.uuid; });
-            s3ui.getURL("SENDPOST " + self.idata.bracketURL + " " + JSON.stringify({"UUIDS": uuids}), function (data) {
+            self.requester.makeBracketRequest(uuids, function (data) {
                     pollBracket(self, uuids, data);
                 });
         }
@@ -256,7 +256,7 @@ function ensureData(self, uuid, pointwidthexp, startTime, endTime, callback, cac
                 if (dataCache.hasOwnProperty(uuid) && dataCache[uuid][pointwidthexp] == cache) { // If the stream or pointwidth has been deleted to limit memory, just return and don't cache
                     var data;
                     try {
-                        data = JSON.parse(streamdata)[0].XReadings;
+                        data = JSON.parse(streamdata);
                     } catch (err) {
                         console.log('Invalid data response from server: ' + err);
                         // Just use the previous data that was cached for drawing
@@ -296,31 +296,32 @@ function makeDataRequest(self, uuid, queryStart, queryEnd, pointwidthexp, halfpw
     var halfpwmillisStart = Math.floor(halfpwnanos / 1000000);
     var halfpwnanosStart = halfpwnanos - (1000000 * halfpwmillisStart);
     halfpwnanosStart = (1000000 + halfpwnanosStart).toString().slice(1);
-    var url = self.idata.dataURLStart + uuid + '?starttime=' + (queryStart + halfpwmillisStart) + halfpwnanosStart + '&endtime=' + (queryEnd + halfpwmillisStart) + halfpwnanosStart + '&unitoftime=ns&pw=' + pointwidthexp;
+    //var url = self.idata.dataURLStart + uuid + '?starttime=' + (queryStart + halfpwmillisStart) + halfpwnanosStart + '&endtime=' + (queryEnd + halfpwmillisStart) + halfpwnanosStart + '&unitoftime=ns&pw=' + pointwidthexp;
+    var req = [uuid, (queryStart + halfpwmillisStart) + halfpwnanosStart, (queryEnd + halfpwmillisStart) + halfpwnanosStart, pointwidthexp];
     if (caching) {
-        Meteor.call('requestData', url, function (error, data) {
+        self.requester.makeDataRequest(req, function (data) {
                 callback(data, queryStart, queryEnd);
             });
     } else {
-        queueRequest(self, url, function (data) {
+        queueRequest(self, req, function (data) {
                 callback(data, queryStart, queryEnd);
-            }, 'text', pointwidthexp);
+            }, pointwidthexp);
     }
 }
 
-function queueRequest(self, url, callback, datatype, pwe) {
+function queueRequest(self, req, callback, pwe) {
     if (self.idata.pendingRequests == 0) {
         self.idata.currPWE = pwe;
     }
     if (self.idata.currPWE == pwe) {
         self.idata.pendingRequests++;
-        s3ui.getURL(url, function (data) {
+        self.requester.makeDataRequest(req, function (data) {
                 self.idata.pendingRequests--;
                 callback(data);
                 if (self.idata.pendingRequests == 0) {
                     effectSecondaryRequests(self);
                 }
-            }, datatype, function () {
+            }, function (error) {
                 self.idata.pendingRequests--;
                 if (self.idata.pendingRequests == 0) {
                     effectSecondaryRequests(self);
@@ -335,14 +336,14 @@ function queueRequest(self, url, callback, datatype, pwe) {
         self.idata.pendingSecondaryRequests++;
         var id = setTimeout(function () {
                 if (self.idata.pendingSecondaryRequestData.hasOwnProperty(id)) {
-                    s3ui.getURL(url, function (data) {
+                    self.requester.makeDataRequest(req, function (data) {
                             callback(data);
-                        }, datatype);
+                        });
                     self.idata.pendingSecondaryRequests--;
                     delete self.idata.pendingSecondaryRequestData[id];
                 }
             }, 1000);
-        self.idata.pendingSecondaryRequestData[id] = [url, callback, datatype];
+        self.idata.pendingSecondaryRequestData[id] = [req, callback];
     }
 }
 
@@ -359,14 +360,14 @@ function effectSecondaryRequests(self) {
         if (pendingData.hasOwnProperty(id)) {
             clearTimeout(id);
             entry = pendingData[id];
-            Meteor.call("requestData", entry[0], (function (cb) {
-                    return function (error, result) {
+            self.requester.makeDataRequest(entry[0], (function (cb) {
+                    return function (result) {
                             self.idata.pendingRequests--;
-                            if (error == undefined) {
-                                cb(result);
-                            }
+                            cb(result)
                         };
-                })(entry[1]));
+                })(entry[1]), function (error) {
+                    self.idata.pendingRequests--;
+                });
         }
     }
     self.idata.pendingSecondaryRequestData = {};

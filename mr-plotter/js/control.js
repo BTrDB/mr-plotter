@@ -374,7 +374,7 @@ function executePermalink(self, args, set_streams_only) {
     if (noRequest) {
         setTimeout(function () { finishExecutingPermalink(self, streamObjs, colors, args, set_streams_only); }, 50);
     } else {
-        Meteor.call('requestMetadata', query, self.idata.tagsURL, function (error, data) {
+        self.requester.makeMetadataRequest(query, function (data) {
                 var receivedStreamObjs = JSON.parse(data);
                 for (i = 0; i < receivedStreamObjs.length; i++) {
                     streamObjs[uuidMap[receivedStreamObjs[i].uuid]] = receivedStreamObjs[i];

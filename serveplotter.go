@@ -121,6 +121,7 @@ type DataRequester struct {
 	pendingLock *sync.Mutex
 	responseWriters map[uint64]Writable
 	synchronizers map[uint64]chan bool
+	gotFirstSeg map[uint64]bool
 	boundaries map[uint64]int64
 	alive bool
 }
@@ -154,6 +155,7 @@ func NewDataRequester(dbAddr string, numConnections int, maxPending uint32, brac
 		pendingLock: &sync.Mutex{},
 		responseWriters: make(map[uint64]Writable),
 		synchronizers: make(map[uint64]chan bool),
+		gotFirstSeg: make(map[uint64]bool),
 		boundaries: make(map[uint64]int64),
 		alive: true,
 	}
@@ -210,11 +212,13 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 	dr.sendLocks[cid].Lock()
 	dr.responseWriters[id] = writ
 	dr.synchronizers[id] = make(chan bool)
+	dr.gotFirstSeg[id] = false
 	_, sendErr := segment.WriteTo(dr.connections[cid])
 	dr.sendLocks[cid].Unlock()
 	
 	defer delete(dr.responseWriters, id)
 	defer delete(dr.synchronizers, id)
+	defer delete(dr.gotFirstSeg, id)
 	
 	queryPool.Put(mp)
 	
@@ -247,34 +251,50 @@ func (dr *DataRequester) handleDataResponse(connection net.Conn) {
 		id := responseSeg.EchoTag()
 		status := responseSeg.StatusCode()
 		records := responseSeg.StatisticalRecords().Values()
+		final := responseSeg.Final()
 		
+		firstSeg := !dr.gotFirstSeg[id]
 		writ := dr.responseWriters[id]
+		
+		dr.gotFirstSeg[id] = true
+		
+		if writ == nil {
+		    fmt.Println("Unknown id!")
+		}
 		
 		w := writ.GetWriter()
 		
 		if status != cpint.STATUSCODE_OK {
+		    fmt.Printf("Bad status code: %v\n", status)
 			w.Write([]byte(fmt.Sprintf("Database returns status code %v", status)))
-			dr.synchronizers[id] <- false
+			if final {
+			    dr.synchronizers[id] <- false
+			}
 			continue
 		}
 		
 		length := records.Len()
-		if length == 0 {
-			w.Write([]byte("[]"))
-		} else {
+		
+	    if firstSeg {
 			w.Write([]byte("["))
-			for i := 0; i < length; i++ {
-				record := records.At(i)
-				millis, nanos := splitTime(record.Time())
-				if i < length - 1 {
-					w.Write([]byte(fmt.Sprintf("[%v,%v,%v,%v,%v,%v],", millis, nanos, record.Min(), record.Mean(), record.Max(), record.Count())))
-				} else {
-					w.Write([]byte(fmt.Sprintf("[%v,%v,%v,%v,%v,%v]]", millis, nanos, record.Min(), record.Mean(), record.Max(), record.Count())))
-				}
+		}
+		for i := 0; i < length; i++ {
+			record := records.At(i)
+			millis, nanos := splitTime(record.Time())
+			if firstSeg && i == 0 {
+				w.Write([]byte(fmt.Sprintf("[%v,%v,%v,%v,%v,%v]", millis, nanos, record.Min(), record.Mean(), record.Max(), record.Count())))
+			} else {
+				w.Write([]byte(fmt.Sprintf(",[%v,%v,%v,%v,%v,%v]", millis, nanos, record.Min(), record.Mean(), record.Max(), record.Count())))
 			}
 		}
 		
-		dr.synchronizers[id] <- true
+		if final {
+			w.Write([]byte("]"))
+		}
+		
+		if final {
+		    dr.synchronizers[id] <- true
+		}
 	}
 }
 
@@ -383,9 +403,10 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 		rMillis int64
 		lowest int64 = QUASAR_HIGH
 		highest int64 = QUASAR_LOW
+		trailchar rune = ','
 	)
 	w := writ.GetWriter()
-	w.Write([]byte("{"))
+	w.Write([]byte("{\"Brackets\": ["))
 	for i = 0; i < len(uuids); i++ {
 		boundary = dr.boundaries[idsUsed[i << 1]]
 		if boundary < lowest {
@@ -397,11 +418,14 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 			highest = boundary
 		}
 		rMillis, rNanos = splitTime(boundary)
-		w.Write([]byte(fmt.Sprintf("\"%v\":[[%v,%v],[%v,%v]],", uuids[i].String(), lMillis, lNanos, rMillis, rNanos)))
+		if i == len(uuids) - 1 {
+    		trailchar = ']';
+    	}
+    	w.Write([]byte(fmt.Sprintf("[[%v,%v],[%v,%v]]%c", lMillis, lNanos, rMillis, rNanos, trailchar)))
 	}
 	lMillis, lNanos = splitTime(lowest)
 	rMillis, rNanos = splitTime(highest)
-	w.Write([]byte(fmt.Sprintf("\"Merged\":[[%v,%v],[%v,%v]]}", lMillis, lNanos, rMillis, rNanos)))
+	w.Write([]byte(fmt.Sprintf(",\"Merged\":[[%v,%v],[%v,%v]]}", lMillis, lNanos, rMillis, rNanos)))
 }
 
 /** A function designed to handle QUASAR's response over Cap'n Proto.
@@ -630,6 +654,7 @@ func main() {
 			}
 			
 			uuidBytes, startTime, endTime, pw, echoTag, success := parseDataRequest(string(payload), &cw)
+			fmt.Println("Got data request")
 		
 			if success {
 				dr.MakeDataRequest(uuidBytes, startTime, endTime, uint8(pw), &cw)

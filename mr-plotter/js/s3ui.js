@@ -245,7 +245,7 @@ function init_graph(self, c1, c2) {
             if (self.idata.selectedStreamsBuffer.length > 0) {
                 self.imethods.resetZoom();
                 var uuids = self.idata.selectedStreamsBuffer.map(function (s) { return s.uuid; });
-                s3ui.getURL("SENDPOST " + self.idata.bracketURL + " " + JSON.stringify({"UUIDS": uuids}), function (data) {
+                self.requester.makeBracketRequest(uuids, function (data) {
                         var range;
                         try {
                             range = JSON.parse(data);
@@ -333,10 +333,10 @@ function init_graph(self, c1, c2) {
     self.idata.changedTimes = false;
     self.idata.otherChange = false;
     s3ui.updatePlotMessage(self);
-    
-    s3ui.updateStreamTree(self)
         
     s3ui.updateStreamList(self);
+    
+    s3ui.updateStreamTree(self)
     
     // Second callback
     if (typeof c2 == "function") {
