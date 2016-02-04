@@ -770,10 +770,7 @@ func main() {
 		var readErr error = nil
 		for readErr == nil {
 			bytesRead, readErr = resp.Body.Read(buffer)
-			if readErr != nil {
-				buffer = buffer[:bytesRead]
-			}
-			w.Write(buffer)
+			w.Write(buffer[:bytesRead])
 		}
 		resp.Body.Close()
 	})

@@ -57,7 +57,7 @@ function updateStreamList(self) {
             if (streamTree.is_selected(node)) {
                 streamTree.deselect_node(node);
             } else {
-                checkboxHandler(node);
+                streamTree.checkbox_select_node(node);
             }
             return false;
         });
@@ -66,7 +66,7 @@ function updateStreamList(self) {
             core: {
                 data: function (obj, callback) {
                         if (obj.id == "#") {
-                            Meteor.call("requestMetadata", 'select distinct Metadata/SourceName;', self.idata.tagsURL, function (error, data) {
+                            self.requester.makeMetadataRequest('select distinct Metadata/SourceName;', function (data) {
                                     var sourceList = JSON.parse(data);
                                     var i;
                                     var rootID;
@@ -83,7 +83,7 @@ function updateStreamList(self) {
                                                         data: {
                                                                 toplevel: true,
                                                                 children: function (callback) {
-                                                                        Meteor.call("requestMetadata", 'select distinct Path where Metadata/SourceName = "' + sourceName + '";', self.idata.tagsURL, function (childerror, data) {
+                                                                        self.requester.makeMetadataRequest('select distinct Path where Metadata/SourceName = "' + sourceName + '";', function (data) {
                                                                                 callback.call(this, pathsToTree(self, sourceName, JSON.parse(data)));
                                                                             });
                                                                     },
@@ -116,7 +116,7 @@ function updateStreamList(self) {
     streamTree.old_select_node = streamTree.select_node;
     streamTree.select_node = makeSelectHandler(self, streamTree, false);
     
-    var checkboxHandler = makeSelectHandler(self, streamTree, true); // select all children when checkbox is clicked, but just expand if text is clicked
+    streamTree.checkbox_select_node = makeSelectHandler(self, streamTree, true); // select all children when checkbox is clicked, but just expand if text is clicked
 }
 
 /* If SELECTALLCHILDREN is true, selects all the children. If not, simply expands the node. */
@@ -240,7 +240,7 @@ function getContextMenu(self, node, callback) {
                         label: "Show Info",
                         action: function () {
                                 if (node.data.streamdata == undefined) {
-                                    Meteor.call('requestMetadata', 'select * where Metadata/SourceName = "' + node.data.sourceName + '" and Path = "' + node.data.path + '";', self.idata.tagsURL, function (error, data) {
+                                    self.requester.makeMetadataRequest('select * where Metadata/SourceName = "' + node.data.sourceName + '" and Path = "' + node.data.path + '";', function (data) {
                                              if (node.data.streamdata == undefined) {
                                                  data = JSON.parse(data)[0];
                                                  node.data.streamdata = data;
@@ -255,10 +255,16 @@ function getContextMenu(self, node, callback) {
             };
     } else {
         return {
+                expandcontract: {
+                        label: self.idata.streamTree.is_closed(node) ? "Expand" : "Collapse",
+                        action: function () {
+                                self.idata.streamTree.select_node(node);
+                            }
+                    },
                 select: {
                         label: "Select",
                         action: function () {
-                                self.idata.streamTree.select_node(node);
+                                self.idata.streamTree.checkbox_select_node(node);
                             }
                     },
                 deselect: {
@@ -289,7 +295,7 @@ function selectNode(self, tree, select, node) { // unfortunately there's no simp
         node.data.selected = select;
         if (node.data.streamdata == undefined) {
             self.idata.pendingStreamRequests += 1;
-            Meteor.call('requestMetadata', 'select * where Metadata/SourceName = "' + node.data.sourceName + '" and Path = "' + node.data.path + '";', self.idata.tagsURL, function (error, data) {
+            self.requester.makeMetadataRequest('select * where Metadata/SourceName = "' + node.data.sourceName + '" and Path = "' + node.data.path + '";', function (data) {
                     self.idata.pendingStreamRequests -= 1;
                     if (node.data.selected == select) { // the box may have been unchecked in the meantime
                         if (node.data.streamdata == undefined) { // it might have been loaded in the meantime
