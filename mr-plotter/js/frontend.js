@@ -12,7 +12,7 @@ function init_frontend(self) {
     self.idata.changedTimes = undefined;
     self.idata.otherChange = undefined;
     self.idata.automaticAxisUpdate = false; // True if axes will be updated without the need for an "Update Axes" button
-    self.idata.initPermalink = window.location.protocol + "//" + window.location.hostname + (function (port) { if (port === '') { return ''; } return ':' + port; })(window.location.port) + window.location.pathname + '?'; // The start of the permalink
+    self.idata.initPermalink = window.location.protocol + "//" + self.backend + window.location.pathname + '?'; // The start of the permalink
     self.idata.loadedPermalink = false;
     self.idata.selectedLegendEntry = undefined; // The currently selected legend entry
     self.idata.chart = self.find("svg.chart");
@@ -23,7 +23,6 @@ function init_frontend(self) {
             var rightpadding = $parent.css("padding-right");
             return s3ui.parsePixelsToInt(width) - s3ui.parsePixelsToInt(leftpadding) - s3ui.parsePixelsToInt(rightpadding);
         }
-    self.idata.csvURL = "http://bunker.cs.berkeley.edu:9000/multicsv";
 }
 
 /* Adds or removes (depending on the value of SHOW) the stream

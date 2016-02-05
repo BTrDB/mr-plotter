@@ -31,18 +31,6 @@ function getInfoHelper(datum, prefix, linebreak) {
     return toReturn;
 }
 
-function getURL(url, success_callback, type, error_callback) {
-    Meteor.call("processQuery", url, type, function (error, result) {
-            if (error == undefined) {
-                success_callback(result);
-            } else if (error_callback != undefined) {
-                console.log(result);
-                error_callback(error, result);
-            }
-        });
-}
-
-
 function makeMenuMaker() {
     var colors = [["blue", "#0000FF"], ["red", "#FF0000"], ["green", "#008000"], ["purple", "#800080"], ["yellow green", "#9ACD32"], ["navy", "#000080"], ["maroon", "#800000"], ["fuchsia", "#FF00FF"], ["brown", "#8B4513"], ["orange", "#FFA500"], ["aqua", "#00FFFF"], ["gray", "#808080"], ["light brown", "#D2691E"], ["olive", "#808000"], ["blue violet", "#8A2BE2"], ["pink", "#FA8072"], ["lime", "#00FF00"], ["dark orange", "#FF8C00"], ["teal", "#008080"], ["yellow", "#FFFF00"], ["dark green", "#004000"], ["tan", "#C2A47C"], ["bright pink", "#FF3399"], ["dark blue", "#4682B4"]];
     var colorIndex = 0;
@@ -219,7 +207,6 @@ function getUnitString(unitDict) {
 s3ui.formatPath = formatPath;
 s3ui.getFilepath = getFilepath;
 s3ui.getInfo = getInfo;
-s3ui.getURL = getURL;
 s3ui.makeMenuMaker = makeMenuMaker;
 s3ui.binSearch = binSearch;
 s3ui.binSearchCmp = binSearchCmp;

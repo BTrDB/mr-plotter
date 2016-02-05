@@ -5,7 +5,6 @@ function bind_method(func, self) {
 }
 
 function init_control(self) {
-    self.idata.bracketURL = 'http://quasar.cal-sdb.org:9000/q/bracket';
     self.imethods.setStartTime = bind_method(setStartTime, self);
     self.imethods.setEndTime = bind_method(setEndTime, self);
     self.imethods.setTimezone = bind_method(setTimezone, self);
@@ -463,21 +462,17 @@ function finishExecutingPermalink(self, streams, colors, args, streamToSelect, s
             start--;
         }
     } else if (args.window_type == "last") {
-        s3ui.getURL("SENDPOST " + self.idata.bracketURL + " " + JSON.stringify({"UUIDS": self.idata.selectedStreamsBuffer.map(function (s) { return s.uuid; })}), function (data) {
+        self.requester.makeBracketRequest(self.idata.selectedStreamsBuffer.map(function (s) { return s.uuid; }), function (data) {
                 var response = JSON.parse(data);
-                console.log(response);
-                end = nanos_to_millis(response.Merged[1]);
+                end = response.Merged[1][0] + (response.Merged[1][1] > 0 ? 1 : 0); // bump it up to be on the safe side
                 start = end - nanos_to_millis(args.window_width);
-                if (end * 1000000 < response.Merged[1]) {
-                    end++;
-                }
                 if ((end - start) * 1000000 < args.window_width) {
                     start--;
                 }
                 setTimeZoom(self, start, end, args.resetStart, args.resetEnd, args.tz, args.dst);
                 self.imethods.applyAllSettings();
                 setCursors(self, args);
-            }, 'text/json');
+            });
         return;
     } else {
         start = nanos_to_millis(args.start);
@@ -558,11 +553,13 @@ function nanos_to_millis(num) {
     num = num.toString();
     var millis = num.slice(0, -6);
     var nanos = num.slice(-6);
+    var millinum;
     if (millis.length == 0) {
-        return floor ? 0 : 1;
+        millinum = 0;
     } else {
-        return Number(millis) + (Number(nanos) < 500000 ? 0 : 1);
+        millinum = Number(millis);
     }
+    return millinum + (Number(nanos) < 500000 ? 0 : 1);
 }
 
 s3ui.init_control = init_control;

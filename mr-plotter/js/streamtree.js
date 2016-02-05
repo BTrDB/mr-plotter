@@ -1,5 +1,4 @@
 function init_streamtree(self) {
-    self.idata.tagsURL = 'http://new.openbms.org/backend/api/query?';
     self.idata.streamTree = undefined;
     self.idata.$streamTreeDiv = undefined;
     self.idata.rootNodes = undefined;; // Acts as a set of root nodes: maps name to id

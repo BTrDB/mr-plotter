@@ -114,18 +114,6 @@ s3ui.__init__ = function (self) {
                 self.find("svg.chart").setAttribute("height", self.data[0].height + self.idata.margin.top + self.idata.margin.bottom);
                 self.idata.HEIGHT = self.data[0].height;
             }
-            if (self.data[0].dataURLStart != undefined) {
-                self.idata.dataURLStart = self.data[0].dataURLStart;
-            }
-            if (self.data[0].tagsURL != undefined) {
-                self.idata.tagsURL = self.data[0].tagsURL;
-            }
-            if (self.data[0].bracketURL != undefined) {
-                self.idata.bracketURL = self.data[0].bracketURL;
-            }
-            if (self.data[0].csvURL != undefined) {
-                self.idata.csvURL = self.data[0].csvURL;
-            }
             if (self.data[0].permalinkStart != undefined) {
                 self.idata.initPermalink = self.data[0].permalinkStart;
             }

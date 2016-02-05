@@ -362,10 +362,10 @@ function getNearestDataPoint(self, xmillis, xnanos, data, uuid, pw) {
             endTime[1] -= 1000000;
             endTime[0] += 1;
         }
-        var url = self.idata.dataURLStart + uuid + '?starttime=' + s3ui.timeToStr(currentPoint) + '&endtime=' + s3ui.timeToStr(endTime) + '&unitoftime=ns&pw=0';
-        s3ui.getURL(url, function (data) {
+        var req = [uuid, s3ui.timeToStr(currentPoint), s3ui.timeToStr(endTime), 0];
+        self.requester.makeDataRequest(req, function (data) {
                 cacheExactTime(self, currentPoint, data);
-            }, 'text');
+            });
     }
     return currentPoint;
 }
@@ -373,7 +373,7 @@ function getNearestDataPoint(self, xmillis, xnanos, data, uuid, pw) {
 function cacheExactTime(self, point, dataStr) {
     var receivedPoint;
     try {
-        receivedPoint = JSON.parse(dataStr)[0].XReadings[0];
+        receivedPoint = JSON.parse(dataStr)[0];
         point.push(receivedPoint[0]);
         point.push(receivedPoint[1]); // cache the exact time of the point at indices 6 and 7
         updateVertCursorStats(self); // to update the screen with the newly cached data

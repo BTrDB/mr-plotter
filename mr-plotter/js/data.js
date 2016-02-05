@@ -12,8 +12,6 @@ function init_data(self) {
     self.idata.pollingBrackets = false; // whether or not we are periodically checking if the brackets have changed
     self.idata.bracketInterval = 5000;
     
-    self.idata.dataURLStart = 'http://bunker.cs.berkeley.edu/backend/api/data/uuid/';
-    
     self.idata.queryLow = 0;//-1152921504606; // in milliseconds
     self.idata.queryHigh = 3458764513820; // in milliseconds
     self.idata.pweHigh = 61;
@@ -296,7 +294,6 @@ function makeDataRequest(self, uuid, queryStart, queryEnd, pointwidthexp, halfpw
     var halfpwmillisStart = Math.floor(halfpwnanos / 1000000);
     var halfpwnanosStart = halfpwnanos - (1000000 * halfpwmillisStart);
     halfpwnanosStart = (1000000 + halfpwnanosStart).toString().slice(1);
-    //var url = self.idata.dataURLStart + uuid + '?starttime=' + (queryStart + halfpwmillisStart) + halfpwnanosStart + '&endtime=' + (queryEnd + halfpwmillisStart) + halfpwnanosStart + '&unitoftime=ns&pw=' + pointwidthexp;
     var req = [uuid, (queryStart + halfpwmillisStart) + halfpwnanosStart, (queryEnd + halfpwmillisStart) + halfpwnanosStart, pointwidthexp];
     if (caching) {
         self.requester.makeDataRequest(req, function (data) {
