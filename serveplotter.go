@@ -846,44 +846,100 @@ func metadataHandler (w http.ResponseWriter, r *http.Request) {
 	resp.Body.Close()
 }
 
+const PERMALINK_HELP string = "To create a permalink, send the data as a JSON document via a POST request. To retrieve a permalink, set a GET request, specifying \"id=<permalink identifier>\" in the URL."
+const PERMALINK_BAD_ID string = "not found"
 func permalinkHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		w.Header().Set("Allow", "POST")
+	if r.Method != "GET" && r.Method != "POST" {
+		w.Header().Set("Allow", "GET POST")
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Write([]byte("To create a permalink, send the data as a JSON document via a POST request."))
+		w.Write([]byte(PERMALINK_HELP))
 		return
 	}
 	
 	var err error
 	var jsonPermalink map[string]interface{}
+	var id bson.ObjectId
 	
-	var permalinkDecoder *json.Decoder = json.NewDecoder(r.Body)
-	
-	err = permalinkDecoder.Decode(&jsonPermalink)
-	if err != nil {
-		w.Write([]byte(fmt.Sprintf("Error: received invalid JSON: %v", err)))
-		return
-	}
-	
-	err = validatePermalinkJSON(jsonPermalink)
-	if err != nil {
-		w.Write([]byte(err.Error()))
-		return
-	}
-	
-	var id bson.ObjectId = bson.NewObjectId()
-	jsonPermalink["_id"] = id
-	jsonPermalink["lastAccessed"] = "never"
-	
-	err = permalinkConn.Insert(jsonPermalink)
-	
-	if err == nil {
-		id64len := base64.URLEncoding.EncodedLen(len(id))
-		id64buf := make([]byte, id64len, id64len)
-		base64.URLEncoding.Encode(id64buf, []byte(id))
-		w.Write(id64buf)
+	if r.Method == "GET" {
+		r.ParseForm()
+		var id64str string = r.Form.Get("id")
+		if id64str == "" {
+			w.Write([]byte(PERMALINK_HELP))
+			return
+		}
+		
+		var idslice []byte
+		idslice, err = base64.URLEncoding.DecodeString(id64str)
+		
+		if err != nil {
+			w.Write([]byte(PERMALINK_HELP))
+			return
+		}
+		
+		id = bson.ObjectId(idslice)
+		
+		if !id.Valid() {
+			w.Write([]byte(PERMALINK_BAD_ID))
+			return
+		}
+		
+		var query *mgo.Query = permalinkConn.FindId(id)
+		
+		err = query.One(&jsonPermalink)
+		if err != nil {
+			w.Write([]byte(PERMALINK_BAD_ID))
+			return
+		}
+		
+		// I could do this asynchronously, but I think this is good enough
+		err = permalinkConn.UpdateId(id, map[string]interface{}{
+			"$set": map[string]interface{}{
+				"lastAccessed": bson.Now(),
+			},
+		})
+		
+		if err != nil {
+			// In the future I could try something like restarting the connection
+			fmt.Printf("Could not update permalink record: %v\n", err)
+		}
+		
+		w.Header().Set("Content-type", "application/json; charset=utf-8")
+		
+		var permalinkEncoder *json.Encoder = json.NewEncoder(w)
+		err = permalinkEncoder.Encode(jsonPermalink)
+		
+		if err != nil {
+			fmt.Printf("Could not encode permlink data: %v\n", err)
+		}
 	} else {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("Could not add permalink to database: %v", err)))
+		var permalinkDecoder *json.Decoder = json.NewDecoder(r.Body)
+	
+		err = permalinkDecoder.Decode(&jsonPermalink)
+		if err != nil {
+			w.Write([]byte(fmt.Sprintf("Error: received invalid JSON: %v", err)))
+			return
+		}
+	
+		err = validatePermalinkJSON(jsonPermalink)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
+	
+		id = bson.NewObjectId()
+		jsonPermalink["_id"] = id
+		jsonPermalink["lastAccessed"] = bson.Now()
+	
+		err = permalinkConn.Insert(jsonPermalink)
+	
+		if err == nil {
+			id64len := base64.URLEncoding.EncodedLen(len(id))
+			id64buf := make([]byte, id64len, id64len)
+			base64.URLEncoding.Encode(id64buf, []byte(id))
+			w.Write(id64buf)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(fmt.Sprintf("Could not add permalink to database: %v", err)))
+		}
 	}
 }

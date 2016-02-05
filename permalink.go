@@ -37,7 +37,7 @@ var PERMALINK_WINDOW_CONDITIONAL = map[string][]string {
 }
 
 var STREAM_SCHEMA = map[string]map[reflect.Kind]string{
-	"stream": { reflect.String: "String", reflect.Slice: "Array" },
+	"stream": { reflect.String: "String", reflect.Map: "Object" },
 	"color": { reflect.String: "String", },
 	"selected": { reflect.Bool: "Boolean", },
 }

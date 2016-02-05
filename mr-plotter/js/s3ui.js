@@ -56,10 +56,21 @@ s3ui.default_cb2 = function (inst) {
     };
 
 s3ui.exec_permalink = function (self, link_id) {
-        Meteor.call("retrievePermalink", link_id, function (error, result) {
-                if (error == undefined && result != undefined) {
-                    s3ui.executePermalink(self, result);
+        self.requester.makePermalinkRetrievalRequest(link_id, function (result) {
+                var permalinkJSON;
+                if (result == undefined) {
+                    return;
+                } else if (result == "not found") {
+                    console.log("Server could not retrieve data for permalink " + link_id);
+                    return;
                 }
+                try {
+                    permalinkJSON = JSON.parse(result);
+                } catch (err) {
+                    console.log('Invalid permalink response from server: ' + err);
+                    return;
+                }
+                s3ui.executePermalink(self, permalinkJSON);
             });
     };
     

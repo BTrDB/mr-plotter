@@ -68,11 +68,22 @@ Requester.prototype.makeMetadataRequest = function (query, success_callback, err
     };
     
 Requester.prototype.makePermalinkInsertRequest = function (permalinkObj, success_callback, error_callback) {
-        var permalinkstr = JSON.stringify(permalinkObj)
+        var permalinkjsonstr = JSON.stringify(permalinkObj)
         return $.ajax({
                 type: "POST",
                 url: "https://" + this.backend + "/permalink",
-                data: permalinkstr,
+                data: permalinkjsonstr,
+                success: success_callback,
+                dataType: "text",
+                error: error_callback = undefined ? function () {} : error_callback
+            });
+    };
+    
+Requester.prototype.makePermalinkRetrievalRequest = function (permalinkStr, success_callback, error_callback) {
+        return $.ajax({
+                type: "GET",
+                url: "https://" + this.backend + "/permalink",
+                data: {id: permalinkStr},
                 success: success_callback,
                 dataType: "text",
                 error: error_callback = undefined ? function () {} : error_callback
