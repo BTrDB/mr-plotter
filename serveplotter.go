@@ -566,6 +566,7 @@ var dr *DataRequester
 var br *DataRequester
 var mdServer string
 var permalinkConn *mgo.Collection
+var csvURL string
 
 func main() {
 	configfile, err := ioutil.ReadFile("plotter.ini")
@@ -622,6 +623,12 @@ func main() {
 		return
 	}
 	
+	csvURLRaw, ok := config["csv_url"]
+	if !ok {
+		fmt.Println("Configuration file is missing required key \"csv_url\"")
+		return
+	}
+	
 	dataConn64, err := strconv.ParseInt(dataConnRaw.(string), 0, 64)
 	if err != nil {
 		fmt.Println("Configuration file must specify num_data_conn as an int")
@@ -636,6 +643,7 @@ func main() {
 	var bracketConn int = int(bracketConn64)
 	mdServer = mdServerRaw.(string)
 	mgServer := mgServerRaw.(string)
+	csvURL = csvURLRaw.(string)
 	
 	mongoConn, err := mgo.Dial(mgServer)
 	if err != nil {
@@ -662,6 +670,7 @@ func main() {
 	http.HandleFunc("/bracket", bracketHandler)
 	http.HandleFunc("/metadata", metadataHandler)
 	http.HandleFunc("/permalink", permalinkHandler)
+	http.HandleFunc("/csv", csvHandler)
 	
 	var portStr string = fmt.Sprintf(":%v", port)
 	
@@ -825,12 +834,18 @@ func metadataHandler (w http.ResponseWriter, r *http.Request) {
 	request, err := ioutil.ReadAll(r.Body) // should probably limit the size of this
 	
 	mdReq, err := http.NewRequest("POST", mdServer, strings.NewReader(string(request)))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("Could not perform HTTP request to metadata server: %v", err)))
+		return
+	}
+	
 	mdReq.Header.Set("Content-Type", "text")
 	mdReq.Header.Set("Content-Length", fmt.Sprintf("%v", len(request)))
 	resp, err := http.DefaultClient.Do(mdReq)
 	
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(fmt.Sprintf("Could not forward request to metadata server: %v", err)))
 		return
 	}
@@ -903,7 +918,7 @@ func permalinkHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("Could not update permalink record: %v\n", err)
 		}
 		
-		w.Header().Set("Content-type", "application/json; charset=utf-8")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		
 		var permalinkEncoder *json.Encoder = json.NewEncoder(w)
 		err = permalinkEncoder.Encode(jsonPermalink)
@@ -942,4 +957,41 @@ func permalinkHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(fmt.Sprintf("Could not add permalink to database: %v", err)))
 		}
 	}
+}
+
+func csvHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.Header().Set("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("To get a CSV file, send the required data as a JSON document via a POST request."))
+	}
+	w.Header().Set("Content-Disposition", "attachment; filename=data.csv")
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Transfer-Encoding", "chunked")
+	
+	csvReq, err := http.NewRequest("POST", csvURL, r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("Could not perform HTTP request to database: %v", err)))
+		return
+	}
+	
+	csvReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := http.DefaultClient.Do(csvReq)
+	
+	if err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		w.Write([]byte(fmt.Sprintf("Could not forward request to database: %v", err)))
+		return
+	}
+	
+	var buffer []byte = make([]byte, 4096) // forward the response in 4 KiB chunks
+	
+	var bytesRead int
+	var readErr error = nil
+	for readErr == nil {
+		bytesRead, readErr = resp.Body.Read(buffer)
+		w.Write(buffer[:bytesRead])
+	}
+	resp.Body.Close()
 }

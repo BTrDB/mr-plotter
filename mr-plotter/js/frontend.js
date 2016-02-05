@@ -384,7 +384,7 @@ function buildCSVMenu(self) {
     } else {
         $(pwselector).css("display", "none");
         textSpace = pwselector.nextSibling.nextSibling;
-        textSpace.innerHTML = "You must plot streams in your desired time range before you can select a resolution.";
+        textSpace.innerHTML = "";
         textSpace.nextSibling.nextSibling.innerHTML = "";
         submitButton.onclick = function () { return false; };
     }

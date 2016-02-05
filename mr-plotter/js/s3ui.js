@@ -2,6 +2,7 @@ s3ui = {instances: [], instanceid: -1}; // stores functions used in multiple fil
 
 function MrPlotter(container, backend, options, cb1, cb2) {
     this.domelem = container;
+    this.backend = backend;
     
     /* In Meteor, this is where the constructor argument would go. I'm doing
        the same thing since the code assumes it would be like this. */
@@ -25,11 +26,14 @@ MrPlotter.prototype.$ = function (expr) {
     CB1 and CB2 are callback overrides for the two callbacks, the first of
     which executes after the graph is built, and the second of which executes
     after the interactive features have been added. */
-function mr_plotter(parent, backend, options, cb1, cb2) {
+function mr_plotter(parent, options, cb1, cb2, backend) {
     // This is the one place in the entire code that I use the ID of an element
     var template = document.getElementById("mrplotter");
     var docfrag = document.importNode(template.content, true);
     var container = document.createElement("div");
+    if (backend == undefined) {
+        backend = window.location.hostname + (window.location.port ? ":" + window.location.port : "");
+    }
     container.appendChild(docfrag);
     parent.appendChild(container);
     var instance = new MrPlotter(container, backend, options, cb1, cb2);
@@ -230,8 +234,7 @@ function init_graph(self, c1, c2) {
             setTimeout(function () { s3ui.createPlotDownload(self); }, 50);
         };
     var csvForm = self.find(".csv-form");
-    csvForm.setAttribute("action", window.location.protocol + "//" + window.location.hostname + (window.location.port ? ":" + window.location.port : "") + "/s3ui_csv");
-    csvForm.querySelector(".csv-form-url").value = self.idata.csvURL;
+    csvForm.setAttribute("action", window.location.protocol + "//" + self.backend + "/csv");
     self.find(".makecsv").onclick = function () {
             s3ui.buildCSVMenu(self);
             $(self.find(".csv-modal")).modal("toggle");
