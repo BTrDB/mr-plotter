@@ -282,22 +282,25 @@ function createPermalink(self, return_raw_document) {
     if (return_raw_document) {
         return permalink;
     }
-    Meteor.call("createPermalink", permalink, function (error, result) {
-            if (error == undefined) {
-                var id = result;
-                var URL = self.idata.initPermalink + id;
-                var anchor = document.createElement("a");
-                anchor.innerHTML = URL;
-                anchor.setAttribute("href", URL);
-                anchor.setAttribute("target", "_blank");
-                var permalocation = self.find(".permalink");
-                permalocation.innerHTML = "";
-                permalocation.insertBefore(anchor, null);
-                self.idata.loadedPermalink = true;
-            } else {
-                console.log(error);
-            }
+    
+    var permalocation = self.find(".permalink");
+    permalocation.innerHTML = 'Generating permalink...';
+    
+    self.requester.makePermalinkInsertRequest(permalink, function (result) {
+            var id = result;
+            var URL = self.idata.initPermalink + id;
+            var anchor = document.createElement("a");
+            anchor.innerHTML = URL;
+            anchor.setAttribute("href", URL);
+            anchor.setAttribute("target", "_blank");
+            permalocation.innerHTML = "";
+            permalocation.insertBefore(anchor, null);
+            self.idata.loadedPermalink = true;
+        }, function (error) {
+            console.log(error);
+            permalocation.innerHTML = 'Permalink could not be generated.';
         });
+        
     return true;
 }
 

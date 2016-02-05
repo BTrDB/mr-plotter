@@ -56,14 +56,26 @@ function Requester(backend) {
 Requester.prototype.DATA_CONN = 8;
 Requester.prototype.BRACK_CONN = 2;
 
-Requester.prototype.makeMetadataRequest = function (message, success_callback, error_callback) {
+Requester.prototype.makeMetadataRequest = function (query, success_callback, error_callback) {
         return $.ajax({
                 type: "POST",
                 url: "https://" + this.backend + "/metadata",
-                data: message,
+                data: query,
                 success: success_callback,
                 dataType: "text",
                 error: error_callback == undefined ? function () {} : error_callback
+            });
+    };
+    
+Requester.prototype.makePermalinkInsertRequest = function (permalinkObj, success_callback, error_callback) {
+        var permalinkstr = JSON.stringify(permalinkObj)
+        return $.ajax({
+                type: "POST",
+                url: "https://" + this.backend + "/permalink",
+                data: permalinkstr,
+                success: success_callback,
+                dataType: "text",
+                error: error_callback = undefined ? function () {} : error_callback
             });
     };
     

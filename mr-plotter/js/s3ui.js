@@ -207,10 +207,9 @@ function init_graph(self, c1, c2) {
     
     // Event handlers are added programmatically
     self.find(".getPermalink").onclick = function () {
-            var permalinkElem = self.find(".permalink");
-            permalinkElem.innerHTML = 'Generating permalink...';
             setTimeout(function () {
                     if (s3ui.createPermalink(self, false) == undefined) {
+                    	var permalinkElem = self.find(".permalink");
                         permalinkElem.innerHTML = 'You must plot some streams before creating a permalink.';
                     }
                 }, 50);

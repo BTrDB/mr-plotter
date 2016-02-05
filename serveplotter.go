@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,6 +15,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	
 	cparse "github.com/SoftwareDefinedBuildings/sync2_quasar/configparser"
 	cpint "github.com/SoftwareDefinedBuildings/btrdb/cpinterface"
@@ -258,24 +263,20 @@ func (dr *DataRequester) handleDataResponse(connection net.Conn) {
 		
 		dr.gotFirstSeg[id] = true
 		
-		if writ == nil {
-		    fmt.Println("Unknown id!")
-		}
-		
 		w := writ.GetWriter()
 		
 		if status != cpint.STATUSCODE_OK {
-		    fmt.Printf("Bad status code: %v\n", status)
+			fmt.Printf("Bad status code: %v\n", status)
 			w.Write([]byte(fmt.Sprintf("Database returns status code %v", status)))
 			if final {
-			    dr.synchronizers[id] <- false
+				dr.synchronizers[id] <- false
 			}
 			continue
 		}
 		
 		length := records.Len()
 		
-	    if firstSeg {
+		if firstSeg {
 			w.Write([]byte("["))
 		}
 		for i := 0; i < length; i++ {
@@ -293,7 +294,7 @@ func (dr *DataRequester) handleDataResponse(connection net.Conn) {
 		}
 		
 		if final {
-		    dr.synchronizers[id] <- true
+			dr.synchronizers[id] <- true
 		}
 	}
 }
@@ -419,9 +420,9 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 		}
 		rMillis, rNanos = splitTime(boundary)
 		if i == len(uuids) - 1 {
-    		trailchar = ']';
-    	}
-    	w.Write([]byte(fmt.Sprintf("[[%v,%v],[%v,%v]]%c", lMillis, lNanos, rMillis, rNanos, trailchar)))
+			trailchar = ']';
+		}
+		w.Write([]byte(fmt.Sprintf("[[%v,%v],[%v,%v]]%c", lMillis, lNanos, rMillis, rNanos, trailchar)))
 	}
 	lMillis, lNanos = splitTime(lowest)
 	rMillis, rNanos = splitTime(highest)
@@ -560,6 +561,12 @@ func parseBracketRequest(request string, writ Writable, expectExtra bool) (uuids
 	return
 }
 
+/* State needed to handle HTTP requests. */
+var dr *DataRequester
+var br *DataRequester
+var mdServer string
+var permalinkConn *mgo.Collection
+
 func main() {
 	configfile, err := ioutil.ReadFile("plotter.ini")
 	if err != nil {
@@ -609,6 +616,12 @@ func main() {
 		return
 	}
 	
+	mgServerRaw, ok := config["mongo_server"]
+	if !ok {
+		fmt.Println("Configuration file is missing required key \"mongo_server\"")
+		return
+	}
+	
 	dataConn64, err := strconv.ParseInt(dataConnRaw.(string), 0, 64)
 	if err != nil {
 		fmt.Println("Configuration file must specify num_data_conn as an int")
@@ -621,184 +634,34 @@ func main() {
 	}
 	var dataConn int = int(dataConn64)
 	var bracketConn int = int(bracketConn64)
-	var mdServer string = mdServerRaw.(string)
+	mdServer = mdServerRaw.(string)
+	mgServer := mgServerRaw.(string)
 	
-	var dr *DataRequester = NewDataRequester(dbaddr.(string), dataConn, 8, false)
+	mongoConn, err := mgo.Dial(mgServer)
+	if err != nil {
+		fmt.Printf("Could not connect to MongoDB Server at address %s\n", mgServer)
+		os.Exit(1)
+	}
+	
+	plotterDBConn := mongoConn.DB("mr_plotter")
+	permalinkConn = plotterDBConn.C("permalinks")
+	
+	dr = NewDataRequester(dbaddr.(string), dataConn, 8, false)
 	if dr == nil {
 		os.Exit(1)
 	}
-	var br *DataRequester = NewDataRequester(dbaddr.(string), bracketConn, 8, true)
+	br = NewDataRequester(dbaddr.(string), bracketConn, 8, true)
 	if br == nil {
 		os.Exit(1)
 	}
 	
 	http.Handle("/", http.FileServer(http.Dir(directory.(string))))
-	http.HandleFunc("/dataws", func (w http.ResponseWriter, r *http.Request) {
-		websocket, upgradeerr := upgrader.Upgrade(w, r, nil)
-		if upgradeerr != nil {
-			// TODO Perhaps we could redirect somehow?
-			w.Write([]byte(fmt.Sprintf("Could not upgrade HTTP connection to WebSocket: %v\n", upgradeerr)))
-			return
-		}
-		
-		cw := ConnWrapper{
-			Writing: &sync.Mutex{},
-			Conn: websocket,
-		}
-		
-		for {
-			_, payload, err := websocket.ReadMessage()
-			
-			if err != nil {
-				return // Most likely the connection was closed
-			}
-			
-			uuidBytes, startTime, endTime, pw, echoTag, success := parseDataRequest(string(payload), &cw)
-			fmt.Println("Got data request")
-		
-			if success {
-				dr.MakeDataRequest(uuidBytes, startTime, endTime, uint8(pw), &cw)
-			}
-			if cw.CurrWriter != nil {
-				cw.CurrWriter.Close()
-			}
-			
-			writer, err := websocket.NextWriter(ws.TextMessage)
-			if err != nil {
-				fmt.Println("Could not echo tag to client")
-			}
-			
-			if cw.CurrWriter != nil {
-				_, err = writer.Write([]byte(echoTag))
-				if err != nil {
-					fmt.Println("Could not echo tag to client")
-				}
-				writer.Close()
-			}
-			
-			cw.Writing.Unlock()
-		}
-	})
-	http.HandleFunc("/data", func (w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
-			w.Header().Set("Allow", "POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			w.Write([]byte("You must send a POST request to get data."))
-			return
-		}
-
-		// TODO: don't just read the whole thing in one go. Instead give up after a reasonably long limit.
-		payload, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			w.Write([]byte(fmt.Sprintf("Could not read received POST payload: %v", err)))
-		}
-		
-		wrapper := RespWrapper{w}
-		
-		uuidBytes, startTime, endTime, pw, _, success := parseDataRequest(string(payload), wrapper)
-		
-		if success {
-			dr.MakeDataRequest(uuidBytes, startTime, endTime, uint8(pw), wrapper)
-		}
-	})
-	http.HandleFunc("/bracketws", func (w http.ResponseWriter, r *http.Request) {
-		websocket, upgradeerr := upgrader.Upgrade(w, r, nil)
-		if upgradeerr != nil {
-			// TODO Perhaps we could redirect somehow?
-			w.Write([]byte(fmt.Sprintf("Could not upgrade HTTP connection to WebSocket: %v\n", upgradeerr)))
-			return
-		}
-		
-		cw := ConnWrapper{
-			Writing: &sync.Mutex{},
-			Conn: websocket,
-		}
-		
-		for {
-			_, payload, err := websocket.ReadMessage()
-			
-			if err != nil {
-				return // Most likely the connection was closed
-			}
-			
-			uuids, echoTag, success := parseBracketRequest(string(payload), &cw, true)
-			
-			if success {
-				br.MakeBracketRequest(uuids, &cw)
-			}
-			if cw.CurrWriter != nil {
-				cw.CurrWriter.Close()
-			}
-			
-			writer, err := websocket.NextWriter(ws.TextMessage)
-			if err != nil {
-				fmt.Println("Could not echo tag to client")
-			}
-			
-			if cw.CurrWriter != nil {
-				_, err = writer.Write([]byte(echoTag))
-				if err != nil {
-					fmt.Println("Could not echo tag to client")
-				}
-				writer.Close()
-			}
-			
-			cw.Writing.Unlock()
-		}
-	})
-	http.HandleFunc("/bracket", func (w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
-			w.Header().Set("Allow", "POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			w.Write([]byte("You must send a POST request to get data."))
-			return
-		}
-
-		// TODO: don't just read the whole thing in one go. Instead give up after a reasonably long limit.
-		payload, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			w.Write([]byte(fmt.Sprintf("Could not read received POST payload: %v", err)))
-		}
-		
-		wrapper := RespWrapper{w}
-		
-		uuids, _, success := parseBracketRequest(string(payload), wrapper, false)
-		
-		if success {
-			br.MakeBracketRequest(uuids, wrapper)
-		}
-	})
-	http.HandleFunc("/metadata", func (w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
-			w.Header().Set("Allow", "POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			w.Write([]byte("You must send a POST request to get data."))
-			return
-		}
-		
-		request, err := ioutil.ReadAll(r.Body) // should probably limit the size of this
-		
-		mdReq, err := http.NewRequest("POST", mdServer, strings.NewReader(string(request)))
-		mdReq.Header.Set("Content-Type", "text")
-		mdReq.Header.Set("Content-Length", fmt.Sprintf("%v", len(request)))
-		resp, err := http.DefaultClient.Do(mdReq)
-		
-		if err != nil {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(fmt.Sprintf("Could not forward request to metadata server: %v", err)))
-			return
-		}
-		
-		var buffer []byte = make([]byte, 1024) // forward the response in 1 KiB chunks
-		
-		var bytesRead int
-		var readErr error = nil
-		for readErr == nil {
-			bytesRead, readErr = resp.Body.Read(buffer)
-			w.Write(buffer[:bytesRead])
-		}
-		resp.Body.Close()
-	})
+	http.HandleFunc("/dataws", datawsHandler)
+	http.HandleFunc("/data", dataHandler)
+	http.HandleFunc("/bracketws", bracketwsHandler)
+	http.HandleFunc("/bracket", bracketHandler)
+	http.HandleFunc("/metadata", metadataHandler)
+	http.HandleFunc("/permalink", permalinkHandler)
 	
 	var portStr string = fmt.Sprintf(":%v", port)
 	
@@ -812,3 +675,215 @@ func main() {
 	}
 }
 
+func datawsHandler(w http.ResponseWriter, r *http.Request) {
+	websocket, upgradeerr := upgrader.Upgrade(w, r, nil)
+	if upgradeerr != nil {
+		// TODO Perhaps we could redirect somehow?
+		w.Write([]byte(fmt.Sprintf("Could not upgrade HTTP connection to WebSocket: %v\n", upgradeerr)))
+		return
+	}
+	
+	cw := ConnWrapper{
+		Writing: &sync.Mutex{},
+		Conn: websocket,
+	}
+	
+	for {
+		_, payload, err := websocket.ReadMessage()
+		
+		if err != nil {
+			return // Most likely the connection was closed
+		}
+		
+		uuidBytes, startTime, endTime, pw, echoTag, success := parseDataRequest(string(payload), &cw)
+		fmt.Println("Got data request")
+	
+		if success {
+			dr.MakeDataRequest(uuidBytes, startTime, endTime, uint8(pw), &cw)
+		}
+		if cw.CurrWriter != nil {
+			cw.CurrWriter.Close()
+		}
+		
+		writer, err := websocket.NextWriter(ws.TextMessage)
+		if err != nil {
+			fmt.Println("Could not echo tag to client")
+		}
+		
+		if cw.CurrWriter != nil {
+			_, err = writer.Write([]byte(echoTag))
+			if err != nil {
+				fmt.Println("Could not echo tag to client")
+			}
+			writer.Close()
+		}
+		
+		cw.Writing.Unlock()
+	}
+}
+
+func dataHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.Header().Set("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("You must send a POST request to get data."))
+		return
+	}
+
+	// TODO: don't just read the whole thing in one go. Instead give up after a reasonably long limit.
+	payload, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("Could not read received POST payload: %v", err)))
+	}
+	
+	wrapper := RespWrapper{w}
+	
+	uuidBytes, startTime, endTime, pw, _, success := parseDataRequest(string(payload), wrapper)
+	
+	if success {
+		dr.MakeDataRequest(uuidBytes, startTime, endTime, uint8(pw), wrapper)
+	}
+}
+
+func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
+	websocket, upgradeerr := upgrader.Upgrade(w, r, nil)
+	if upgradeerr != nil {
+		// TODO Perhaps we could redirect somehow?
+		w.Write([]byte(fmt.Sprintf("Could not upgrade HTTP connection to WebSocket: %v\n", upgradeerr)))
+		return
+	}
+	
+	cw := ConnWrapper{
+		Writing: &sync.Mutex{},
+		Conn: websocket,
+	}
+	
+	for {
+		_, payload, err := websocket.ReadMessage()
+		
+		if err != nil {
+			return // Most likely the connection was closed
+		}
+		
+		uuids, echoTag, success := parseBracketRequest(string(payload), &cw, true)
+		
+		if success {
+			br.MakeBracketRequest(uuids, &cw)
+		}
+		if cw.CurrWriter != nil {
+			cw.CurrWriter.Close()
+		}
+		
+		writer, err := websocket.NextWriter(ws.TextMessage)
+		if err != nil {
+			fmt.Println("Could not echo tag to client")
+		}
+		
+		if cw.CurrWriter != nil {
+			_, err = writer.Write([]byte(echoTag))
+			if err != nil {
+				fmt.Println("Could not echo tag to client")
+			}
+			writer.Close()
+		}
+		
+		cw.Writing.Unlock()
+	}
+}
+
+func bracketHandler (w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.Header().Set("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("You must send a POST request to get data."))
+		return
+	}
+
+	// TODO: don't just read the whole thing in one go. Instead give up after a reasonably long limit.
+	payload, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("Could not read received POST payload: %v", err)))
+	}
+	
+	wrapper := RespWrapper{w}
+	
+	uuids, _, success := parseBracketRequest(string(payload), wrapper, false)
+	
+	if success {
+		br.MakeBracketRequest(uuids, wrapper)
+	}
+}
+
+func metadataHandler (w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.Header().Set("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("You must send a POST request to get data."))
+		return
+	}
+	
+	request, err := ioutil.ReadAll(r.Body) // should probably limit the size of this
+	
+	mdReq, err := http.NewRequest("POST", mdServer, strings.NewReader(string(request)))
+	mdReq.Header.Set("Content-Type", "text")
+	mdReq.Header.Set("Content-Length", fmt.Sprintf("%v", len(request)))
+	resp, err := http.DefaultClient.Do(mdReq)
+	
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(fmt.Sprintf("Could not forward request to metadata server: %v", err)))
+		return
+	}
+	
+	var buffer []byte = make([]byte, 1024) // forward the response in 1 KiB chunks
+	
+	var bytesRead int
+	var readErr error = nil
+	for readErr == nil {
+		bytesRead, readErr = resp.Body.Read(buffer)
+		w.Write(buffer[:bytesRead])
+	}
+	resp.Body.Close()
+}
+
+func permalinkHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.Header().Set("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("To create a permalink, send the data as a JSON document via a POST request."))
+		return
+	}
+	
+	var err error
+	var jsonPermalink map[string]interface{}
+	
+	var permalinkDecoder *json.Decoder = json.NewDecoder(r.Body)
+	
+	err = permalinkDecoder.Decode(&jsonPermalink)
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("Error: received invalid JSON: %v", err)))
+		return
+	}
+	
+	err = validatePermalinkJSON(jsonPermalink)
+	if err != nil {
+		w.Write([]byte(err.Error()))
+		return
+	}
+	
+	var id bson.ObjectId = bson.NewObjectId()
+	jsonPermalink["_id"] = id
+	jsonPermalink["lastAccessed"] = "never"
+	
+	err = permalinkConn.Insert(jsonPermalink)
+	
+	if err == nil {
+		id64len := base64.URLEncoding.EncodedLen(len(id))
+		id64buf := make([]byte, id64len, id64len)
+		base64.URLEncoding.Encode(id64buf, []byte(id))
+		w.Write(id64buf)
+	} else {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("Could not add permalink to database: %v", err)))
+	}
+}
