@@ -7,7 +7,8 @@ client = pymongo.MongoClient()
 accounts = client.mr_plotter.accounts
 
 def disp_help(tokens):
-    print "Valid commands:", " ".join(funcs.keys())
+    print "Type one of the following commands and press <Enter> or <Return> to execute it:"
+    print " ".join(funcs.keys())
 
 def create_funcs():
     help = disp_help
@@ -23,7 +24,17 @@ def create_funcs():
         # ALL accounts have the public tag
         tags = set(tokens[3:])
         tags.add("public")
-        accounts.insert_one({"user": username, "password": pbin, "tags": tuple(tags)})
+        accounts.update({"user": username}, {"$set": {"password": pbin, "tags": tuple(tags)}}, upsert = True)
+        
+    def setpassword(tokens):
+        if len(tokens) != 3:
+            print "Usage: setpassword username password"
+            return
+        username = tokens[1]
+        password = tokens[2]
+        phash = bcrypt.hashpw(password, bcrypt.gensalt())
+        pbin = bson.binary.Binary(phash, bson.binary.USER_DEFINED_SUBTYPE)
+        accounts.update({"user": username}, {"$set": {"password": pbin}})
             
     def rmuser(tokens):
         if len(tokens) != 2:
@@ -88,8 +99,14 @@ def exec_statement(string):
     tokens = string.split()
     if len(tokens) == 0:
         return
-        
-    exec_func = funcs.get(tokens[0], disp_help)
+    
+    command = tokens[0]
+    if command not in funcs:
+        exec_func = disp_help
+        print "'{0}' is not a valid command".format(command)
+    else:
+        exec_func = funcs[command]
+    
     exec_func(tokens)
     
 while True:
