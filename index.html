@@ -33,12 +33,18 @@
     <script src="mr-plotter/js/cursors.js"></script>
     <script src="mr-plotter/js/requester.js"></script>
     <script>
-        function init() {
-            mr_plotter(document.body);
-        }
-        document.addEventListener('DOMContentLoaded', init, false);
+        $(function () {
+                mr_plotter(document.body);
+            });
     </script>
     <body>
+        <div class="navbar navbar-default" role="navigation">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="/">Mr. Plotter</a>
+            </div>
+            <div class="navbar-collapse collapse">
+            </div>
+        </div>
     </body>
 </html>
 

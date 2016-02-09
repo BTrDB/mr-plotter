@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -566,6 +567,7 @@ var dr *DataRequester
 var br *DataRequester
 var mdServer string
 var permalinkConn *mgo.Collection
+var accountConn *mgo.Collection
 var csvURL string
 
 func main() {
@@ -653,6 +655,7 @@ func main() {
 	
 	plotterDBConn := mongoConn.DB("mr_plotter")
 	permalinkConn = plotterDBConn.C("permalinks")
+	accountConn = plotterDBConn.C("accounts")
 	
 	dr = NewDataRequester(dbaddr.(string), dataConn, 8, false)
 	if dr == nil {
@@ -671,6 +674,8 @@ func main() {
 	http.HandleFunc("/metadata", metadataHandler)
 	http.HandleFunc("/permalink", permalinkHandler)
 	http.HandleFunc("/csv", csvHandler)
+	http.HandleFunc("/login", loginHandler)
+	http.HandleFunc("/logoff", logoffHandler)
 	
 	var portStr string = fmt.Sprintf(":%v", port)
 	
@@ -832,8 +837,22 @@ func metadataHandler (w http.ResponseWriter, r *http.Request) {
 	}
 	
 	request, err := ioutil.ReadAll(r.Body) // should probably limit the size of this
+	if err != nil {
+		w.Write([]byte("Could not read request."))
+		return
+	}
 	
-	mdReq, err := http.NewRequest("POST", mdServer, strings.NewReader(string(request)))
+	var tags string = "public"
+	semicolonindex := bytes.IndexByte(request, ';')
+	if semicolonindex != -1 {
+		token := request[semicolonindex + 1:]
+		tagslice := usertags(token)
+		if tagslice != nil {
+			tags = strings.Join(tagslice, ",")
+		}
+	}
+	
+	mdReq, err := http.NewRequest("POST", fmt.Sprintf("%s?tags=%s", mdServer, tags), strings.NewReader(string(request)))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("Could not perform HTTP request to metadata server: %v", err)))
@@ -964,6 +983,7 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Allow", "POST")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		w.Write([]byte("To get a CSV file, send the required data as a JSON document via a POST request."))
+		return
 	}
 	w.Header().Set("Content-Disposition", "attachment; filename=data.csv")
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
@@ -994,4 +1014,77 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(buffer[:bytesRead])
 	}
 	resp.Body.Close()
+}
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.Header().Set("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("To log in, make a POST request with JSON containing a username and password."))
+		return
+	}
+	
+	var err error
+	var jsonLogin map[string]interface{}
+	var usernameint interface{}
+	var username string
+	var passwordint interface{}
+	var password string
+	var ok bool
+	
+	var loginDecoder *json.Decoder = json.NewDecoder(r.Body)
+
+	err = loginDecoder.Decode(&jsonLogin)
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("Error: received invalid JSON: %v", err)))
+		return
+	}
+
+	usernameint, ok = jsonLogin["username"]
+	if !ok {
+		w.Write([]byte(fmt.Sprintf("Error: JSON must contain field 'username'")))
+		return
+	}
+	
+	passwordint, ok = jsonLogin["password"]
+	if !ok {
+		w.Write([]byte(fmt.Sprintf("Error: JSON must contain field 'password'")))
+		return
+	}
+	
+	username, ok = usernameint.(string)
+	if !ok {
+		w.Write([]byte(fmt.Sprintf("Error: field 'username' must be a string")))
+		return
+	}
+	
+	password, ok = passwordint.(string)
+	if !ok {
+		w.Write([]byte(fmt.Sprintf("Error: field 'password' must be a string")))
+		return
+	}
+	
+	tokenarr := userlogin(accountConn, username, []byte(password))
+	if tokenarr != nil {
+		w.Write(tokenarr)
+	}
+}
+
+func logoffHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.Header().Set("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("To log off, make a POST request with the session token."))
+		return
+	}
+	
+	tokenslice := make([]byte, TOKEN_BYTE_LEN, TOKEN_BYTE_LEN)
+	
+	n, err := io.ReadFull(r.Body, tokenslice)
+	if err == nil && n == TOKEN_BYTE_LEN {
+		userlogoff(tokenslice)
+		w.Write([]byte("Logoff successful."))
+	}
+	
+	w.Write([]byte("Invalid session token."))
 }
