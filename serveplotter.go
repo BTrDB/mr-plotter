@@ -676,6 +676,7 @@ func main() {
 	http.HandleFunc("/csv", csvHandler)
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/logoff", logoffHandler)
+	http.HandleFunc("/changepw", changepwHandler)
 	
 	var portStr string = fmt.Sprintf(":%v", port)
 	
@@ -1087,4 +1088,74 @@ func logoffHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	w.Write([]byte("Invalid session token."))
+}
+
+func changepwHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.Header().Set("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("To change password, make a POST request with the appropriate JSON document."))
+		return
+	}
+	
+	var err error
+	var jsonChangePassword map[string]interface{}
+	var tokenint interface{}
+	var token string
+	var oldpasswordint interface{}
+	var oldpassword string
+	var newpasswordint interface{}
+	var newpassword string
+	var ok bool
+	
+	var pwDecoder *json.Decoder = json.NewDecoder(r.Body)
+
+	err = pwDecoder.Decode(&jsonChangePassword)
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("Error: received invalid JSON: %v", err)))
+		return
+	}
+
+	tokenint, ok = jsonChangePassword["token"]
+	if !ok {
+		w.Write([]byte(fmt.Sprintf("Error: JSON must contain field 'token'")))
+		return
+	}
+	
+	oldpasswordint, ok = jsonChangePassword["oldpassword"]
+	if !ok {
+		w.Write([]byte(fmt.Sprintf("Error: JSON must contain field 'oldpassword'")))
+		return
+	}
+	
+	newpasswordint, ok = jsonChangePassword["newpassword"]
+	if !ok {
+		w.Write([]byte(fmt.Sprintf("Error: JSON must contain field 'newpassword'")))
+		return
+	}
+	
+	token, ok = tokenint.(string)
+	if !ok {
+		w.Write([]byte(fmt.Sprintf("Error: field 'token' must be a string")))
+		return
+	}
+	
+	oldpassword, ok = oldpasswordint.(string)
+	if !ok {
+		w.Write([]byte(fmt.Sprintf("Error: field 'oldpassword' must be a string")))
+		return
+	}
+	
+	newpassword, ok = newpasswordint.(string)
+	if !ok {
+		w.Write([]byte(fmt.Sprintf("Error: field 'newpassword' must be a string")))
+		return
+	}
+	
+	success := userchangepassword(accountConn, []byte(token), []byte(oldpassword), []byte(newpassword))
+	if (success) {
+		w.Write([]byte("Success."))
+	} else {
+		w.Write([]byte("Failure."))
+	}
 }

@@ -34,21 +34,27 @@ var sessionsbyid map[[TOKEN_BYTE_LEN]byte]*LoginSession = make(map[[TOKEN_BYTE_L
 // Maps user to session
 var sessionsbyuser map[string]*LoginSession = make(map[string]*LoginSession)
 
+func checkpassword(passwordConn *mgo.Collection, user string, password []byte) (userdoc map[string]interface{}, err error) {
+	userquery := bson.M{ "user": user }
+	err = passwordConn.Find(userquery).One(&userdoc)
+	if err != nil {
+		return
+	}
+	hashedpasswordbinary := userdoc["password"].(bson.Binary)
+	hashedpassword := hashedpasswordbinary.Data
+	
+	err = bcrypt.CompareHashAndPassword(hashedpassword, password)
+	return
+}
+
 /* Writing to the returned slice results in undefined behavior.
    The returned slice is guaranteed to have a length of TOKEN_BYTE_LEN. */
 func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byte {
 	var userdoc map[string]interface{}
 	var loginsession *LoginSession
 	var err error
-	userquery := bson.M{ "user": user }
-	err = passwordConn.Find(userquery).One(&userdoc)
-	if err == nil {
-		return nil
-	}
-	hashedpasswordbinary := userdoc["password"].(bson.Binary)
-	hashedpassword := hashedpasswordbinary.Data
 	
-	err = bcrypt.CompareHashAndPassword(hashedpassword, password)
+	userdoc, err = checkpassword(passwordConn, user, password)
 	if err != nil {
 		return nil
 	}
@@ -98,7 +104,7 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 
 func getloginsession(token []byte) *LoginSession {
 	if len(token) != TOKEN_BYTE_LEN {
-		panic(fmt.Sprintf("Logoff token has length %d; expected length %d\n", len(token), TOKEN_BYTE_LEN))
+		return nil
 	}
 	var tokenarr [TOKEN_BYTE_LEN]byte
 	copy(tokenarr[:], token)
@@ -117,14 +123,37 @@ func userlogoff(token []byte) {
 }
 
 func usertags(token []byte) []string {
-	if len(token) != TOKEN_BYTE_LEN {
-		return nil
-	}
-	
 	loginsession := getloginsession(token)
 	if loginsession == nil {
 		return nil
 	}
 	
 	return loginsession.tags	
+}
+
+func userchangepassword(passwordConn *mgo.Collection, token []byte, oldpw []byte, newpw []byte) bool {
+	loginsession := getloginsession(token)
+	if loginsession == nil {
+		return false
+	}
+	
+	var hash []byte
+	var err error
+	
+	user := loginsession.user
+	_, err = checkpassword(passwordConn, user, oldpw)
+	if err != nil {
+		return false
+	}
+	
+	hash, err = bcrypt.GenerateFromPassword(newpw, bcrypt.DefaultCost)
+	if err != nil {
+		return false
+	}
+	
+	updatepasssel := bson.M{ "user": user }
+	updatepasscom := bson.M{ "$set": bson.M{ "password": bson.Binary{ Kind: 0x80, Data: hash } } }
+	
+	err = passwordConn.Update(updatepasssel, updatepasscom)
+	return err == nil
 }
