@@ -1,11 +1,13 @@
 #!/usr/bin/python
+import bcrypt
+import bson.binary
 import pymongo
 
 client = pymongo.MongoClient()
-accounts_collection = client.mr_plotter.accounts
+accounts = client.mr_plotter.accounts
 
 def disp_help(tokens):
-    print "Valid commands are:", " ".join(funcs.keys())
+    print "Valid commands:", " ".join(funcs.keys())
 
 def create_funcs():
     help = disp_help
@@ -14,43 +16,57 @@ def create_funcs():
         if len(tokens) < 3:
             print "Usage: adduser username password [tag1] [tag2] ..."
             return
-        print "Not implemented"
+        username = tokens[1]
+        password = tokens[2]
+        phash = bcrypt.hashpw(password, bcrypt.gensalt())
+        pbin = bson.binary.Binary(phash, bson.binary.USER_DEFINED_SUBTYPE)
+        # ALL accounts have the public tag
+        tags = set(tokens[3:])
+        tags.add("public")
+        accounts.insert_one({"user": username, "password": pbin, "tags": tuple(tags)})
             
-    def deluser(tokens):
+    def rmuser(tokens):
         if len(tokens) != 2:
-            print "Usage: deluser username"
+            print "Usage: rmuser username"
             return
-        print "Not implemented"
+        accounts.delete_one({"user": tokens[1]})
             
     def addtags(tokens):
         if len(tokens) < 3:
             print "Usage: addtags username tag1 [tag2] [tag3] ..."
             return
-        print "Not implemented"
+        accounts.update({"user": tokens[1]}, {"$addToSet": {"tags": {"$each": tokens[2:]}}})
             
     def rmtags(tokens):
         if len(tokens) < 3:
             print "Usage: rmtags username tag1 [tag2] [tag3] ..."
             return
-        print "Not implemented"
+        # ALL accounts have the public tag
+        tags = set(tokens[2:])
+        if "public" in tags:
+            tags.remove("public")
+        accounts.update({"user": tokens[1]}, {"$pullAll": {"tags": tuple(tags)}})
             
     def lstags(tokens):
         if len(tokens) != 2:
             print "Usage: lstags username"
             return
-        print "Not implemented"
+        account = accounts.find_one({"user": tokens[1]})
+        print " ".join(account["tags"])
             
     def lsusers(tokens):
         if len(tokens) != 1:
             print "Usage: lsusers"
             return
-        print "Not implemented"
+        for account in accounts.find():
+            print account["user"]
             
-    def lsall(tokens):
+    def ls(tokens):
         if len(tokens) != 1:
-            print "Usage: lsall"
+            print "Usage: ls"
             return
-        print "Not implemented"
+        for account in accounts.find():
+            print "{0}: {1}".format(account["user"], " ".join(account["tags"]))
         
     def exit(tokens):
         if len(tokens) != 1:
