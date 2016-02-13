@@ -334,8 +334,15 @@ function init_graph(self, c1, c2) {
     self.idata.changedTimes = false;
     self.idata.otherChange = false;
     s3ui.updatePlotMessage(self);
-        
-    s3ui.updateStreamList(self);
+    
+    // Make parts of the login menu invisible
+    self.$(".loginstate-loggedin").hide();
+    self.find(".loginButton").onclick = function () {
+            s3ui.login(self);
+        };
+    self.find(".logoffButton").onclick = function () {
+            s3ui.logoff(self);
+        };
     
     s3ui.updateStreamTree(self)
     
@@ -344,12 +351,3 @@ function init_graph(self, c1, c2) {
         c2(self);
     }
 }
-
-/* When a user logs in or logs out, we need to update the stream tree. */
-s3ui.updateStreamTree = function (self) {
-        var curr_state = s3ui.createPermalink(self, true);
-        s3ui.updateStreamList(self);
-        if (curr_state != undefined) {
-            s3ui.executePermalink(self, curr_state, true); // reselect the streams from before, to the best of our ability
-        }
-    };

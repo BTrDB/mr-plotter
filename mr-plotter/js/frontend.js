@@ -404,6 +404,47 @@ function createCSVDownload(self, streams, settingsObj, domain, pwe, graphExport)
     csvform.submit();
 }
 
+function login(self) {
+    var usernamefield = self.find(".username");
+    var passwordfield = self.find(".password");
+    var username = usernamefield.value;
+    var password = passwordfield.value;
+    usernamefield.value = "";
+    passwordfield.value = "";
+    
+    var $loginButton = $(self.find(".loginMenu"));
+    var loginmessage = self.find(".loginmessage");
+    
+    $loginButton.button("loading");
+    self.requester.makeLoginRequest(username, password, function (token) {
+            $loginButton.button("reset");
+            if (token === "") {
+                loginmessage.innerHTML = "Invalid username or password";
+                $loginButton.dropdown("toggle");
+            } else {
+                self.requester.setToken(token);
+                s3ui.updateStreamTree(self);
+                loginmessage.innerHTML = "";
+                var $loginList = $(self.find(".loginList"));
+                $loginList.find(".loginstate-start").hide();
+                $loginList.find(".loginstate-loggedin").show();
+            }
+        }, function (error) {
+            loginmessage.innerHTML = "A server error has occurred";
+            $loginButton.button("reset");
+            $loginButton.dropdown("toggle");
+        });
+}
+
+function logoff(self) {
+    self.requester.makeLogoffRequest(function () {});
+    self.requester.setToken("");
+    s3ui.updateStreamTree(self);
+    var $loginList = $(self.find(".loginList"));
+    $loginList.find(".loginstate-loggedin").hide();
+    $loginList.find(".loginstate-start").show();
+}
+
 s3ui.init_frontend = init_frontend;
 s3ui.toggleLegend = toggleLegend;
 s3ui.setStreamMessage = setStreamMessage;
@@ -412,3 +453,5 @@ s3ui.getSelectedTimezone = getSelectedTimezone;
 s3ui.createPlotDownload = createPlotDownload;
 s3ui.createPermalink = createPermalink;
 s3ui.buildCSVMenu = buildCSVMenu;
+s3ui.login = login;
+s3ui.logoff = logoff;

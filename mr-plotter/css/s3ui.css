@@ -80,3 +80,9 @@ div.timeSelection {
     margin-left: 15px;
     margin-right: 15px;
 }
+ul.loginList {
+    padding: 5px;
+}
+div.loginmessage {
+    color: red;
+}

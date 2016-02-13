@@ -81,21 +81,28 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 		if MAX_TOKEN.Sign() == 0 {
 			(&MAX_TOKEN).SetBytes(MAX_TOKEN_BYTES)
 		}
-		token, err := rand.Int(rand.Reader, &MAX_TOKEN)
-		if err != nil {
-			fmt.Println("Could not generate session key")
-			return nil
-		}
-		tokenbytes := token.Bytes()
-		
+		var token *big.Int
 		var tokenarr [TOKEN_BYTE_LEN]byte
-		copy(tokenarr[TOKEN_BYTE_LEN - len(tokenbytes):], tokenbytes)
+		for token == nil || sessionsbyid[tokenarr] != nil {
+			token, err = rand.Int(rand.Reader, &MAX_TOKEN)
+			if err != nil {
+				fmt.Println("Could not generate session key")
+				return nil
+			}
+			tokenbytes := token.Bytes()
+		
+			copy(tokenarr[TOKEN_BYTE_LEN - len(tokenbytes):], tokenbytes)
+		}
 		
 		loginsession = &LoginSession{
 			user: user,
 			token: tokenarr,
 			tags: taglist,
 		}
+		
+		sessionsbyid[tokenarr] = loginsession
+		sessionsbyuser[user] = loginsession
+		
 		return tokenarr[:]
 	} else {
 		return loginsession.token[:]
@@ -103,23 +110,21 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 }
 
 func getloginsession(token []byte) *LoginSession {
-	if len(token) != TOKEN_BYTE_LEN {
-		return nil
-	}
 	var tokenarr [TOKEN_BYTE_LEN]byte
 	copy(tokenarr[:], token)
 	
 	return sessionsbyid[tokenarr]
 }
 
-func userlogoff(token []byte) {
+func userlogoff(token []byte) bool {
 	loginsession := getloginsession(token)
 	if loginsession == nil {
-		return
+		return false
 	}
 	
 	delete(sessionsbyid, loginsession.token)
 	delete(sessionsbyuser, loginsession.user)
+	return true
 }
 
 func usertags(token []byte) []string {

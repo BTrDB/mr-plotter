@@ -38,6 +38,7 @@ DataConn.prototype.send = function(message, callback) {
 
 function Requester(backend) {
     this.backend = backend;
+    this.token = "";
     if (USE_WEBSOCKETS) {
         this.dconnections = [];
         var i;
@@ -56,11 +57,42 @@ function Requester(backend) {
 Requester.prototype.DATA_CONN = 8;
 Requester.prototype.BRACK_CONN = 2;
 
+Requester.prototype.setToken = function (token) {
+        if (token == undefined || token == null) {
+            self.token = "";
+        } else {
+            self.token = token;
+        }
+    };
+
+Requester.prototype.makeLoginRequest = function (username, password, success_callback, error_callback) {
+        var loginjsonstr = JSON.stringify({"username": username, "password": password});
+        return $.ajax({
+            type: "POST",
+            url: "https://" + this.backend + "/login",
+            data: loginjsonstr,
+            success: success_callback,
+            dataType: "text",
+            error: error_callback = undefined ? function () {} : error_callback
+        });
+    };
+    
+Requester.prototype.makeLogoffRequest = function (success_callback, error_callback) {
+        return $.ajax({
+            type: "POST",
+            url: "https://" + this.backend + "/logoff",
+            data: self.token,
+            success: success_callback,
+            dataType: "text",
+            error: error_callback = undefined ? function () {} : error_callback
+        });
+    };
+
 Requester.prototype.makeMetadataRequest = function (query, success_callback, error_callback) {
         return $.ajax({
                 type: "POST",
                 url: "https://" + this.backend + "/metadata",
-                data: query,
+                data: query.concat(self.token),
                 success: success_callback,
                 dataType: "text",
                 error: error_callback == undefined ? function () {} : error_callback

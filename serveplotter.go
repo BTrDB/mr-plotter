@@ -569,6 +569,8 @@ var mdServer string
 var permalinkConn *mgo.Collection
 var accountConn *mgo.Collection
 var csvURL string
+var token64len int
+var token64dlen int
 
 func main() {
 	configfile, err := ioutil.ReadFile("plotter.ini")
@@ -665,6 +667,9 @@ func main() {
 	if br == nil {
 		os.Exit(1)
 	}
+	
+	token64len = base64.StdEncoding.EncodedLen(TOKEN_BYTE_LEN)
+	token64dlen = base64.StdEncoding.DecodedLen(token64len)
 	
 	http.Handle("/", http.FileServer(http.Dir(directory.(string))))
 	http.HandleFunc("/dataws", datawsHandler)
@@ -837,6 +842,7 @@ func metadataHandler (w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
+	var n int
 	request, err := ioutil.ReadAll(r.Body) // should probably limit the size of this
 	if err != nil {
 		w.Write([]byte("Could not read request."))
@@ -846,10 +852,18 @@ func metadataHandler (w http.ResponseWriter, r *http.Request) {
 	var tags string = "public"
 	semicolonindex := bytes.IndexByte(request, ';')
 	if semicolonindex != -1 {
-		token := request[semicolonindex + 1:]
-		tagslice := usertags(token)
-		if tagslice != nil {
-			tags = strings.Join(tagslice, ",")
+		tokenencoded := request[semicolonindex + 1:]
+		request = request[:semicolonindex + 1]
+		
+		if len(tokenencoded) == token64len {
+			tokenslice := make([]byte, token64dlen, token64dlen)
+			n, err = base64.StdEncoding.Decode(tokenslice, tokenencoded)
+			if n == TOKEN_BYTE_LEN && err == nil {
+				tagslice := usertags(tokenslice)
+				if tagslice != nil {
+					tags = strings.Join(tagslice, ",")
+				}
+			}
 		}
 	}
 	
@@ -1067,7 +1081,9 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	
 	tokenarr := userlogin(accountConn, username, []byte(password))
 	if tokenarr != nil {
-		w.Write(tokenarr)
+		token64buf := make([]byte, token64len)
+		base64.StdEncoding.Encode(token64buf, tokenarr)
+		w.Write(token64buf)
 	}
 }
 
@@ -1079,12 +1095,16 @@ func logoffHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	tokenslice := make([]byte, TOKEN_BYTE_LEN, TOKEN_BYTE_LEN)
+	tokenencoded := make([]byte, token64len, token64len)
+	tokenslice := make([]byte, token64dlen, token64dlen)
 	
-	n, err := io.ReadFull(r.Body, tokenslice)
-	if err == nil && n == TOKEN_BYTE_LEN {
-		userlogoff(tokenslice)
-		w.Write([]byte("Logoff successful."))
+	n, err := io.ReadFull(r.Body, tokenencoded)
+	if err == nil && n == token64len {
+		n, err = base64.StdEncoding.Decode(tokenslice, tokenencoded)
+		if n == TOKEN_BYTE_LEN && err == nil && userlogoff(tokenslice) {
+			w.Write([]byte("Logoff successful."))
+			return
+		}
 	}
 	
 	w.Write([]byte("Invalid session token."))
@@ -1107,6 +1127,7 @@ func changepwHandler(w http.ResponseWriter, r *http.Request) {
 	var newpasswordint interface{}
 	var newpassword string
 	var ok bool
+	var tokenslice []byte
 	
 	var pwDecoder *json.Decoder = json.NewDecoder(r.Body)
 
@@ -1118,41 +1139,52 @@ func changepwHandler(w http.ResponseWriter, r *http.Request) {
 
 	tokenint, ok = jsonChangePassword["token"]
 	if !ok {
-		w.Write([]byte(fmt.Sprintf("Error: JSON must contain field 'token'")))
+		w.Write([]byte("Error: JSON must contain field 'token'"))
 		return
 	}
 	
 	oldpasswordint, ok = jsonChangePassword["oldpassword"]
 	if !ok {
-		w.Write([]byte(fmt.Sprintf("Error: JSON must contain field 'oldpassword'")))
+		w.Write([]byte("Error: JSON must contain field 'oldpassword'"))
 		return
 	}
 	
 	newpasswordint, ok = jsonChangePassword["newpassword"]
 	if !ok {
-		w.Write([]byte(fmt.Sprintf("Error: JSON must contain field 'newpassword'")))
+		w.Write([]byte("Error: JSON must contain field 'newpassword'"))
 		return
 	}
 	
 	token, ok = tokenint.(string)
 	if !ok {
-		w.Write([]byte(fmt.Sprintf("Error: field 'token' must be a string")))
+		w.Write([]byte("Error: field 'token' must be a string"))
 		return
 	}
 	
 	oldpassword, ok = oldpasswordint.(string)
 	if !ok {
-		w.Write([]byte(fmt.Sprintf("Error: field 'oldpassword' must be a string")))
+		w.Write([]byte("Error: field 'oldpassword' must be a string"))
 		return
 	}
 	
 	newpassword, ok = newpasswordint.(string)
 	if !ok {
-		w.Write([]byte(fmt.Sprintf("Error: field 'newpassword' must be a string")))
+		w.Write([]byte("Error: field 'newpassword' must be a string"))
 		return
 	}
 	
-	success := userchangepassword(accountConn, []byte(token), []byte(oldpassword), []byte(newpassword))
+	if len(token) != token64len {
+		w.Write([]byte("Error: invalid token"))
+		return
+	}
+	
+	tokenslice, err = base64.StdEncoding.DecodeString(token)
+	if err != nil || len(tokenslice) != TOKEN_BYTE_LEN {
+		w.Write([]byte("Error: invalid token"))
+		return
+	}
+	
+	success := userchangepassword(accountConn, tokenslice, []byte(oldpassword), []byte(newpassword))
 	if (success) {
 		w.Write([]byte("Success."))
 	} else {

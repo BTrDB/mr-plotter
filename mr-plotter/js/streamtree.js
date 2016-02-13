@@ -11,6 +11,17 @@ function init_streamtree(self) {
     self.idata.numLeaves = undefined;
 }
 
+/* When a user logs in or logs out, we need to update the stream tree.
+   Unlike updateStreamList, this maintains, to the best of its ability,
+   which streams are selected. */
+function updateStreamTree(self) {
+    var curr_state = s3ui.createPermalink(self, true);
+    s3ui.updateStreamList(self);
+    if (curr_state != undefined) {
+        s3ui.executePermalink(self, curr_state, true); // reselect the streams from before, to the best of our ability
+    }
+}
+
 function updateStreamList(self) {
     self.idata.rootNodes = {};
     self.idata.leafNodes = {};
@@ -326,4 +337,5 @@ function countUnselectedStreams (tree, node) {
 
 s3ui.init_streamtree = init_streamtree;
 s3ui.updateStreamList = updateStreamList;
+s3ui.updateStreamTree = updateStreamTree;
 s3ui.selectNode = selectNode;
