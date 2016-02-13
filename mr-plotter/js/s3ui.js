@@ -38,6 +38,7 @@ function mr_plotter(parent, options, cb1, cb2, backend) {
     parent.appendChild(container);
     var instance = new MrPlotter(container, backend, options, cb1, cb2);
     s3ui.__init__(instance);
+    return instance;
 }
 
 s3ui.parsePixelsToInt = function (q) {
@@ -161,6 +162,7 @@ function init_visuals(self, options) {
     setVisibility(self, options, "div.plotLoading", "hide_info_bar");
     setVisibility(self, options, "div.timeSelection", "hide_time_selection");
     setVisibility(self, options, "div.streamSelection", "hide_stream_tree");
+    setVisibility(self, options, "div.login", "hide_login");
     if (!options.hasOwnProperty("hide_plot_directions")) { // we have to take action to enforce the default here
         options.hide_plot_directions = false;
     }

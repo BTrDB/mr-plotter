@@ -405,15 +405,16 @@ function createCSVDownload(self, streams, settingsObj, domain, pwe, graphExport)
 }
 
 function login(self) {
-    var usernamefield = self.find(".username");
-    var passwordfield = self.find(".password");
+    var loginElem = self.find(".login");
+    var usernamefield = loginElem.querySelector(".username");
+    var passwordfield = loginElem.querySelector(".password");
     var username = usernamefield.value;
     var password = passwordfield.value;
     usernamefield.value = "";
     passwordfield.value = "";
     
-    var $loginButton = $(self.find(".loginMenu"));
-    var loginmessage = self.find(".loginmessage");
+    var $loginButton = $(loginElem.querySelector(".loginMenu"));
+    var loginmessage = loginElem.querySelector(".loginmessage");
     
     $loginButton.button("loading");
     self.requester.makeLoginRequest(username, password, function (token) {
@@ -425,7 +426,7 @@ function login(self) {
                 self.requester.setToken(token);
                 s3ui.updateStreamTree(self);
                 loginmessage.innerHTML = "";
-                var $loginList = $(self.find(".loginList"));
+                var $loginList = $(loginElem.querySelector(".loginList"));
                 $loginList.find(".loginstate-start").hide();
                 $loginList.find(".loginstate-loggedin").show();
             }

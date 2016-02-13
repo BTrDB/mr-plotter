@@ -1,41 +1,38 @@
 Mr. Plotter
 ===========
-Currently, this file contains the documentation for an out-of-date version of
-the plotter that is based on Meteor. A new version that uses a backend written
-in Go is now in progress.
+The Multi-Resolution Plotter is a utility for viewing data in BTrDB.
 
-The "upmu-plotter" repository contains the "s3ui" package along with an example
-of how to use it.
-
-The "s3ui" package defines the "s3plot" template, which contains a graphing
-utility that can be included in a Meteor application. Multiple instances of
-"s3plot" can be inserted into the same web page and will act independently of
-one another.
+The backend consists of three parts: (1) an HTTP server written in Go, (2) a
+metadata server that answers sMAP queries, and (3) a Mongo Database to store
+permalinks and account information. The script accounts.py provides a REPL
+for creating accounts and granting permissions. Permissions are granted
+to users at the granularity of "tags". The script metadata.py is a minimal
+implementation of the metadata server; tagconfig.json maps "tags" to viewable
+streams, and must be supplied to metadata.py as a command line argument.
 
 Instantiating a Graph
 ---------------------
-To insert a graph with full control available to the user, simply use the
-inclusion operator:
-<pre><code>{{> s3plot}}</code></pre>
+To insert a graph with full control available to the user, simply execute the
+following in Javascript:
+<pre><code>{{mr_plotter(domElement);}}</code></pre>
+The graph will be inserted as a child of the specified DOM Element.
 
-One can also instantiate the graph with paremeters, by wrapping the inclusion
-operator in a data context:
-<pre><code>{{#with somecontext}}
-    {{> s3plot}}
-{{/with}}</code></pre>
+One can also instantiate the graph with parameters:
+<pre><code>{{mr_plotter(domElement, options, callback1, callback2, backend);}}</code></pre>
 
-If "somecontext" is an array (or array-like object) with an object at index 0,
-a function at index 1, and a function at index 2, the object at index 0 is
-interpreted as specifying parameters and the functions at indices 1 and 2 are
-interpreted as callback functions.
+OPTIONS is a Javascript object containing parameters (explained below).
+CALLBACK1 and CALLBACK2 are callback functions invoked during initialization
+(explained below). BACKEND is the URL of the backend; if omitted, it is derived
+from window.location.
 
-The object of parameters may have the following properties (all optional):
+OPTIONS, the object of parameters, may have the following properties (all optional):
 
 * hide\_permalink - TRUE if the button to generate a permalink and the space to display it are to be hidden. Defaults to FALSE.
 * hide\_graph\_export - TRUE if the menu to export the graph to an SVG file is to be hidden. Defaults to FALSE.
 * hide\_stream\_legend - TRUE if the legend displaying streams is to be hidden. Defaults to FALSE.
 * hide\_axis\_legend - TRUE if the legend displaying axes is to be hidden. Defaults to FALSE.
 * hide\_automatic\_update - TRUE if the checkbox specifying whether stream removals and axis changes should be applied automatically is to be hidden. Defaults to FALSE.
+* hide\_login\_button - TRUE if the "Login" dropdown menu is to be hidden. Defaults to FALSE.
 * hide\_apply\_button - TRUE if the "Apply and Plot" button is to be hidden. Defaults to FALSE.
 * hide\_reset\_button - TRUE if the "Reset Zoom" button is to be hidden. Defaults to FALSE.
 * hide\_autozoom\_button - True if the "Autozoom and Plot" button is to be hiddn. Defaults to FALSE.
@@ -86,42 +83,30 @@ Custom Layouts
 --------------
 Simply including the s3plot template provides a default layout, and the first
 callback function allows for simple layout changes (see above). But for more
-advanced layouts it may be easier to write the layout in HTML. Rather than
-including the s3plot template, one can create a custom template describing the
-preferred layout and call the s3ui.\_\_init\_\_ function on the template
-instance (the implicit parameter "this") in Meteor's "rendered" callback.
-
-To make creating the HTML layout easier, several sub-templates are included.
-They are:
-
-* s3plot_plotStyles
-* s3plot_permalink
-* s3plot_export
-* s3plot_chart
-* s3plot_streamLegend
-* s3plot_axisLegend
-* s3plot_automaticUpdate
-* s3plot_timeSelection
-* s3plot_streamSelection
-
-These templates can be included in the custom template. But if you want a
-higher degree of customization, you can write your own template components
-from scratch (though be aware that the relative positioning of the components
-of the stream and axis legends may be necessary for the correctness of the
-graph). If you do not want all of the features of the graph, you _must_ still
-include all of the components; use the appropriate parameters on instantiation
-to hide the components you do not need (see above).
+advanced layouts it may be easier to write the layout in HTML. The
+implementation of the plotter is, to a large degree, robust to layout changes;
+it relies mostly on the classes of the HTML components, as long as the logical
+components are kept together. For example, it is OK to move the login
+section of the plotter's HTML to a different place, but it is not OK to put
+the different components of the login dropdown menu in different places. The
+"modules" that can be rearranged on the page are marked with HTML comments. If
+you do not want all of the features of the graph, you _must_ still include all
+of the components; use the appropriate parameters on instantiation to hide the
+components you do not need (see above).
 
 As a rule of thumb, any element in the "s3plot" template that has a class not
-provided by Bootstrap contributes to the functioning of the graph in some way.
+provided by Bootstrap contributes to the functioning of the graph in some way
+and should be kept even if the layout is rearranged. The 
 
 Programmatically Changing the Graph
 -----------------------------------
-The "idata" property of the template instance is an object that stores the
+The "idata" property of the plotter instance is an object that stores the
 instance fields  of the object (i.e., the variables used by the graph to
 keep track of its internal state). The "imethods" property of the template
 instance contains bound methods that can be used to programmatically manipulate
-the state of the graph.
+the state of the graph. The only exception to this rule is that the "requester"
+object, which handles outstanding requests to the site's backend, is a direct
+property of the plotter instance (i.e., in neither idata nor imethods).
 
 The bound methods provided are:
 
@@ -294,43 +279,16 @@ Below is an example of permalink data that uses a window of type "now" (a window
 Restricting Stream Access
 -------------------------
 It is possible to restrict streams to be visible only by certain users. The
-is place is as follows: an account system is set up via Meteor's login system.
-In each user document is a field called "s3ui_tags", which contains a list of
-tags corresponding to each user. Each tag is a token that represents certain
-streams. When the program requests stream metadata to build the stream tree, it
-sends the current user's tags along with the request. The program that returns
-the metadata is responsible for interpreting the tags and only revealing
-information about streams visible to users with those tags.
+accounts.py script provides a REPL that allows one to create user accounts,
+and to associate which each user a set of tags. A _tag_ represents the
+permissions to view a set of streams. Every user always has a tag called
+_public_, which represents the ability to view publicly available streams;
+additional tags may be added via the REPL.
 
-The s3ui package does not do any of the setup work to use Meteor's accounts
-system; doing so would preclude use of Meteor's accounts system for the s3ui
-plot in conjunction with other features.
-
-That said, an example of an appropriate configuration may be found in the "lib"
-and "server" directories of the "upmuplot" Meteor project. The files here set
-up the user information to be read from the "server/account_list.json" file.
-The "users\_to\_add" property contains an object mapping usernames to objects
-containing the "password" in plaintext and "s3ui_tags" as an array of strings.
-The "users" property contains information about existing users; here, the
-password is not stored in plaintext. When Meteor, as configured in this
-repository, starts, it moves the users in "users\_to\_add" to "users", hashing
-the passwords as appropriate, and updates Meteor's internal database of users
-according to changes made in the file.
-
-Similarly, an example of a program to serve metadata requests is found in the
-python folder of this package  ("metadata.py"). It reads the tag definitions
-from a file passed in as a command line argument (such as "tagconfig.json").
-The file is expected to be a JSON document mapping each tag to an array of
-strings, each of which represents a prefix of paths of streams corresponding to
-that tag.
-
-Examples of the two configuration files can be found in the appropriate
-directories of this repository. Once again, using these example programs to
-restrict stream access is by no means required; you may use any method you wish
-to add users to the Meteor.users repository as long as the "s3ui_tags" field in
-each user document is correct, you can interpret the tags to find out the
-streams they refer to in any way you want, and you can even choose to not
-restrict stream access at all.
+The mapping from tags to specific streams that are viewable is in the file
+tagconfig.json. Each tag is a key in the JSON documents; the corresponding
+value is a list of path prefixes (as strings) that describe the streams
+viewable by users with that tag.
 
 If a user logs in or out while streams are selected, the plotting application
 will maintain the streams being plotted as far as possible, ensuring that the
