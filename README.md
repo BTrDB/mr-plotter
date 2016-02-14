@@ -18,8 +18,11 @@ following in Javascript:
 The graph will be inserted as a child of the specified DOM Element.
 
 One can also instantiate the graph with parameters:
-<pre><code>{{mr_plotter(domElement, options, callback1, callback2, backend);}}</code></pre>
+<pre><code>{{mr_plotter(domElement, storageKey, options, callback1, callback2, backend);}}</code></pre>
 
+STORAGEKEY is a string that is the key to use when persisting login sessions.
+Local storage is used by default. cookies are used when local storage is not
+available. Two keys are stored: _storageKey_\_username and _storageKey_\_token.
 OPTIONS is a Javascript object containing parameters (explained below).
 CALLBACK1 and CALLBACK2 are callback functions invoked during initialization
 (explained below). BACKEND is the URL of the backend; if omitted, it is derived
@@ -40,14 +43,10 @@ OPTIONS, the object of parameters, may have the following properties (all option
 * hide\_time\_selection - TRUE if the menu to select the start and end times is to be hidden. Defaults to FALSE.
 * hide\_stream\_tree - TRUE if the tree used to select streams is to be hidden. Defaults to FALSE.
 * hide\_plot\_directions - TRUE if the directions for how to use the interface are to be hidden. Defaults to FALSE.
-* hide\_refresh\_button - TRUE if the "Refresh Stream Tree" button is to be hidden. Defaults to FALSE.
+* hide\_streamtree\_options - TRUE if the "Refresh Tree" and "Deselect All" buttons are to be hidden. Defaults to FALSE.
 * hide\_axis\_selection - TRUE if the axis selection menu within the legend is to be hidden. Defaults to FALSE.
 * disable\_color\_selection - TRUE if the color selection menu within the legend is to be disabled. Defaults to FALSE.
 * permalinkStart - Specifies the start of the permalink URL. Defaults to the current window location of the browser, excluding any seach queries in the URL, but including the question mark.
-* dataURLStart - Specifies the start of the url where to get data. Defaults to "http://bunker.cs.berkeley.edu/backend/api/data/uuid/".
-* tagsURL - Specifies the url to query to get stream info. Defaults to "http://new.openbms.org/backend/api/query?".
-* bracketURL - Specifies the url to query to find the time range in which streams have data. Defaults to "http://quasar.cal-sdb.org:9000/q/brackets".
-* csvURL - Specifies the url to query to generate CSV files containing data. Defaults to "http://bunker.cs.berkeley.edu:9000/multicsv".
 * width - A function that returns the targed width of the graph (_not_ just the chart area) to use. Defaults to a function that sizes the graph to the well it is in ("div.chartContainer"). If you plan to override this with a custom setting, the s3ui.pixelsToInt helper function may be of interest to you.
 * widthmin - The minimum width, in pixels, of the width of the chart area (_not_ the whole graph). Defaults to 450.
 * height - Specifies the height of the chart area (_not_ the whole graph). Defaults to 300.

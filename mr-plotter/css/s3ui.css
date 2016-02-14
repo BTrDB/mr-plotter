@@ -86,3 +86,9 @@ ul.loginList {
 div.loginmessage {
     color: red;
 }
+.streamTreeOptions {
+    width: 100%;
+}
+.streamTreeOptions > div {
+    width: 50%;
+}

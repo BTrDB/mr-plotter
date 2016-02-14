@@ -103,47 +103,51 @@
         <tr valign="top">
             <td width="20%">
                 <div class="leftColumn">
-                    <div class="login btn-group" style="width: 100%">
-                        <div class="loginMenu btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <span class="loginButtonText"></span><span class="caret"></span>
-                        </div>
-                        <ul class="dropdown-menu loginList" style="width: 100%">
-                            <li><input type="text" class="loginstate-start loginbox form-control username" placeholder="Username"></input></li>
-                            <li><input type="password" class="loginstate-start loginbox form-control password" placeholder="Password"></input></li>
-                            <li><input type="password" class="loginstate-changepw loginbox form-control oldpassword" placeholder="Current Password"></input></li>
-                            <li><input type="password" class="loginstate-changepw loginbox form-control newpassword1" placeholder="New Password"></input></li>
-                            <li><input type="password" class="loginstate-changepw loginbox form-control newpassword2" placeholder="New Password (Again)"></input></li>
+                    <div class="login">
+                        <div class="logindiv btn-group" style="width: 100%;">
+                            <div class="loginMenu btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <span class="loginButtonText"></span><span class="caret"></span>
+                            </div>
+                            <ul class="dropdown-menu loginList" style="width: 100%;">
+                                <li><input type="text" class="loginstate-start loginbox form-control username" placeholder="Username"></input></li>
+                                <li><input type="password" class="loginstate-start loginbox form-control password" placeholder="Password"></input></li>
+                                <li><input type="password" class="loginstate-changepw loginbox form-control oldpassword" placeholder="Current Password"></input></li>
+                                <li><input type="password" class="loginstate-changepw loginbox form-control newpassword1" placeholder="New Password"></input></li>
+                                <li><input type="password" class="loginstate-changepw loginbox form-control newpassword2" placeholder="New Password (Again)"></input></li>
 
-                            <li><div class="loginmessage"></div></li>
-                            <li role="separator" class="divider loginstate-start"></li>
-                            <li><div class="loginstate-start loginButton btn btn-primary" style="width: 100%">Sign In</div></li>
-                            
-                            <li>
-                                <div class="loginstate-loggedin btn-group-vertical" style="width: 100%">
-                                    <div class="changepwMenu btn btn-warning" style="width: 100%">Change Password</div>
-                                    <div class="logoffButton btn btn-danger" style="width: 100%">Sign Out</div>
-                                </div>
-                            </li>
-                            
-                            <li role="separator" class="divider loginstate-changepw"></li>
-                            <li><div class="loginstate-changepw changepwButton btn btn-success" style="width: 100%">Confirm Change</div></li>
-                        </ul>
+                                <li><div class="loginmessage"></div></li>
+                                <li role="separator" class="divider loginstate-start"></li>
+                                <li><div class="loginstate-start loginButton btn btn-primary" style="width: 100%;">Sign In</div></li>
+                                
+                                <li>
+                                    <div class="loginstate-loggedin btn-group-vertical" style="width: 100%;">
+                                        <div class="changepwMenu btn btn-warning" style="width: 100%;">Change Password</div>
+                                        <div class="logoffButton btn btn-danger" style="width: 100%;">Sign Out</div>
+                                    </div>
+                                </li>
+                                
+                                <li role="separator" class="divider loginstate-changepw"></li>
+                                <li><div class="loginstate-changepw changepwButton btn btn-success" style="width: 100%;">Confirm Change</div></li>
+                            </ul>
+                        </div>
+                        <hr>
                     </div>
-                    <hr>
-                    <div class="btn-group-vertical" style="width: 100%">
+                    <div class="btn-group-vertical" style="width: 100%;">
                         <div class="plotButton btn btn-primary">Apply and Plot</div>
                         <div class="resetZoom btn btn-default">Reset Zoom</div>
                         <div class="showAll btn btn-success">Plot all Data</div>
                     </div>
-                    <div class="plotLoading" style="width: 100%; margin-top: 20px; font-size: 1.25em;"></div> <!-- Displays details about how the plot is loading -->
-                    <hr>
+                    <div class="infoBar">
+                        <div class="plotLoading" style="width: 100%; margin-top: 20px; font-size: 1.25em;"></div> <!-- Displays details about how the plot is loading -->
+                        <hr>
+                    </div>
                     <!-- TIME SELECTION MENU -->
                     <div class="timeSelection">
                         <form role="form">
                             <div class="row">
                                 <div class="form-group">
                                     <label>Start date</label>
-                                    <div class="input-group" style="width: 100%">
+                                    <div class="input-group" style="width: 100%;">
                                         <input type="text" class="form-control datefield startdate" />
                                         <div class="m1yButton btn input-group-addon" style="width:4em">-1Y</div>
                                     </div>
@@ -152,7 +156,7 @@
                             <div class="row">
                                 <div class="form-group">
                                     <label>End date</label>
-                                    <div class="input-group" style="width: 100%">
+                                    <div class="input-group" style="width: 100%;">
                                         <input type="text" class="form-control datefield enddate">
                                         <div class="nowButton btn input-group-addon" style="width:4em">Now</div>
                                     </div>
@@ -161,7 +165,7 @@
                             <div class="row">
                                 <div class="form-group">
                                     <label>Timezone</label>
-                                    <div class="input-group" style="width: 100%">
+                                    <div class="input-group" style="width: 100%;">
                                         <select class="timezoneSelect form-control">
                                             <option value="America/Los_Angeles">America/Los_Angeles</option>
                                             <option value="UTC">UTC</option>
@@ -177,8 +181,13 @@
                     <!-- STREAM SELECTION MENU -->
                     <div class="streamSelection">
                         <h3>Select Streams</h3>
-                        <div class="updateStreamList btn btn-default">Deselect All and Refresh</div>
-                        <div class="streamTree well" style="background: white;"></div>
+                        <div class="well" style="background: white;">
+                            <div class="streamTreeOptions btn-group">
+                                <div class="refreshStreamTree btn btn-default">Refresh Tree</div>
+                                <div class="deselectStreamTree btn btn-default">Deselect All</div>
+                            </div>
+                            <div class="streamTree"></div>
+                        </div>
                     </div>
                 </div>
             </td>
@@ -190,7 +199,7 @@
                                 <!-- THE ACTUAL CHART -->
                                 <svg class="chart" width="800" height="430" background="white">
                                     <rect width="800" height="430" class="background-rect" fill="white"></rect>  <!-- The background is white, not transparent. -->
-                                    <g class="plotDirections" transform="translate(30, 30)" style="display: none">
+                                    <g class="plotDirections" transform="translate(30, 30)">
                                         <text transform="translate(0, 0)">1. Select streams in the tree to the left. You may need to log in to see all of the streams.</text>
                                         <text transform="translate(0, 30)">2. If desired, change axis settings using the box below.</text>
                                         <text transform="translate(0, 60)">

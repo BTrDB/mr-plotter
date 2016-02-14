@@ -165,11 +165,8 @@ function init_visuals(self, options) {
     setVisibility(self, options, "div.timeSelection", "hide_time_selection");
     setVisibility(self, options, "div.streamSelection", "hide_stream_tree");
     setVisibility(self, options, "div.login", "hide_login");
-    if (!options.hasOwnProperty("hide_plot_directions")) { // we have to take action to enforce the default here
-        options.hide_plot_directions = false;
-    }
     setVisibility(self, options, "g.plotDirections", "hide_plot_directions");
-    setVisibility(self, options, "button.updateStreamList", "hide_refresh_button");
+    setVisibility(self, options, "div.streamTreeOptions", "hide_streamtree_options");
     
     setCSSRule(self, options, "tr.streamLegend-" + self.idata.instanceid + " select.axis-select { display: none; }", "hide_axis_selection");
     setCSSRule(self, options, "tr.streamLegend-" + self.idata.instanceid + " span.simplecolorpicker { pointer-events: none; }", "disable_color_selection");
@@ -321,7 +318,10 @@ function init_graph(self, c1, c2) {
             s3ui.updatePlotMessage(self);
         };
     self.find(".otherTimezone").onchange = changedDate;
-    self.find(".updateStreamList").onclick = function () {
+    self.find(".refreshStreamTree").onclick = function () {
+            s3ui.updateStreamTree(self);
+        };
+    self.find(".deselectStreamTree").onclick = function () {
             s3ui.updateStreamList(self);
         };
     

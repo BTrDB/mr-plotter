@@ -409,7 +409,7 @@ function createCSVDownload(self, streams, settingsObj, domain, pwe, graphExport)
 }
 
 function login(self) {
-    var loginElem = self.find(".login");
+    var loginElem = self.find(".logindiv");
     var usernamefield = loginElem.querySelector(".username");
     var passwordfield = loginElem.querySelector(".password");
     var username = usernamefield.value;
@@ -476,7 +476,7 @@ function hideChangepwMenu(self) {
 }
 
 function changepw(self, event) {
-    var loginElem = self.find(".login");
+    var loginElem = self.find(".logindiv");
     var newpasswordfield1 = loginElem.querySelector(".newpassword1");
     var newpasswordfield2 = loginElem.querySelector(".newpassword2");
     
