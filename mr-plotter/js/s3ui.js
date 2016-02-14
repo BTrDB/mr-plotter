@@ -1,8 +1,8 @@
 s3ui = {instances: [], instanceid: -1}; // stores functions used in multiple files
 
-function MrPlotter(container, cookiekey, backend, options, cb1, cb2) {
+function MrPlotter(container, storagekey, backend, options, cb1, cb2) {
     this.domelem = container;
-    this.cookiekey = cookiekey;
+    this.cookiekey = storagekey;
     this.backend = backend;
     
     /* In Meteor, this is where the constructor argument would go. I'm doing
@@ -28,7 +28,7 @@ MrPlotter.prototype.$ = function (expr) {
     CB1 and CB2 are callback overrides for the two callbacks, the first of
     which executes after the graph is built, and the second of which executes
     after the interactive features have been added. */
-function mr_plotter(parent, cookiekey, options, cb1, cb2, backend) {
+function mr_plotter(parent, storagekey, options, cb1, cb2, backend) {
     // This is the one place in the entire code that I use the ID of an element
     var template = document.getElementById("mrplotter");
     var docfrag = document.importNode(template.content, true);
@@ -38,7 +38,7 @@ function mr_plotter(parent, cookiekey, options, cb1, cb2, backend) {
     }
     container.appendChild(docfrag);
     parent.appendChild(container);
-    var instance = new MrPlotter(container, cookiekey, backend, options, cb1, cb2);
+    var instance = new MrPlotter(container, storagekey, backend, options, cb1, cb2);
     s3ui.__init__(instance);
     return instance;
 }

@@ -551,21 +551,35 @@ function setLoginText(self, text) {
 }
 
 function getCookie(self) {
-    var cookiestr = document.cookie;
-    var username = cookieGetKV(cookiestr, self.cookiekey + "_username");
-    var token = cookieGetKV(cookiestr, self.cookiekey + "_token");
-    return [username, token];
+    var usernamekey = self.cookiekey + "_username";
+    var tokenkey = self.cookiekey + "_token";
+    if (window.localStorage === undefined) {
+        var cookiestr = document.cookie;
+        var username = cookieGetKV(cookiestr, usernamekey);
+        var token = cookieGetKV(cookiestr, tokenkey);
+        return [username, token];
+    } else {
+        return [window.localStorage.getItem(usernamekey), window.localStorage.getItem(tokenkey)];
+    }
 }
 
 function setCookie(self, username, token) {
-    var expiry = new Date();
-    var currTime = expiry.getTime();
-    expiry.setTime(currTime + 14 * 24 * 60 * 60 * 1000);
+    var expiry;
+    if (window.localStorage === undefined) {
+        expiry = new Date();
+        var currTime = expiry.getTime();
+        expiry.setTime(currTime + 14 * 24 * 60 * 60 * 1000);
+    }
     writeCookie(self, username, token, expiry);
 }
 
 function delCookie(self) {
-    writeCookie(self, "", "", new Date(0));
+    if (window.localStorage === undefined) {
+        writeCookie(self, "", "", new Date(0));
+    } else {
+        window.localStorage.removeItem(self.cookiekey + "_username");
+        window.localStorage.removeItem(self.cookiekey + "_token");
+    }
 }
 
 function cookieGetKV(cookiestr, key) {
@@ -582,9 +596,16 @@ function cookieGetKV(cookiestr, key) {
 }
 
 function writeCookie(self, username, token, expiry) {
-    var suffix = "; domain=" + window.location.hostname + "; path=/; secure; expires=" + expiry.toUTCString() + ";"
-    document.cookie = self.cookiekey + "_username=" + username + suffix;
-    document.cookie = self.cookiekey + "_token=" + token + suffix;
+    var usernamekey = self.cookiekey + "_username";
+    var tokenkey = self.cookiekey + "_token";
+    if (window.localStorage === undefined) {
+        var suffix = "; domain=" + window.location.hostname + "; path=/; secure; expires=" + expiry.toUTCString() + ";"
+        document.cookie = usernamekey + "=" + username + suffix;
+        document.cookie = tokenkey + "=" + token + suffix;
+    } else {
+        window.localStorage.setItem(usernamekey, username);
+        window.localStorage.setItem(tokenkey, token);
+    }
 }
 
 function checkCookie(self, callback) {
