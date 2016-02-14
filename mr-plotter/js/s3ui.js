@@ -368,6 +368,7 @@ function init_graph(self, c1, c2) {
             self.find(".loginmessage").innerHTML = "";
         });
         
+    s3ui.setLoginText(self, self.idata.defaultLoginMenuText);
     
     s3ui.updateStreamTree(self)
     

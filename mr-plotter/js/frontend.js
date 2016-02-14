@@ -25,6 +25,8 @@ function init_frontend(self) {
         }
         
     self.idata.changingpw = false;
+    self.idata.defaultLoginMenuText = "Log in ";
+    self.idata.prevLoginMenuText = self.idata.defaultLoginMenuText;
 }
 
 /* Adds or removes (depending on the value of SHOW) the stream
@@ -418,23 +420,27 @@ function login(self) {
     var $loginButton = $(loginElem.querySelector(".loginMenu"));
     var loginmessage = loginElem.querySelector(".loginmessage");
     
-    $loginButton.button("loading");
+    setButtonEnabled($loginButton, false);
+    setLoginText(self, "Logging in...");
     self.requester.makeLoginRequest(username, password, function (token) {
-            $loginButton.button("reset");
+            setButtonEnabled($loginButton, true);
             if (token === "") {
                 loginmessage.innerHTML = "Invalid username or password";
-                setTimeout(function () { $loginButton.dropdown("toggle"); }, 0);
+                restoreLoginText(self);
+                $loginButton.dropdown("toggle");
             } else {
                 self.requester.setToken(token);
                 s3ui.updateStreamTree(self);
                 var $loginList = $(loginElem.querySelector(".loginList"));
                 $loginList.find(".loginstate-start").hide();
                 $loginList.find(".loginstate-loggedin").show();
+                setLoginText(self, "Logged in as " + username + " ");
             }
         }, function (error) {
             loginmessage.innerHTML = "A server error has occurred";
-            $loginButton.button("reset");
-            setTimeout(function () { $loginButton.dropdown("toggle"); }, 0);
+            restoreLoginText(self);
+            setButtonEnabled($loginButton, true);
+            $loginButton.dropdown("toggle");
         });
 }
 
@@ -445,6 +451,7 @@ function logoff(self) {
     var $loginList = $(self.find(".loginList"));
     $loginList.find(".loginstate-loggedin").hide();
     $loginList.find(".loginstate-start").show();
+    setLoginText(self, self.idata.defaultLoginMenuText);
 }
 
 function showChangepwMenu(self) {
@@ -491,9 +498,11 @@ function changepw(self, event) {
             showChangepwMenu(self);
         };
     
-    $loginButton.button("loading");
+    setButtonEnabled($loginButton, false);
+    setLoginText(self, "Changing password...");
     self.requester.makeChangePasswordRequest(oldpassword, newpassword, function (response) {
-            $loginButton.button("reset");
+            restoreLoginText(self);
+            setButtonEnabled($loginButton, true);
             if (response === "Success") {
                 loginmessage.innerHTML = "Sucessfully changed password";
                 $loginButton.dropdown("toggle");
@@ -507,13 +516,31 @@ function changepw(self, event) {
             } else {
                 errorfunc();
             }
-            // Need to set timeout; otherwise it doesn't work consistently
-            setTimeout(function () { $loginButton.dropdown("toggle"); }, 0);
+            $loginButton.dropdown("toggle");
         }, function (error) {
-            $loginButton.button("reset");
+            restoreLoginText(self);
+            setButtonEnabled($loginButton, true);
             errorfunc();
-            setTimeout(function () { $loginButton.dropdown("toggle"); }, 0);
+            $loginButton.dropdown("toggle");
         });
+}
+
+function setButtonEnabled($button, enable) {
+    if (enable) {
+        $button.removeClass("disabled");
+    } else {
+        $button.addClass("disabled");
+    }
+}
+
+function restoreLoginText(self) {
+    self.find(".loginButtonText").innerHTML = self.idata.prevLoginMenuText;
+}
+
+function setLoginText(self, text) {
+    var loginMenuText = self.find(".loginButtonText");
+    self.idata.prevLoginMenuText = loginMenuText.innerHTML;
+    loginMenuText.innerHTML = text;
 }
 
 s3ui.init_frontend = init_frontend;
@@ -529,3 +556,4 @@ s3ui.logoff = logoff;
 s3ui.showChangepwMenu = showChangepwMenu;
 s3ui.hideChangepwMenu = hideChangepwMenu;
 s3ui.changepw = changepw;
+s3ui.setLoginText = setLoginText;
