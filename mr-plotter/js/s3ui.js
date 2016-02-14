@@ -1,7 +1,8 @@
 s3ui = {instances: [], instanceid: -1}; // stores functions used in multiple files
 
-function MrPlotter(container, backend, options, cb1, cb2) {
+function MrPlotter(container, cookiekey, backend, options, cb1, cb2) {
     this.domelem = container;
+    this.cookiekey = cookiekey;
     this.backend = backend;
     
     /* In Meteor, this is where the constructor argument would go. I'm doing
@@ -22,11 +23,12 @@ MrPlotter.prototype.$ = function (expr) {
 
 /** Instantiates Mr. Plotter as a child of the provided DOM element.
     BACKEND is the hostname/port of the backend (ex. localhost:8080).
+    COOKIEKEY is the key to use for the cookie storing login data.
     OPTIONS is an object containing options to create the chart.
     CB1 and CB2 are callback overrides for the two callbacks, the first of
     which executes after the graph is built, and the second of which executes
     after the interactive features have been added. */
-function mr_plotter(parent, options, cb1, cb2, backend) {
+function mr_plotter(parent, cookiekey, options, cb1, cb2, backend) {
     // This is the one place in the entire code that I use the ID of an element
     var template = document.getElementById("mrplotter");
     var docfrag = document.importNode(template.content, true);
@@ -36,7 +38,7 @@ function mr_plotter(parent, options, cb1, cb2, backend) {
     }
     container.appendChild(docfrag);
     parent.appendChild(container);
-    var instance = new MrPlotter(container, backend, options, cb1, cb2);
+    var instance = new MrPlotter(container, cookiekey, backend, options, cb1, cb2);
     s3ui.__init__(instance);
     return instance;
 }
@@ -337,7 +339,8 @@ function init_graph(self, c1, c2) {
     self.idata.otherChange = false;
     s3ui.updatePlotMessage(self);
     
-    // Make parts of the login menu invisible
+    // Make the login menu invisible, to start with
+    self.$(".loginstate-start").hide()
     self.$(".loginstate-loggedin").hide();
     self.$(".loginstate-changepw").hide();
     
@@ -368,12 +371,21 @@ function init_graph(self, c1, c2) {
             self.find(".loginmessage").innerHTML = "";
         });
         
-    s3ui.setLoginText(self, self.idata.defaultLoginMenuText);
-    
-    s3ui.updateStreamTree(self)
-    
-    // Second callback
-    if (typeof c2 == "function") {
-        c2(self);
-    }
+    s3ui.setLoginText(self, "Loading...");
+    s3ui.checkCookie(self, function (username, token) {
+            if (username === null) {
+                s3ui.setLoginText(self, self.idata.defaultLoginMenuText);
+                self.$(".loginstate-start").show()
+            } else {
+                s3ui.loggedin(self, username, token);
+                self.$(".loginstate-loggedin").show();
+            }
+            
+            s3ui.updateStreamTree(self)
+            
+            // Second callback
+            if (typeof c2 == "function") {
+                c2(self);
+            }
+        });
 }

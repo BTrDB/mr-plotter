@@ -88,6 +88,17 @@ Requester.prototype.makeLogoffRequest = function (success_callback, error_callba
         });
     };
     
+Requester.prototype.makeCheckTokenRequest = function (token, success_callback, error_callback) {
+        return $.ajax({
+            type: "POST",
+            url: "https://" + this.backend + "/checktoken",
+            data: token,
+            success: success_callback,
+            dataType: "text",
+            error: error_callback = undefined ? function () {} : error_callback
+        });
+    };
+    
 Requester.prototype.makeChangePasswordRequest = function (old_password, new_password, success_callback, error_callback) {
         var changepwjsonstr = JSON.stringify({"token": self.token, "oldpassword": old_password, "newpassword": new_password});
         return $.ajax({

@@ -682,6 +682,7 @@ func main() {
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/logoff", logoffHandler)
 	http.HandleFunc("/changepw", changepwHandler)
+	http.HandleFunc("/checktoken", checktokenHandler)
 	
 	var portStr string = fmt.Sprintf(":%v", port)
 	
@@ -1087,6 +1088,21 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func parseToken(reader io.Reader) []byte {
+	tokenencoded := make([]byte, token64len, token64len)
+	tokenslice := make([]byte, token64dlen, token64dlen)
+	
+	n, err := io.ReadFull(reader, tokenencoded)
+	if err == nil && n == token64len {
+		n, err = base64.StdEncoding.Decode(tokenslice, tokenencoded)
+		if n == TOKEN_BYTE_LEN && err == nil {
+			return tokenslice
+		}
+	}
+	
+	return nil
+}
+
 func logoffHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.Header().Set("Allow", "POST")
@@ -1095,19 +1111,13 @@ func logoffHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	tokenencoded := make([]byte, token64len, token64len)
-	tokenslice := make([]byte, token64dlen, token64dlen)
+	tokenslice := parseToken(r.Body)
 	
-	n, err := io.ReadFull(r.Body, tokenencoded)
-	if err == nil && n == token64len {
-		n, err = base64.StdEncoding.Decode(tokenslice, tokenencoded)
-		if n == TOKEN_BYTE_LEN && err == nil && userlogoff(tokenslice) {
-			w.Write([]byte("Logoff successful."))
-			return
-		}
+	if tokenslice != nil && userlogoff(tokenslice) {
+		w.Write([]byte("Logoff successful."))
+	} else {
+		w.Write([]byte("Invalid session token."))
 	}
-	
-	w.Write([]byte("Invalid session token."))
 }
 
 func changepwHandler(w http.ResponseWriter, r *http.Request) {
@@ -1186,4 +1196,21 @@ func changepwHandler(w http.ResponseWriter, r *http.Request) {
 	
 	success := userchangepassword(accountConn, tokenslice, []byte(oldpassword), []byte(newpassword))
 	w.Write([]byte(success))
+}
+
+func checktokenHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.Header().Set("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("To check a token, make a POST request with the token in the request body."))
+		return
+	}
+	
+	tokenslice := parseToken(r.Body)
+	
+	if tokenslice != nil && getloginsession(tokenslice) != nil {
+		w.Write([]byte("ok"))
+	} else {
+		w.Write([]byte("invalid"))
+	}
 }

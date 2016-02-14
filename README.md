@@ -104,9 +104,10 @@ The "idata" property of the plotter instance is an object that stores the
 instance fields  of the object (i.e., the variables used by the graph to
 keep track of its internal state). The "imethods" property of the template
 instance contains bound methods that can be used to programmatically manipulate
-the state of the graph. The only exception to this rule is that the "requester"
-object, which handles outstanding requests to the site's backend, is a direct
-property of the plotter instance (i.e., in neither idata nor imethods).
+the state of the graph. The only exceptions to this rule are that the
+"requester" object, which handles outstanding requests to the site's backend,
+and the cookie key provided as an argument upon construction, are not direct
+properties of the plotter instance (i.e., in neither idata nor imethods).
 
 The bound methods provided are:
 

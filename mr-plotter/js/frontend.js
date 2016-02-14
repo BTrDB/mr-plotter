@@ -429,12 +429,11 @@ function login(self) {
                 restoreLoginText(self);
                 $loginButton.dropdown("toggle");
             } else {
-                self.requester.setToken(token);
+                loggedin(self, username, token);
                 s3ui.updateStreamTree(self);
                 var $loginList = $(loginElem.querySelector(".loginList"));
                 $loginList.find(".loginstate-start").hide();
                 $loginList.find(".loginstate-loggedin").show();
-                setLoginText(self, "Logged in as " + username + " ");
             }
         }, function (error) {
             loginmessage.innerHTML = "A server error has occurred";
@@ -444,8 +443,16 @@ function login(self) {
         });
 }
 
+function loggedin(self, username, token) {
+    // Creating cookie
+    setCookie(self, username, token); // Create cookie, or renew it if it's already there
+    self.requester.setToken(token);
+    setLoginText(self, "Logged in as " + username + " ");
+}
+
 function logoff(self) {
     self.requester.makeLogoffRequest(function () {});
+    delCookie(self);
     self.requester.setToken("");
     s3ui.updateStreamTree(self);
     var $loginList = $(self.find(".loginList"));
@@ -543,6 +550,69 @@ function setLoginText(self, text) {
     loginMenuText.innerHTML = text;
 }
 
+function getCookie(self) {
+    var cookiestr = document.cookie;
+    var username = cookieGetKV(cookiestr, self.cookiekey + "_username");
+    var token = cookieGetKV(cookiestr, self.cookiekey + "_token");
+    return [username, token];
+}
+
+function setCookie(self, username, token) {
+    var expiry = new Date();
+    var currTime = expiry.getTime();
+    expiry.setTime(currTime + 14 * 24 * 60 * 60 * 1000);
+    writeCookie(self, username, token, expiry);
+}
+
+function delCookie(self) {
+    writeCookie(self, "", "", new Date(0));
+}
+
+function cookieGetKV(cookiestr, key) {
+    var keyindex = cookiestr.indexOf(key + "=");
+    if (keyindex == -1) {
+        return null;
+    }
+    var valstart = keyindex + key.length + 1;
+    var valend = cookiestr.indexOf(";", valstart);
+    if (valend == -1) {
+        valend = cookiestr.length;
+    }
+    return cookiestr.substring(valstart, valend);
+}
+
+function writeCookie(self, username, token, expiry) {
+    var suffix = "; domain=" + window.location.hostname + "; path=/; secure; expires=" + expiry.toUTCString() + ";"
+    document.cookie = self.cookiekey + "_username=" + username + suffix;
+    document.cookie = self.cookiekey + "_token=" + token + suffix;
+}
+
+function checkCookie(self, callback) {
+    var cookiedata = getCookie(self);
+    var username = cookiedata[0];
+    var token = cookiedata[1];
+    var $button = $(self.find(".loginMenu"));
+    setButtonEnabled($button, false);
+    if (username !== null && token !== null) {
+        self.requester.makeCheckTokenRequest(token, function (response) {
+                setButtonEnabled($button, true);
+                if (response === "ok") {
+                    callback(username, token);
+                } else {
+                    callback(null, null);
+                }
+            }, function (error) {
+                setButtonEnabled($button, true);
+                callback(null, null);
+            });
+    } else {
+        setTimeout(function () {
+                setButtonEnabled($button, true);
+                callback(null, null);
+            }, 0);
+    }
+}
+
 s3ui.init_frontend = init_frontend;
 s3ui.toggleLegend = toggleLegend;
 s3ui.setStreamMessage = setStreamMessage;
@@ -552,8 +622,10 @@ s3ui.createPlotDownload = createPlotDownload;
 s3ui.createPermalink = createPermalink;
 s3ui.buildCSVMenu = buildCSVMenu;
 s3ui.login = login;
+s3ui.loggedin = loggedin;
 s3ui.logoff = logoff;
 s3ui.showChangepwMenu = showChangepwMenu;
 s3ui.hideChangepwMenu = hideChangepwMenu;
 s3ui.changepw = changepw;
 s3ui.setLoginText = setLoginText;
+s3ui.checkCookie = checkCookie;
