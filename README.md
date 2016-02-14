@@ -105,8 +105,9 @@ keep track of its internal state). The "imethods" property of the template
 instance contains bound methods that can be used to programmatically manipulate
 the state of the graph. The only exceptions to this rule are that the
 "requester" object, which handles outstanding requests to the site's backend,
-and the cookie key provided as an argument upon construction, are not direct
-properties of the plotter instance (i.e., in neither idata nor imethods).
+the storage key provided as an argument upon construction, the backend URL,
+and some of the arguments provided upon construction, are direct properties of
+the plotter instance, and therefore are in neither idata nor imethods.
 
 The bound methods provided are:
 
