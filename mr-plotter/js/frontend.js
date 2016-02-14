@@ -23,6 +23,8 @@ function init_frontend(self) {
             var rightpadding = $parent.css("padding-right");
             return s3ui.parsePixelsToInt(width) - s3ui.parsePixelsToInt(leftpadding) - s3ui.parsePixelsToInt(rightpadding);
         }
+        
+    self.idata.changingpw = false;
 }
 
 /* Adds or removes (depending on the value of SHOW) the stream
@@ -421,11 +423,10 @@ function login(self) {
             $loginButton.button("reset");
             if (token === "") {
                 loginmessage.innerHTML = "Invalid username or password";
-                $loginButton.dropdown("toggle");
+                setTimeout(function () { $loginButton.dropdown("toggle"); }, 0);
             } else {
                 self.requester.setToken(token);
                 s3ui.updateStreamTree(self);
-                loginmessage.innerHTML = "";
                 var $loginList = $(loginElem.querySelector(".loginList"));
                 $loginList.find(".loginstate-start").hide();
                 $loginList.find(".loginstate-loggedin").show();
@@ -433,7 +434,7 @@ function login(self) {
         }, function (error) {
             loginmessage.innerHTML = "A server error has occurred";
             $loginButton.button("reset");
-            $loginButton.dropdown("toggle");
+            setTimeout(function () { $loginButton.dropdown("toggle"); }, 0);
         });
 }
 
@@ -446,6 +447,75 @@ function logoff(self) {
     $loginList.find(".loginstate-start").show();
 }
 
+function showChangepwMenu(self) {
+    var $loginList = $(self.find(".loginList"));
+    $loginList.find(".loginstate-loggedin").hide();
+    $loginList.find(".loginstate-changepw").show();
+    self.idata.changingpw = true;
+}
+
+function hideChangepwMenu(self) {
+    var $loginList = $(self.find(".loginList"));
+    $loginList.find(".loginstate-changepw").hide();
+    $loginList.find(".loginstate-loggedin").show();
+    self.idata.changingpw = false;
+}
+
+function changepw(self, event) {
+    var loginElem = self.find(".login");
+    var newpasswordfield1 = loginElem.querySelector(".newpassword1");
+    var newpasswordfield2 = loginElem.querySelector(".newpassword2");
+    
+    var loginmessage = loginElem.querySelector(".loginmessage");
+    
+    if (newpasswordfield1.value !== newpasswordfield2.value) {
+        loginmessage.innerHTML = "New passwords do not match";
+        event.stopPropagation(); // keep the dropdown from closing
+        return;
+    }
+    
+    var oldpasswordfield = loginElem.querySelector(".oldpassword");
+    
+    var oldpassword = oldpasswordfield.value;
+    var newpassword = newpasswordfield1.value;
+    
+    oldpasswordfield.value = "";
+    newpasswordfield1.value = "";
+    newpasswordfield2.value = "";
+    
+    var $loginButton = $(loginElem.querySelector(".loginMenu"));
+    var loginmessage = loginElem.querySelector(".loginmessage");
+    
+    var errorfunc = function () {
+            loginmessage.innerHTML = "A server error has occurred";
+            showChangepwMenu(self);
+        };
+    
+    $loginButton.button("loading");
+    self.requester.makeChangePasswordRequest(oldpassword, newpassword, function (response) {
+            $loginButton.button("reset");
+            if (response === "Success") {
+                loginmessage.innerHTML = "Sucessfully changed password";
+                $loginButton.dropdown("toggle");
+            } else if (response === "Bad token") {
+                loginmessage.innerHTML = "Session expired";
+                logoff(self);
+                $loginButton.dropdown("toggle");
+            } else if (response === "Bad password") {
+                loginmessage.innerHTML = "Old password is incorrect";
+                showChangepwMenu(self);
+            } else {
+                errorfunc();
+            }
+            // Need to set timeout; otherwise it doesn't work consistently
+            setTimeout(function () { $loginButton.dropdown("toggle"); }, 0);
+        }, function (error) {
+            $loginButton.button("reset");
+            errorfunc();
+            setTimeout(function () { $loginButton.dropdown("toggle"); }, 0);
+        });
+}
+
 s3ui.init_frontend = init_frontend;
 s3ui.toggleLegend = toggleLegend;
 s3ui.setStreamMessage = setStreamMessage;
@@ -456,3 +526,6 @@ s3ui.createPermalink = createPermalink;
 s3ui.buildCSVMenu = buildCSVMenu;
 s3ui.login = login;
 s3ui.logoff = logoff;
+s3ui.showChangepwMenu = showChangepwMenu;
+s3ui.hideChangepwMenu = hideChangepwMenu;
+s3ui.changepw = changepw;

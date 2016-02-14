@@ -1185,9 +1185,5 @@ func changepwHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	success := userchangepassword(accountConn, tokenslice, []byte(oldpassword), []byte(newpassword))
-	if (success) {
-		w.Write([]byte("Success."))
-	} else {
-		w.Write([]byte("Failure."))
-	}
+	w.Write([]byte(success))
 }

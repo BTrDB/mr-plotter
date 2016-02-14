@@ -136,10 +136,10 @@ func usertags(token []byte) []string {
 	return loginsession.tags	
 }
 
-func userchangepassword(passwordConn *mgo.Collection, token []byte, oldpw []byte, newpw []byte) bool {
+func userchangepassword(passwordConn *mgo.Collection, token []byte, oldpw []byte, newpw []byte) string {
 	loginsession := getloginsession(token)
 	if loginsession == nil {
-		return false
+		return "Bad token"
 	}
 	
 	var hash []byte
@@ -148,17 +148,21 @@ func userchangepassword(passwordConn *mgo.Collection, token []byte, oldpw []byte
 	user := loginsession.user
 	_, err = checkpassword(passwordConn, user, oldpw)
 	if err != nil {
-		return false
+		return "Bad password"
 	}
 	
 	hash, err = bcrypt.GenerateFromPassword(newpw, bcrypt.DefaultCost)
 	if err != nil {
-		return false
+		return "Server error"
 	}
 	
 	updatepasssel := bson.M{ "user": user }
 	updatepasscom := bson.M{ "$set": bson.M{ "password": bson.Binary{ Kind: 0x80, Data: hash } } }
 	
 	err = passwordConn.Update(updatepasssel, updatepasscom)
-	return err == nil
+	if err == nil {
+	    return "Success"
+	} else {
+	    return "Server error"
+	}
 }

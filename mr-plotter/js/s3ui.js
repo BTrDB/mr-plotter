@@ -339,12 +339,35 @@ function init_graph(self, c1, c2) {
     
     // Make parts of the login menu invisible
     self.$(".loginstate-loggedin").hide();
+    self.$(".loginstate-changepw").hide();
+    
+    // Buttons in login menu that perform actions
     self.find(".loginButton").onclick = function () {
             s3ui.login(self);
         };
     self.find(".logoffButton").onclick = function () {
             s3ui.logoff(self);
         };
+    self.find(".changepwButton").onclick = function (event) {
+            s3ui.changepw(self, event);
+        };
+        
+    // Button to show the change password menu
+    self.find(".changepwMenu").onclick = function (event) {
+            s3ui.showChangepwMenu(self);
+            event.stopPropagation(); // Prevents dropdown menu from disappearing
+        };
+        
+    var $login = $(self.find(".login"));
+    $login.on("hide.bs.dropdown", function () {
+            if (self.idata.changingpw) {
+                s3ui.hideChangepwMenu(self);
+            }
+        });
+    $login.on("hidden.bs.dropdown", function () {
+            self.find(".loginmessage").innerHTML = "";
+        });
+        
     
     s3ui.updateStreamTree(self)
     

@@ -87,6 +87,18 @@ Requester.prototype.makeLogoffRequest = function (success_callback, error_callba
             error: error_callback = undefined ? function () {} : error_callback
         });
     };
+    
+Requester.prototype.makeChangePasswordRequest = function (old_password, new_password, success_callback, error_callback) {
+        var changepwjsonstr = JSON.stringify({"token": self.token, "oldpassword": old_password, "newpassword": new_password});
+        return $.ajax({
+            type: "POST",
+            url: "https://" + this.backend + "/changepw",
+            data: changepwjsonstr,
+            success: success_callback,
+            dataType: "text",
+            error: error_callback = undefined ? function () {} : error_callback
+        });
+    };
 
 Requester.prototype.makeMetadataRequest = function (query, success_callback, error_callback) {
         return $.ajax({

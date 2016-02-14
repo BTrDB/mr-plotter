@@ -110,10 +110,23 @@
                         <ul class="dropdown-menu loginList" style="width: 100%">
                             <li><input type="text" class="loginstate-start loginbox form-control username" placeholder="Username"></input></li>
                             <li><input type="password" class="loginstate-start loginbox form-control password" placeholder="Password"></input></li>
-                            <li><div class="loginmessage"></div>
+                            <li><input type="password" class="loginstate-changepw loginbox form-control oldpassword" placeholder="Current Password"></input></li>
+                            <li><input type="password" class="loginstate-changepw loginbox form-control newpassword1" placeholder="New Password"></input></li>
+                            <li><input type="password" class="loginstate-changepw loginbox form-control newpassword2" placeholder="New Password (Again)"></input></li>
+
+                            <li><div class="loginmessage"></div></li>
                             <li role="separator" class="divider loginstate-start"></li>
                             <li><div class="loginstate-start loginButton btn btn-primary" style="width: 100%">Sign In</div></li>
-                            <li><div class="loginstate-loggedin logoffButton btn btn-primary" style="width: 100%">Sign Out</div></li>
+                            
+                            <li>
+                                <div class="loginstate-loggedin btn-group-vertical" style="width: 100%">
+                                    <div class="changepwMenu btn btn-warning" style="width: 100%">Change Password</div>
+                                    <div class="logoffButton btn btn-danger" style="width: 100%">Sign Out</div>
+                                </div>
+                            </li>
+                            
+                            <li role="separator" class="divider loginstate-changepw"></li>
+                            <li><div class="loginstate-changepw changepwButton btn btn-success" style="width: 100%">Confirm Change</div></li>
                         </ul>
                     </div>
                     <hr>
