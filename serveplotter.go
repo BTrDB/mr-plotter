@@ -411,12 +411,12 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 	w.Write([]byte("{\"Brackets\": ["))
 	for i = 0; i < len(uuids); i++ {
 		boundary = dr.boundaries[idsUsed[i << 1]]
-		if boundary < lowest {
+		if boundary != INVALID_TIME && boundary < lowest {
 			lowest = boundary
 		}
 		lMillis, lNanos = splitTime(boundary)
 		boundary = dr.boundaries[idsUsed[(i << 1) + 1]]
-		if boundary > highest {
+		if boundary != INVALID_TIME && boundary > highest {
 			highest = boundary
 		}
 		rMillis, rNanos = splitTime(boundary)
