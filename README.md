@@ -14,11 +14,11 @@ Instantiating a Graph
 ---------------------
 To insert a graph with full control available to the user, simply execute the
 following in Javascript:
-<pre><code>{{mr_plotter(domElement);}}</code></pre>
+<pre><code>mr_plotter(domElement);</code></pre>
 The graph will be inserted as a child of the specified DOM Element.
 
 One can also instantiate the graph with parameters:
-<pre><code>{{mr_plotter(domElement, storageKey, options, callback1, callback2, backend);}}</code></pre>
+<pre><code>mr_plotter(domElement, storageKey, options, callback1, callback2, backend);</code></pre>
 
 STORAGEKEY is a string that is the key to use when persisting login sessions.
 Local storage is used by default. cookies are used when local storage is not
