@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -25,7 +26,7 @@ import (
 var upgrader = ws.Upgrader{}
 
 type RespWrapper struct {
-	wr http.ResponseWriter
+	wr io.Writer
 }
 
 func (rw RespWrapper) GetWriter() io.Writer {
@@ -313,6 +314,9 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("You must send a POST request to get data."))
 		return
 	}
+	
+	var gzipWriter *gzip.Writer
+	var wrapper RespWrapper
 
 	// TODO: don't just read the whole thing in one go. Instead give up after a reasonably long limit.
 	payload, err := ioutil.ReadAll(r.Body)
@@ -320,7 +324,15 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("Could not read received POST payload: %v", err)))
 	}
 	
-	wrapper := RespWrapper{w}
+	if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		gzipWriter = gzip.NewWriter(w)
+		defer gzipWriter.Close()
+		
+		wrapper = RespWrapper{gzipWriter}
+		w.Header().Set("Content-Encoding", "gzip")
+	} else {
+		wrapper = RespWrapper{w}
+	}
 	
 	uuidBytes, startTime, endTime, pw, _, success := parseDataRequest(string(payload), wrapper)
 	
