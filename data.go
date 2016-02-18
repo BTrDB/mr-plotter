@@ -104,8 +104,11 @@ type DataRequester struct {
 	pendingLock *sync.Mutex
 	responseWriters map[uint64]Writable
 	synchronizers map[uint64]chan bool
+	stateLock *sync.Mutex
 	gotFirstSeg map[uint64]bool
+	gotFirstSegLock *sync.RWMutex
 	boundaries map[uint64]int64
+	boundaryLock *sync.Mutex
 	alive bool
 }
 
@@ -138,8 +141,11 @@ func NewDataRequester(dbAddr string, numConnections int, maxPending uint32, brac
 		pendingLock: &sync.Mutex{},
 		responseWriters: make(map[uint64]Writable),
 		synchronizers: make(map[uint64]chan bool),
+		stateLock: &sync.Mutex{},
 		gotFirstSeg: make(map[uint64]bool),
+		gotFirstSegLock: &sync.RWMutex{},
 		boundaries: make(map[uint64]int64),
+		boundaryLock: &sync.Mutex{},
 		alive: true,
 	}
 	
@@ -192,16 +198,18 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 	
 	cid := atomic.AddUint32(&dr.connID, 1) % uint32(len(dr.connections))
 	
-	dr.sendLocks[cid].Lock()
+	dr.stateLock.Lock()
 	dr.responseWriters[id] = writ
 	dr.synchronizers[id] = make(chan bool)
+	dr.stateLock.Unlock()
+	
+	dr.gotFirstSegLock.Lock()
 	dr.gotFirstSeg[id] = false
+	dr.gotFirstSegLock.Unlock()
+	
+	dr.sendLocks[cid].Lock()
 	_, sendErr := segment.WriteTo(dr.connections[cid])
 	dr.sendLocks[cid].Unlock()
-	
-	defer delete(dr.responseWriters, id)
-	defer delete(dr.synchronizers, id)
-	defer delete(dr.gotFirstSeg, id)
 	
 	queryPool.Put(mp)
 	
@@ -212,6 +220,11 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 	}
 	
 	<- dr.synchronizers[id]
+	
+	dr.stateLock.Lock()
+	delete(dr.responseWriters, id)
+	delete(dr.synchronizers, id)
+	dr.stateLock.Unlock()
 }
 
 /** A function designed to handle QUASAR's response over Cap'n Proto.
@@ -236,10 +249,15 @@ func (dr *DataRequester) handleDataResponse(connection net.Conn) {
 		records := responseSeg.StatisticalRecords().Values()
 		final := responseSeg.Final()
 		
-		firstSeg := !dr.gotFirstSeg[id]
+		dr.gotFirstSegLock.RLock()
+		_, firstSeg := dr.gotFirstSeg[id]
+		dr.gotFirstSegLock.RUnlock()
+		if firstSeg {
+			dr.gotFirstSegLock.Lock()
+			delete(dr.gotFirstSeg, id)
+			dr.gotFirstSegLock.Unlock()
+		}
 		writ := dr.responseWriters[id]
-		
-		dr.gotFirstSeg[id] = true
 		
 		w := writ.GetWriter()
 		
@@ -298,7 +316,7 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 	request := mp.request
 	bquery := mp.bquery
 	
-	var numResponses int = 2 * len(uuids)
+	var numResponses int = len(uuids) << 1
 	var responseChan chan bool = make(chan bool, numResponses)
 	
 	var idsUsed []uint64 = make([]uint64, numResponses) // Due to concurrency, we could use a non-contiguous block of IDs
@@ -314,23 +332,20 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 	
 		id = atomic.AddUint64(&dr.currID, 1)
 		idsUsed[i << 1] = id
-		dr.boundaries[id] = INVALID_TIME
 	
 		request.SetEchoTag(id)
 	
 		request.SetQueryNearestValue(*bquery)
 	
 		cid = atomic.AddUint32(&dr.connID, 1) % uint32(len(dr.connections))
-	
-		dr.sendLocks[cid].Lock()
-		dr.responseWriters[id] = writ
+		
+		dr.stateLock.Lock()
 		dr.synchronizers[id] = responseChan
+		dr.stateLock.Unlock()
+		
+		dr.sendLocks[cid].Lock()
 		_, sendErr = segment.WriteTo(dr.connections[cid])
 		dr.sendLocks[cid].Unlock()
-		
-		defer delete(dr.responseWriters, id)
-		defer delete(dr.synchronizers, id)
-		defer delete(dr.boundaries, id)
 		
 		if sendErr != nil {
 			w := writ.GetWriter()
@@ -343,7 +358,6 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 		
 		id = atomic.AddUint64(&dr.currID, 1)
 		idsUsed[(i << 1) + 1] = id
-		dr.boundaries[id] = INVALID_TIME
 	
 		request.SetEchoTag(id)
 	
@@ -351,15 +365,13 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 	
 		cid = atomic.AddUint32(&dr.connID, 1) % uint32(len(dr.connections))
 	
-		dr.sendLocks[cid].Lock()
-		dr.responseWriters[id] = writ
+		dr.stateLock.Lock()
 		dr.synchronizers[id] = responseChan
+		dr.stateLock.Unlock()
+		
+		dr.sendLocks[cid].Lock()
 		_, sendErr = segment.WriteTo(dr.connections[cid])
 		dr.sendLocks[cid].Unlock()
-		
-		defer delete(dr.responseWriters, id)
-		defer delete(dr.synchronizers, id)
-		defer delete(dr.boundaries, id)
 		
 		if sendErr != nil {
 			w := writ.GetWriter()
@@ -376,6 +388,8 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 	
 	var (
 		boundary int64
+		ok bool
+		boundarySlice []int64 = make([]int64, numResponses)
 		lNanos int32
 		lMillis int64
 		rNanos int32
@@ -384,15 +398,32 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 		highest int64 = QUASAR_LOW
 		trailchar rune = ','
 	)
+	dr.boundaryLock.Lock()
+	for i = 0; i < numResponses; i++ {
+		boundarySlice[i], ok = dr.boundaries[idsUsed[i]]
+		if !ok {
+			boundarySlice[i] = INVALID_TIME
+		}
+		delete(dr.boundaries, idsUsed[i])
+	}
+	dr.boundaryLock.Unlock()
+	
+	dr.stateLock.Lock()
+	for i = 0; i < numResponses; i++ {
+		delete(dr.synchronizers, idsUsed[i])
+	}
+	dr.stateLock.Unlock()
+	
 	w := writ.GetWriter()
 	w.Write([]byte("{\"Brackets\": ["))
+	
 	for i = 0; i < len(uuids); i++ {
-		boundary = dr.boundaries[idsUsed[i << 1]]
+		boundary = boundarySlice[i << 1]
 		if boundary != INVALID_TIME && boundary < lowest {
 			lowest = boundary
 		}
 		lMillis, lNanos = splitTime(boundary)
-		boundary = dr.boundaries[idsUsed[(i << 1) + 1]]
+		boundary = boundarySlice[(i << 1) + 1]
 		if boundary != INVALID_TIME && boundary > highest {
 			highest = boundary
 		}
@@ -435,7 +466,9 @@ func (dr *DataRequester) handleBracketResponse(connection net.Conn) {
 		}
 		
 		if records.Len() > 0 {
+			dr.boundaryLock.Lock()
 			dr.boundaries[id] = records.At(0).Time()
+			dr.boundaryLock.Unlock()
 		}
 		
 		dr.synchronizers[id] <- true

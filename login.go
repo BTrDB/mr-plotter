@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"sync"
 	
 	"golang.org/x/crypto/bcrypt"
 	
@@ -31,8 +32,10 @@ var MAX_TOKEN big.Int = big.Int{}
 
 // Maps ID to session
 var sessionsbyid map[[TOKEN_BYTE_LEN]byte]*LoginSession = make(map[[TOKEN_BYTE_LEN]byte]*LoginSession)
+var sessionsbyidlock sync.Mutex = sync.Mutex{}
 // Maps user to session
 var sessionsbyuser map[string]*LoginSession = make(map[string]*LoginSession)
+var sessionsbyuserlock sync.RWMutex = sync.RWMutex{}
 
 func checkpassword(passwordConn *mgo.Collection, user string, password []byte) (userdoc map[string]interface{}, err error) {
 	userquery := bson.M{ "user": user }
@@ -75,7 +78,9 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 	}
 	
 	// Check if we already have a session for this user
+	sessionsbyuserlock.RLock()
 	loginsession = sessionsbyuser[user]
+	sessionsbyuserlock.RUnlock()
 	if loginsession == nil {
 		// Need to create a new session
 		if MAX_TOKEN.Sign() == 0 {
@@ -83,7 +88,7 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 		}
 		var token *big.Int
 		var tokenarr [TOKEN_BYTE_LEN]byte
-		for token == nil || sessionsbyid[tokenarr] != nil {
+		for true {
 			token, err = rand.Int(rand.Reader, &MAX_TOKEN)
 			if err != nil {
 				fmt.Println("Could not generate session key")
@@ -92,6 +97,13 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 			tokenbytes := token.Bytes()
 		
 			copy(tokenarr[TOKEN_BYTE_LEN - len(tokenbytes):], tokenbytes)
+			
+			sessionsbyidlock.Lock()
+			if sessionsbyid[tokenarr] == nil {
+				break
+			} else {
+				sessionsbyidlock.Unlock()
+			}
 		}
 		
 		loginsession = &LoginSession{
@@ -101,7 +113,11 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 		}
 		
 		sessionsbyid[tokenarr] = loginsession
+		sessionsbyidlock.Unlock()
+		
+		sessionsbyuserlock.Lock()
 		sessionsbyuser[user] = loginsession
+		sessionsbyuserlock.Unlock()
 		
 		return tokenarr[:]
 	} else {
@@ -113,7 +129,11 @@ func getloginsession(token []byte) *LoginSession {
 	var tokenarr [TOKEN_BYTE_LEN]byte
 	copy(tokenarr[:], token)
 	
-	return sessionsbyid[tokenarr]
+	var loginsession *LoginSession
+	sessionsbyidlock.Lock()
+	loginsession = sessionsbyid[tokenarr]
+	sessionsbyidlock.Unlock()
+	return loginsession
 }
 
 func userlogoff(token []byte) bool {
@@ -122,8 +142,12 @@ func userlogoff(token []byte) bool {
 		return false
 	}
 	
+	sessionsbyidlock.Lock()
 	delete(sessionsbyid, loginsession.token)
+	sessionsbyidlock.Unlock()
+	sessionsbyuserlock.Lock()
 	delete(sessionsbyuser, loginsession.user)
+	sessionsbyuserlock.Unlock()
 	return true
 }
 
