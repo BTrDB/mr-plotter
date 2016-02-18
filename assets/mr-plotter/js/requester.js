@@ -145,15 +145,15 @@ Requester.prototype.makePermalinkRetrievalRequest = function (permalinkStr, succ
             });
     };
     
-Requester.prototype.makeDataRequest = function (request, success_callback, error_callback) {
+Requester.prototype.makeDataRequest = function (request, callback) {
 		var request_str = request.join(',');
 		if (USE_WEBSOCKETS) {
 			if (!this.dconnections[this.currDConnection].ready) {
 		    	var self = this;
-		    	setTimeout(function () { self.makeDataRequest(request, success_callback, error_callback); }, 1000);
+		    	setTimeout(function () { self.makeDataRequest(request, callback); }, 1000);
 		    	return;
 		    }
-		    this.dconnections[this.currDConnection++].send(request_str, success_callback);
+		    this.dconnections[this.currDConnection++].send(request_str, callback);
 		    if (this.currDConnection == this.DATA_CONN) {
 		        this.currDConnection = 0;
 		    }
@@ -162,9 +162,9 @@ Requester.prototype.makeDataRequest = function (request, success_callback, error
                     type: "POST",
                     url: "https://" + this.backend + "/data",
                     data: request_str,
-                    success: success_callback,
-                    dataType: "text",
-                    error: error_callback == undefined ? function () {} : error_callback
+                    success: callback,
+                    dataType: "json",
+                    error: function (jqXHR, status) { callback(status); }
                 });
         }
     };

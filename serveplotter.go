@@ -330,6 +330,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		
 		wrapper = RespWrapper{gzipWriter}
 		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set("Content-Type", "application/json")
 	} else {
 		wrapper = RespWrapper{w}
 	}

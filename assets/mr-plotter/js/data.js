@@ -252,16 +252,13 @@ function ensureData(self, uuid, pointwidthexp, startTime, endTime, callback, cac
                     callbackToUse = function () {};
                 }
                 if (dataCache.hasOwnProperty(uuid) && dataCache[uuid][pointwidthexp] == cache) { // If the stream or pointwidth has been deleted to limit memory, just return and don't cache
-                    var data;
-                    try {
-                        data = JSON.parse(streamdata);
-                    } catch (err) {
-                        console.log('Invalid data response from server: ' + err);
+                    if (typeof(streamdata) === "string") { // Catches the case where the AJAX request didn't go through
+                        console.log("Could not get data from server: " + streamdata);
                         // Just use the previous data that was cached for drawing
                         callback(undefined);
                         return;
                     }
-                    insertData(self, uuid, cache, data, start, end, callbackToUse);
+                    insertData(self, uuid, cache, streamdata, start, end, callbackToUse);
                 }
             };
         
@@ -318,11 +315,6 @@ function queueRequest(self, req, callback, pwe) {
                 if (self.idata.pendingRequests == 0) {
                     effectSecondaryRequests(self);
                 }
-            }, function (error) {
-                self.idata.pendingRequests--;
-                if (self.idata.pendingRequests == 0) {
-                    effectSecondaryRequests(self);
-                }
             });
     } else {
         if (pwe != self.idata.secondaryPWE) {
@@ -333,9 +325,7 @@ function queueRequest(self, req, callback, pwe) {
         self.idata.pendingSecondaryRequests++;
         var id = setTimeout(function () {
                 if (self.idata.pendingSecondaryRequestData.hasOwnProperty(id)) {
-                    self.requester.makeDataRequest(req, function (data) {
-                            callback(data);
-                        });
+                    self.requester.makeDataRequest(req, callback);
                     self.idata.pendingSecondaryRequests--;
                     delete self.idata.pendingSecondaryRequestData[id];
                 }
@@ -362,9 +352,7 @@ function effectSecondaryRequests(self) {
                             self.idata.pendingRequests--;
                             cb(result)
                         };
-                })(entry[1]), function (error) {
-                    self.idata.pendingRequests--;
-                });
+                })(entry[1]));
         }
     }
     self.idata.pendingSecondaryRequestData = {};
