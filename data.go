@@ -6,7 +6,6 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
-	"time"
 	
 	cpint "github.com/SoftwareDefinedBuildings/btrdb/cpinterface"
 	capnp "github.com/glycerine/go-capnproto"
@@ -102,6 +101,7 @@ type DataRequester struct {
 	pending uint32
 	maxPending uint32
 	pendingLock *sync.Mutex
+	pendingCondVar *sync.Cond
 	responseWriters map[uint64]Writable
 	synchronizers map[uint64]chan bool
 	stateLock *sync.Mutex
@@ -131,6 +131,7 @@ func NewDataRequester(dbAddr string, numConnections int, maxPending uint32, brac
 		locks[i] = &sync.Mutex{}
 	}
 	
+	pendingLock := &sync.Mutex{}
 	var dr *DataRequester = &DataRequester{
 		connections: connections,
 		sendLocks: locks,
@@ -138,7 +139,8 @@ func NewDataRequester(dbAddr string, numConnections int, maxPending uint32, brac
 		connID: 0,
 		pending: 0,
 		maxPending: maxPending,
-		pendingLock: &sync.Mutex{},
+		pendingLock: pendingLock,
+		pendingCondVar: sync.NewCond(pendingLock),
 		responseWriters: make(map[uint64]Writable),
 		synchronizers: make(map[uint64]chan bool),
 		stateLock: &sync.Mutex{},
@@ -165,19 +167,12 @@ func NewDataRequester(dbAddr string, numConnections int, maxPending uint32, brac
 
 /* Makes a request for data and writes the result to the specified Writer. */
 func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, endTime int64, pw uint8, writ Writable) {
-	for true {
-		dr.pendingLock.Lock()
-		if dr.pending < dr.maxPending {
-			dr.pending += 1
-			dr.pendingLock.Unlock()
-			break
-		} else {
-			dr.pendingLock.Unlock()
-			time.Sleep(time.Second)
-		}
+	dr.pendingLock.Lock()
+	for dr.pending == dr.maxPending {
+		dr.pendingCondVar.Wait()
 	}
-	
-	defer atomic.AddUint32(&dr.pending, 0xFFFFFFFF)
+	dr.pending += 1
+	dr.pendingLock.Unlock()
 	
 	var mp QueryMessagePart = queryPool.Get().(QueryMessagePart)
 	
@@ -225,6 +220,15 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 	delete(dr.responseWriters, id)
 	delete(dr.synchronizers, id)
 	dr.stateLock.Unlock()
+	
+	dr.pendingLock.Lock()
+	if dr.pending == dr.maxPending {
+		dr.pending -= 1
+		dr.pendingCondVar.Signal()
+	} else {
+		dr.pending -= 1
+	}
+	dr.pendingLock.Unlock()
 }
 
 /** A function designed to handle QUASAR's response over Cap'n Proto.
@@ -296,19 +300,12 @@ func (dr *DataRequester) handleDataResponse(connection net.Conn) {
 }
 
 func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
-	for true {
-		dr.pendingLock.Lock()
-		if dr.pending < dr.maxPending {
-			dr.pending += 1
-			dr.pendingLock.Unlock()
-			break
-		} else {
-			dr.pendingLock.Unlock()
-			time.Sleep(time.Second)
-		}
+	dr.pendingLock.Lock()
+	for dr.pending == dr.maxPending {
+		dr.pendingCondVar.Wait()
 	}
-	
-	defer atomic.AddUint32(&dr.pending, 0xFFFFFFFF)
+	dr.pending += 1
+	dr.pendingLock.Unlock()
 	
 	var mp BracketMessagePart = bracketPool.Get().(BracketMessagePart)
 	
@@ -436,6 +433,15 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 	lMillis, lNanos = splitTime(lowest)
 	rMillis, rNanos = splitTime(highest)
 	w.Write([]byte(fmt.Sprintf(",\"Merged\":[[%v,%v],[%v,%v]]}", lMillis, lNanos, rMillis, rNanos)))
+	
+	dr.pendingLock.Lock()
+	if dr.pending == dr.maxPending {
+		dr.pending -= 1
+		dr.pendingCondVar.Signal()
+	} else {
+		dr.pending -= 1
+	}
+	dr.pendingLock.Unlock()
 }
 
 /** A function designed to handle QUASAR's response over Cap'n Proto.
