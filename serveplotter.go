@@ -167,21 +167,24 @@ func main() {
 	}
 }
 
-func parseDataRequest(request string, writ Writable) (uuidBytes uuid.UUID, startTime int64, endTime int64, pw uint8, extra string, success bool) {
+func parseDataRequest(request string, writ Writable) (uuidBytes uuid.UUID, startTime int64, endTime int64, pw uint8, extra1 string, extra2 string, success bool) {
 	var args []string = strings.Split(string(request), ",")
 	var err error
 	
 	success = false
 	var w io.Writer
 
-	if len(args) != 4 && len(args) != 5 {
+	if len(args) != 4 && len(args) != 5 && len(args) != 6 {
 		w = writ.GetWriter()
-		w.Write([]byte(fmt.Sprintf("Four or five arguments are required; got %v", len(args))))
+		w.Write([]byte(fmt.Sprintf("Four, five, or six arguments are required; got %v", len(args))))
 		return
 	}
 	
-	if len(args) == 5 {
-		extra = args[4]
+	if len(args) == 6 {
+		extra1 = args[4]
+		extra2 = args[5]
+	} else if len(args) == 5 {
+		extra1 = args[4]
 	}
 
 	uuidBytes = uuid.Parse(args[0])
@@ -280,7 +283,7 @@ func datawsHandler(w http.ResponseWriter, r *http.Request) {
 			return // Most likely the connection was closed
 		}
 		
-		uuidBytes, startTime, endTime, pw, echoTag, success := parseDataRequest(string(payload), &cw)
+		uuidBytes, startTime, endTime, pw, _, echoTag, success := parseDataRequest(string(payload), &cw)
 		fmt.Println("Got data request")
 	
 		if success {
@@ -316,29 +319,45 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	var gzipWriter *gzip.Writer
-	var wrapper RespWrapper
 
 	// TODO: don't just read the whole thing in one go. Instead give up after a reasonably long limit.
 	payload, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.Write([]byte(fmt.Sprintf("Could not read received POST payload: %v", err)))
+		return
 	}
 	
-	if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-		gzipWriter = gzip.NewWriter(w)
-		defer gzipWriter.Close()
+	var wrapper RespWrapper = RespWrapper{w}
+	
+	uuidBytes, startTime, endTime, pw, token, _, success := parseDataRequest(string(payload), wrapper)
 		
-		wrapper = RespWrapper{gzipWriter}
-		w.Header().Set("Content-Encoding", "gzip")
-		w.Header().Set("Content-Type", "application/json")
-	} else {
-		wrapper = RespWrapper{w}
-	}
-	
-	uuidBytes, startTime, endTime, pw, _, success := parseDataRequest(string(payload), wrapper)
-	
 	if success {
-		dr.MakeDataRequest(uuidBytes, startTime, endTime, uint8(pw), wrapper)
+		var loginsession *LoginSession
+		if len(token) != 0 {
+			tokenslice, err := base64.StdEncoding.DecodeString(token)
+			if err != nil || len(tokenslice) != TOKEN_BYTE_LEN {
+				wrapper.GetWriter().Write([]byte("invalid token"))
+				return
+			}
+			loginsession = getloginsession(tokenslice)
+			if loginsession == nil {
+				wrapper.GetWriter().Write([]byte("invalid token"))
+				return
+			}
+		}
+		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			gzipWriter = gzip.NewWriter(w)
+			defer gzipWriter.Close()
+		
+			wrapper = RespWrapper{gzipWriter}
+			w.Header().Set("Content-Encoding", "gzip")
+			w.Header().Set("Content-Type", "application/json")
+		}
+		if hasPermission(loginsession, uuidBytes) {
+			dr.MakeDataRequest(uuidBytes, startTime, endTime, uint8(pw), wrapper)
+		} else {
+			wrapper.GetWriter().Write([]byte("[]"))
+		}
 	}
 }
 

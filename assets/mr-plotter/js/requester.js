@@ -161,7 +161,7 @@ Requester.prototype.makeDataRequest = function (request, callback) {
             return $.ajax({
                     type: "POST",
                     url: "https://" + this.backend + "/data",
-                    data: request_str,
+                    data: request_str + "," + this.token,
                     success: callback,
                     dataType: "json",
                     error: function (jqXHR, status) { callback(status); }

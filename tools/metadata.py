@@ -102,6 +102,9 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
                 if not pathstarts or doc_matches_path(stream, pathstarts):
 	            del stream['_id']
         	    streams.add(json.dumps(stream))
+        	if len(streams) == 0:
+        		self.wfile.write('[]')
+        		return
             returnstr = '['
             for stream in streams:
                 returnstr += stream + ", "
