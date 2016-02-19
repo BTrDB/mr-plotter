@@ -146,7 +146,7 @@ Requester.prototype.makePermalinkRetrievalRequest = function (permalinkStr, succ
     };
     
 Requester.prototype.makeDataRequest = function (request, callback) {
-		var request_str = request.join(',');
+		var request_str = request.join(',') + "," + this.token;
 		if (USE_WEBSOCKETS) {
 			if (!this.dconnections[this.currDConnection].ready) {
 		    	var self = this;
@@ -161,7 +161,7 @@ Requester.prototype.makeDataRequest = function (request, callback) {
             return $.ajax({
                     type: "POST",
                     url: "https://" + this.backend + "/data",
-                    data: request_str + "," + this.token,
+                    data: request_str,
                     success: callback,
                     dataType: "json",
                     error: function (jqXHR, status) { callback(status); }
@@ -171,7 +171,7 @@ Requester.prototype.makeDataRequest = function (request, callback) {
     
 /** REQUEST should be an array of UUIDs whose brackets we want. */
 Requester.prototype.makeBracketRequest = function (request, success_callback, error_callback) {
-		var request_str = request.join(',');
+		var request_str = request.join(',') + "," + this.token
 		if (USE_WEBSOCKETS) {
 		    if (!this.bconnections[this.currBConnection].ready) {
 		    	var self = this;

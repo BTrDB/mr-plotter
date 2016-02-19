@@ -227,7 +227,7 @@ func parseDataRequest(request string, writ Writable) (uuidBytes uuid.UUID, start
 	return
 }
 
-func parseBracketRequest(request string, writ Writable, expectExtra bool) (uuids []uuid.UUID, extra string, success bool) {
+func parseBracketRequest(request string, writ Writable, expectExtra bool) (uuids []uuid.UUID, token string, extra string, success bool) {
 	var args []string = strings.Split(string(request), ",")
 	
 	success = false
@@ -236,15 +236,19 @@ func parseBracketRequest(request string, writ Writable, expectExtra bool) (uuids
 	var numUUIDs int
 	
 	if expectExtra {
-		numUUIDs = len(args) - 1
-		if numUUIDs < 1 {
-			w = writ.GetWriter()
-			w.Write([]byte(fmt.Sprintf("At least two arguments are required; got %v", len(args))))
-			return
-		}
-		extra = args[numUUIDs]
+		numUUIDs = len(args) - 2
 	} else {
-		numUUIDs = len(args)
+		numUUIDs = len(args) - 1
+	}
+	
+	if numUUIDs < 1 {
+		w = writ.GetWriter()
+		w.Write([]byte(fmt.Sprintf("Got only %v arguments", len(args))))
+		return
+	}
+	
+	if expectExtra {
+		extra = args[numUUIDs + 1]
 	}
 	
 	uuids = make([]uuid.UUID, numUUIDs)
@@ -258,9 +262,19 @@ func parseBracketRequest(request string, writ Writable, expectExtra bool) (uuids
 		}
 	}
 	
+	token = args[numUUIDs]
+	
 	success = true
 	
 	return
+}
+
+func validateToken(token string) *LoginSession {
+	tokenslice, err := base64.StdEncoding.DecodeString(token)
+	if err != nil || len(tokenslice) != TOKEN_BYTE_LEN {
+		return nil
+	}
+	return getloginsession(tokenslice)
 }
 
 func datawsHandler(w http.ResponseWriter, r *http.Request) {
@@ -283,11 +297,22 @@ func datawsHandler(w http.ResponseWriter, r *http.Request) {
 			return // Most likely the connection was closed
 		}
 		
-		uuidBytes, startTime, endTime, pw, _, echoTag, success := parseDataRequest(string(payload), &cw)
-		fmt.Println("Got data request")
+		uuidBytes, startTime, endTime, pw, token, echoTag, success := parseDataRequest(string(payload), &cw)
 	
 		if success {
-			dr.MakeDataRequest(uuidBytes, startTime, endTime, uint8(pw), &cw)
+			var loginsession *LoginSession
+			if len(token) != 0 {
+				loginsession = validateToken(token)
+				if loginsession == nil {
+					w.Write([]byte("invalid token"))
+					return
+				}
+			}
+			if hasPermission(loginsession, uuidBytes) {
+				dr.MakeDataRequest(uuidBytes, startTime, endTime, uint8(pw), &cw)
+			} else {
+				cw.GetWriter().Write([]byte("[]"))
+			}
 		}
 		if cw.CurrWriter != nil {
 			cw.CurrWriter.Close()
@@ -334,14 +359,9 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 	if success {
 		var loginsession *LoginSession
 		if len(token) != 0 {
-			tokenslice, err := base64.StdEncoding.DecodeString(token)
-			if err != nil || len(tokenslice) != TOKEN_BYTE_LEN {
-				wrapper.GetWriter().Write([]byte("invalid token"))
-				return
-			}
-			loginsession = getloginsession(tokenslice)
+			loginsession = validateToken(token)
 			if loginsession == nil {
-				wrapper.GetWriter().Write([]byte("invalid token"))
+				w.Write([]byte("invalid token"))
 				return
 			}
 		}
@@ -381,10 +401,29 @@ func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
 			return // Most likely the connection was closed
 		}
 		
-		uuids, echoTag, success := parseBracketRequest(string(payload), &cw, true)
+		uuids, token, echoTag, success := parseBracketRequest(string(payload), &cw, true)
 		
 		if success {
-			br.MakeBracketRequest(uuids, &cw)
+			var loginsession *LoginSession
+			if len(token) != 0 {
+				loginsession = validateToken(token)
+				if loginsession == nil {
+					w.Write([]byte("invalid token"))
+					return
+				}
+			}
+			var canview bool = true
+			for _, uuid := range uuids {
+				if !hasPermission(loginsession, uuid) {
+					canview = false
+					break
+				}
+			}
+			if canview {
+				br.MakeBracketRequest(uuids, &cw)
+			} else {
+				br.MakeBracketRequest([]uuid.UUID{}, &cw)
+			}
 		}
 		if cw.CurrWriter != nil {
 			cw.CurrWriter.Close()
@@ -423,10 +462,29 @@ func bracketHandler (w http.ResponseWriter, r *http.Request) {
 	
 	wrapper := RespWrapper{w}
 	
-	uuids, _, success := parseBracketRequest(string(payload), wrapper, false)
+	uuids, token, _, success := parseBracketRequest(string(payload), wrapper, false)
 	
 	if success {
-		br.MakeBracketRequest(uuids, wrapper)
+		var loginsession *LoginSession
+		if len(token) != 0 {
+			loginsession = validateToken(token)
+			if loginsession == nil {
+				w.Write([]byte("invalid token"))
+				return
+			}
+		}
+		var canview bool = true
+		for _, uuid := range uuids {
+			if !hasPermission(loginsession, uuid) {
+				canview = false
+				break
+			}
+		}
+		if canview {
+			br.MakeBracketRequest(uuids, wrapper)
+		} else {
+			br.MakeBracketRequest([]uuid.UUID{}, wrapper)
+		}
 	}
 }
 

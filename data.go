@@ -430,6 +430,9 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 		}
 		w.Write([]byte(fmt.Sprintf("[[%v,%v],[%v,%v]]%c", lMillis, lNanos, rMillis, rNanos, trailchar)))
 	}
+	if len(uuids) == 0 {
+		w.Write([]byte("]"))
+	}
 	lMillis, lNanos = splitTime(lowest)
 	rMillis, rNanos = splitTime(highest)
 	w.Write([]byte(fmt.Sprintf(",\"Merged\":[[%v,%v],[%v,%v]]}", lMillis, lNanos, rMillis, rNanos)))
