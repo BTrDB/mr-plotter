@@ -69,7 +69,7 @@ Requester.prototype.makeLoginRequest = function (username, password, success_cal
         var loginjsonstr = JSON.stringify({"username": username, "password": password});
         return $.ajax({
             type: "POST",
-            url: "https://" + this.backend + "/login",
+            url: location.protocol + "//" + this.backend + "/login",
             data: loginjsonstr,
             success: success_callback,
             dataType: "text",
@@ -80,7 +80,7 @@ Requester.prototype.makeLoginRequest = function (username, password, success_cal
 Requester.prototype.makeLogoffRequest = function (success_callback, error_callback) {
         return $.ajax({
             type: "POST",
-            url: "https://" + this.backend + "/logoff",
+            url: location.protocol + "//" + this.backend + "/logoff",
             data: self.token,
             success: success_callback,
             dataType: "text",
@@ -91,7 +91,7 @@ Requester.prototype.makeLogoffRequest = function (success_callback, error_callba
 Requester.prototype.makeCheckTokenRequest = function (token, success_callback, error_callback) {
         return $.ajax({
             type: "POST",
-            url: "https://" + this.backend + "/checktoken",
+            url: location.protocol + "//" + this.backend + "/checktoken",
             data: token,
             success: success_callback,
             dataType: "text",
@@ -103,7 +103,7 @@ Requester.prototype.makeChangePasswordRequest = function (old_password, new_pass
         var changepwjsonstr = JSON.stringify({"token": self.token, "oldpassword": old_password, "newpassword": new_password});
         return $.ajax({
             type: "POST",
-            url: "https://" + this.backend + "/changepw",
+            url: location.protocol + "//" + this.backend + "/changepw",
             data: changepwjsonstr,
             success: success_callback,
             dataType: "text",
@@ -114,7 +114,7 @@ Requester.prototype.makeChangePasswordRequest = function (old_password, new_pass
 Requester.prototype.makeMetadataRequest = function (query, success_callback, error_callback) {
         return $.ajax({
                 type: "POST",
-                url: "https://" + this.backend + "/metadata",
+                url: location.protocol + "//" + this.backend + "/metadata",
                 data: query.concat(self.token),
                 success: success_callback,
                 dataType: "text",
@@ -126,7 +126,7 @@ Requester.prototype.makePermalinkInsertRequest = function (permalinkObj, success
         var permalinkjsonstr = JSON.stringify(permalinkObj)
         return $.ajax({
                 type: "POST",
-                url: "https://" + this.backend + "/permalink",
+                url: location.protocol + "//" + this.backend + "/permalink",
                 data: permalinkjsonstr,
                 success: success_callback,
                 dataType: "text",
@@ -137,7 +137,7 @@ Requester.prototype.makePermalinkInsertRequest = function (permalinkObj, success
 Requester.prototype.makePermalinkRetrievalRequest = function (permalinkStr, success_callback, error_callback) {
         return $.ajax({
                 type: "GET",
-                url: "https://" + this.backend + "/permalink",
+                url: location.protocol + "//" + this.backend + "/permalink",
                 data: {id: permalinkStr},
                 success: success_callback,
                 dataType: "text",
@@ -160,7 +160,7 @@ Requester.prototype.makeDataRequest = function (request, callback) {
         } else {
             return $.ajax({
                     type: "POST",
-                    url: "https://" + this.backend + "/data",
+                    url: location.protocol + "//" + this.backend + "/data",
                     data: request_str,
                     success: callback,
                     dataType: "json",
@@ -185,7 +185,7 @@ Requester.prototype.makeBracketRequest = function (request, success_callback, er
         } else {
             return $.ajax({
                     type: "POST",
-                    url: "https://" + this.backend + "/bracket",
+                    url: location.protocol + "//" + this.backend + "/bracket",
                     data: request_str,
                     success: success_callback,
                     dataType: "text",
