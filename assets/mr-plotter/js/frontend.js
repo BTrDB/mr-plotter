@@ -401,7 +401,8 @@ function createCSVDownload(self, streams, settingsObj, domain, pwe, graphExport)
             "StartTime": domain[0] - self.idata.offset,
             "EndTime": domain[1] - self.idata.offset,
             "UnitOfTime": "ms",
-            "PointWidth": pwe
+            "PointWidth": pwe,
+            "_token": self.requester.getToken()
         };
     var csvform = graphExport.querySelector(".csv-form");
     csvform.querySelector(".csv-form-data").value = JSON.stringify(dataJSON);

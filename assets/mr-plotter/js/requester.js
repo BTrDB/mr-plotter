@@ -47,7 +47,7 @@ function Requester(backend) {
         }
         this.bconnections = [];
         for (i = 0; i < this.BRACK_CONN; i++) {
-        	this.bconnections.push(new DataConn("wss://" + backend + "/bracketws"));
+            this.bconnections.push(new DataConn("wss://" + backend + "/bracketws"));
         }
         this.currDConnection = 0;
         this.currBConnection = 0;
@@ -59,10 +59,14 @@ Requester.prototype.BRACK_CONN = 2;
 
 Requester.prototype.setToken = function (token) {
         if (token == undefined || token == null) {
-            self.token = "";
+            this.token = "";
         } else {
-            self.token = token;
+            this.token = token;
         }
+    };
+    
+Requester.prototype.getToken = function (token) {
+        return this.token;
     };
 
 Requester.prototype.makeLoginRequest = function (username, password, success_callback, error_callback) {
@@ -81,7 +85,7 @@ Requester.prototype.makeLogoffRequest = function (success_callback, error_callba
         return $.ajax({
             type: "POST",
             url: location.protocol + "//" + this.backend + "/logoff",
-            data: self.token,
+            data: this.token,
             success: success_callback,
             dataType: "text",
             error: error_callback = undefined ? function () {} : error_callback
@@ -100,7 +104,7 @@ Requester.prototype.makeCheckTokenRequest = function (token, success_callback, e
     };
     
 Requester.prototype.makeChangePasswordRequest = function (old_password, new_password, success_callback, error_callback) {
-        var changepwjsonstr = JSON.stringify({"token": self.token, "oldpassword": old_password, "newpassword": new_password});
+        var changepwjsonstr = JSON.stringify({"token": this.token, "oldpassword": old_password, "newpassword": new_password});
         return $.ajax({
             type: "POST",
             url: location.protocol + "//" + this.backend + "/changepw",
@@ -115,7 +119,7 @@ Requester.prototype.makeMetadataRequest = function (query, success_callback, err
         return $.ajax({
                 type: "POST",
                 url: location.protocol + "//" + this.backend + "/metadata",
-                data: query.concat(self.token),
+                data: query.concat(this.token),
                 success: success_callback,
                 dataType: "text",
                 error: error_callback == undefined ? function () {} : error_callback
@@ -146,17 +150,17 @@ Requester.prototype.makePermalinkRetrievalRequest = function (permalinkStr, succ
     };
     
 Requester.prototype.makeDataRequest = function (request, callback) {
-		var request_str = request.join(',') + "," + this.token;
-		if (USE_WEBSOCKETS) {
-			if (!this.dconnections[this.currDConnection].ready) {
-		    	var self = this;
-		    	setTimeout(function () { self.makeDataRequest(request, callback); }, 1000);
-		    	return;
-		    }
-		    this.dconnections[this.currDConnection++].send(request_str, callback);
-		    if (this.currDConnection == this.DATA_CONN) {
-		        this.currDConnection = 0;
-		    }
+        var request_str = request.join(',') + "," + this.token;
+        if (USE_WEBSOCKETS) {
+            if (!this.dconnections[this.currDConnection].ready) {
+                var self = this;
+                setTimeout(function () { self.makeDataRequest(request, callback); }, 1000);
+                return;
+            }
+            this.dconnections[this.currDConnection++].send(request_str, callback);
+            if (this.currDConnection == this.DATA_CONN) {
+                this.currDConnection = 0;
+            }
         } else {
             return $.ajax({
                     type: "POST",
@@ -171,17 +175,17 @@ Requester.prototype.makeDataRequest = function (request, callback) {
     
 /** REQUEST should be an array of UUIDs whose brackets we want. */
 Requester.prototype.makeBracketRequest = function (request, success_callback, error_callback) {
-		var request_str = request.join(',') + "," + this.token
-		if (USE_WEBSOCKETS) {
-		    if (!this.bconnections[this.currBConnection].ready) {
-		    	var self = this;
-		    	setTimeout(function () { self.makeBracketRequest(request, success_callback, error_callback); }, 1000);
-		    	return;
-		    }
-		    this.bconnections[this.currBConnection++].send(request_str, success_callback);
-		    if (this.currBConnection == this.BRACK_CONN) {
-		        this.currBConnection = 0;
-		    }
+        var request_str = request.join(',') + "," + this.token
+        if (USE_WEBSOCKETS) {
+            if (!this.bconnections[this.currBConnection].ready) {
+                var self = this;
+                setTimeout(function () { self.makeBracketRequest(request, success_callback, error_callback); }, 1000);
+                return;
+            }
+            this.bconnections[this.currBConnection++].send(request_str, success_callback);
+            if (this.currBConnection == this.BRACK_CONN) {
+                this.currBConnection = 0;
+            }
         } else {
             return $.ajax({
                     type: "POST",
@@ -192,4 +196,4 @@ Requester.prototype.makeBracketRequest = function (request, success_callback, er
                     error: error_callback == undefined ? function () {} : error_callback
                 });
         }
-	};
+    };

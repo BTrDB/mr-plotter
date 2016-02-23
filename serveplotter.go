@@ -23,6 +23,16 @@ import (
 	ws "github.com/gorilla/websocket"
 )
 
+type CSVRequest struct {
+	UUIDs []string `json:"UUIDS"`
+	Labels []string
+	StartTime int64
+	EndTime int64
+	UnitofTime string
+	PointWidth uint8
+	Token string `json:"_token,omitempty"`
+}
+
 var upgrader = ws.Upgrader{}
 
 type RespWrapper struct {
@@ -301,7 +311,7 @@ func datawsHandler(w http.ResponseWriter, r *http.Request) {
 	
 		if success {
 			var loginsession *LoginSession
-			if len(token) != 0 {
+			if token != "" {
 				loginsession = validateToken(token)
 				if loginsession == nil {
 					w.Write([]byte("invalid token"))
@@ -358,7 +368,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		
 	if success {
 		var loginsession *LoginSession
-		if len(token) != 0 {
+		if token != "" {
 			loginsession = validateToken(token)
 			if loginsession == nil {
 				w.Write([]byte("invalid token"))
@@ -405,7 +415,7 @@ func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
 		
 		if success {
 			var loginsession *LoginSession
-			if len(token) != 0 {
+			if token != "" {
 				loginsession = validateToken(token)
 				if loginsession == nil {
 					w.Write([]byte("invalid token"))
@@ -466,9 +476,10 @@ func bracketHandler (w http.ResponseWriter, r *http.Request) {
 	
 	if success {
 		var loginsession *LoginSession
-		if len(token) != 0 {
+		if token != "" {
 			loginsession = validateToken(token)
 			if loginsession == nil {
+				w.WriteHeader(http.StatusBadRequest)
 				w.Write([]byte("invalid token"))
 				return
 			}
@@ -654,23 +665,78 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("To get a CSV file, send the required data as a JSON document via a POST request."))
 		return
 	}
+	
+	var err error
+	_, err = io.ReadFull(r.Body, make([]byte, 5)) // Remove the "json="
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Bad request"))
+		return
+	}
+	
+	var jsonCSVReq CSVRequest
+	var jsonCSVReqDecoder *json.Decoder = json.NewDecoder(r.Body)
+	err = jsonCSVReqDecoder.Decode(&jsonCSVReq)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Malformed Request"))
+		return
+	}
+	
+	var loginsession *LoginSession
+	if jsonCSVReq.Token != "" {
+		loginsession = validateToken(jsonCSVReq.Token)
+		if loginsession == nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("Invalid token"))
+			return
+		}
+	}
+	
+	for _, uuidstr := range jsonCSVReq.UUIDs {
+		uuidobj := uuid.Parse(uuidstr)
+		if uuidobj == nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("Malformed UUID"))
+			return
+		}
+		if !hasPermission(loginsession, uuidobj) {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte("Insufficient permissions"))
+			return
+		}
+	}
+	
+	// Don't send the token to BTrDB
+	jsonCSVReq.Token = ""
+	
 	w.Header().Set("Content-Disposition", "attachment; filename=data.csv")
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Transfer-Encoding", "chunked")
 	
-	csvReq, err := http.NewRequest("POST", csvURL, r.Body)
+	var csvJSON []byte
+	csvJSON, err = json.Marshal(&jsonCSVReq)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("Could not forward request: %v", err)))
+		return
+	}
+	
+	var csvReq *http.Request
+	csvReq, err = http.NewRequest("POST", csvURL, bytes.NewReader(csvJSON))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("Could not perform HTTP request to database: %v", err)))
 		return
 	}
 	
-	csvReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	csvReq.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(csvReq)
 	
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(fmt.Sprintf("Could not forward request to database: %v", err)))
+		resp.Body.Close()
 		return
 	}
 	
@@ -682,6 +748,7 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		bytesRead, readErr = resp.Body.Read(buffer)
 		w.Write(buffer[:bytesRead])
 	}
+	
 	resp.Body.Close()
 }
 
