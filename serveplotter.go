@@ -10,15 +10,17 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 	
+	"gopkg.in/ini.v1"
+	
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	
-	cparse "github.com/SoftwareDefinedBuildings/sync2_quasar/configparser"
 	uuid "github.com/pborman/uuid"
 	ws "github.com/gorilla/websocket"
 )
@@ -53,86 +55,45 @@ var csvURL string
 var token64len int
 var token64dlen int
 
+type Config struct {
+	HTTPPort uint16 `ini:"http_port"`
+	HTTPSPort uint16 `ini:"https_port"`
+	UseHTTPS bool `ini:"use_https"`
+	HTTPSRedirect bool `ini:"https_redirect"`
+	PlotterDir string `ini:"plotter_dir"`
+	CertFile string `ini:"cert_file"`
+	KeyFile string `ini:"key_file"`
+	
+	DBAddr string `ini:"db_addr"`
+	NumDataConn uint16 `ini:"num_data_conn"`
+	NumBracketConn uint16 `ini:"num_bracket_conn"`
+	MetadataServer string `ini:"metadata_server"`
+	MongoServer string `ini:"mongo_server"`
+	CSVURL string `ini:"csv_url"`
+}
+
 func main() {
-	configfile, err := ioutil.ReadFile("plotter.ini")
+	var config Config
+	var filename string
+	
+	if len(os.Args) < 2 {
+		filename = "plotter.ini"
+	} else {
+		filename = os.Args[1]
+	}
+	
+	err := ini.MapTo(&config, filename)
 	if err != nil {
-		fmt.Printf("Could not read plotter.ini: %v\n", err)
+		fmt.Printf("Could not parse %s: %v\n", filename, err)
 		return
 	}
+
+	mdServer = config.MetadataServer
+	csvURL = config.CSVURL
 	
-	config, isErr := cparse.ParseConfig(string(configfile))
-	if isErr {
-		fmt.Println("There were errors while parsing plotter.ini. See above.")
-		return
-	}
-	
-	port, ok := config["port"]
-	if !ok {
-		fmt.Println("Configuration file is missing required key \"port\"")
-		return
-	}
-	
-	dbaddr, ok := config["db_addr"]
-	if !ok {
-		fmt.Println("Configuration file is missing required key \"db_addr\"")
-		return
-	}
-	
-	dataConnRaw, ok := config["num_data_conn"]
-	if !ok {
-		fmt.Println("Configuration file is missing required key \"num_data_conn\"")
-		return
-	}
-	
-	bracketConnRaw, ok := config["num_bracket_conn"]
-	if !ok {
-		fmt.Println("Configuration file is missing required key \"num_data_conn\"")
-		return
-	}
-	
-	directory, ok := config["plotter_dir"]
-	if !ok {
-		fmt.Println("Configuration file is missing required key \"plotter_dir\"")
-		return
-	}
-	
-	mdServerRaw, ok := config["metadata_server"]
-	if !ok {
-		fmt.Println("Configuration file is missing required key \"metadata_server\"")
-		return
-	}
-	
-	mgServerRaw, ok := config["mongo_server"]
-	if !ok {
-		fmt.Println("Configuration file is missing required key \"mongo_server\"")
-		return
-	}
-	
-	csvURLRaw, ok := config["csv_url"]
-	if !ok {
-		fmt.Println("Configuration file is missing required key \"csv_url\"")
-		return
-	}
-	
-	dataConn64, err := strconv.ParseInt(dataConnRaw.(string), 0, 64)
+	mongoConn, err := mgo.Dial(config.MongoServer)
 	if err != nil {
-		fmt.Println("Configuration file must specify num_data_conn as an int")
-		return
-	}
-	bracketConn64, err := strconv.ParseInt(bracketConnRaw.(string), 0, 64)
-	if err != nil {
-		fmt.Println("Configuration file must specify num_bracket_conn as an int")
-		return
-	}
-	var dataConn int = int(dataConn64)
-	var bracketConn int = int(bracketConn64)
-	mdServer = mdServerRaw.(string)
-	mgServer := mgServerRaw.(string)
-	csvURL = csvURLRaw.(string)
-	
-	mongoConn, err := mgo.Dial(mgServer)
-	if err != nil {
-		fmt.Printf("Could not connect to MongoDB Server at address %s\n", mgServer)
+		fmt.Printf("Could not connect to MongoDB Server at address %s\n", config.MongoServer)
 		os.Exit(1)
 	}
 	
@@ -140,11 +101,11 @@ func main() {
 	permalinkConn = plotterDBConn.C("permalinks")
 	accountConn = plotterDBConn.C("accounts")
 	
-	dr = NewDataRequester(dbaddr.(string), dataConn, 8, false)
+	dr = NewDataRequester(config.DBAddr, int(config.NumDataConn), 8, false)
 	if dr == nil {
 		os.Exit(1)
 	}
-	br = NewDataRequester(dbaddr.(string), bracketConn, 8, true)
+	br = NewDataRequester(config.DBAddr, int(config.NumBracketConn), 8, true)
 	if br == nil {
 		os.Exit(1)
 	}
@@ -152,7 +113,7 @@ func main() {
 	token64len = base64.StdEncoding.EncodedLen(TOKEN_BYTE_LEN)
 	token64dlen = base64.StdEncoding.DecodedLen(token64len)
 	
-	http.Handle("/", http.FileServer(http.Dir(directory.(string))))
+	http.Handle("/", http.FileServer(http.Dir(config.PlotterDir)))
 	http.HandleFunc("/dataws", datawsHandler)
 	http.HandleFunc("/data", dataHandler)
 	http.HandleFunc("/bracketws", bracketwsHandler)
@@ -165,16 +126,29 @@ func main() {
 	http.HandleFunc("/changepw", changepwHandler)
 	http.HandleFunc("/checktoken", checktokenHandler)
 	
-	var portStr string = fmt.Sprintf(":%v", port)
-	
-	certFile, ok1 := config["cert_file"]
-	keyFile, ok2 := config["key_file"]
-	if ok1 && ok2 {
-		log.Fatal(http.ListenAndServeTLS(portStr, certFile.(string), keyFile.(string), nil))
+	var portStrHTTP string = fmt.Sprintf(":%d", config.HTTPPort)
+	if config.UseHTTPS {
+		var portStrHTTPS string = fmt.Sprintf(":%d", config.HTTPSPort)
+		go func () {
+				log.Fatal(http.ListenAndServeTLS(portStrHTTPS, config.CertFile, config.KeyFile, nil))
+				os.Exit(1)
+			}()
+			
+		if config.HTTPSRedirect {
+			var redirect http.Handler = http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+					var url *url.URL = r.URL
+					url.Scheme = "https"
+					url.Host = r.Host + portStrHTTPS
+					http.Redirect(w, r, url.String(), http.StatusFound)
+				})
+			log.Fatal(http.ListenAndServe(portStrHTTP, redirect))
+		} else {
+			log.Fatal(http.ListenAndServe(portStrHTTP, nil))
+		}
 	} else {
-		fmt.Println("Not using TLS: cert_file and key_file not specified in plotter.ini")
-		log.Fatal(http.ListenAndServe(portStr, nil))
+		log.Fatal(http.ListenAndServe(portStrHTTP, nil))
 	}
+	os.Exit(1);
 }
 
 func parseDataRequest(request string, writ Writable) (uuidBytes uuid.UUID, startTime int64, endTime int64, pw uint8, extra1 string, extra2 string, success bool) {
