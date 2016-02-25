@@ -1,7 +1,8 @@
 var slashRE = new RegExp("/", "g");
 
 function formatPath(metadata) {
-    return metadata.Path.replace(slashRE, "/ "); // so the line breaks where appropriate
+    /* Check that the path doesn't contain anything nasty. */
+    return escapeHTMLEntities(metadata.Path).replace(slashRE, "/ "); // so the line breaks where appropriate
 }
 
 function getFilepath(datum) {
@@ -10,25 +11,36 @@ function getFilepath(datum) {
     return (sourceName == undefined ? '<no source name>' : sourceName) + rawpath;
 }
 
-function getInfo (datum, linebreak) {
+function getInfo (datum, linebreak, escapeHTML) {
     if (linebreak == undefined) {
         linebreak = "<br>";
     }
-    return getInfoHelper(datum, "", linebreak);
+    if (escapeHTML == undefined) {
+        escapeHTML = true;
+    }
+    return getInfoHelper(datum, "", linebreak, escapeHTML);
 }
 
-function getInfoHelper(datum, prefix, linebreak) {
-    var toReturn = "";
+function getInfoHelper(datum, prefix, linebreak, escapeHTML) {
+    var toReturn = [];
+    var toadd;
     for (var prop in datum) {
         if (datum.hasOwnProperty(prop)) {
+            if (escapeHTML) {
+                prop = escapeHTMLEntities(prop);
+            }
             if (typeof datum[prop] == "object") {
-                toReturn += getInfoHelper(datum[prop], prefix + prop + "/", linebreak);
+                toReturn.push(getInfoHelper(datum[prop], prefix + prop + "/", linebreak, escapeHTML));
             } else {
-                toReturn += prefix + prop + ": " + datum[prop] + linebreak;
+                toadd = datum[prop];
+                if (escapeHTML) {
+                    toadd = escapeHTMLEntities(toadd);
+                }
+                toReturn.push(prefix + prop + ": " + toadd + linebreak);
             }
         }
     }
-    return toReturn;
+    return toReturn.join("");
 }
 
 function makeMenuMaker() {
@@ -146,12 +158,12 @@ function timeToStr(time) {
     }
 }
 
-var div = document.createElement("div");
-var text = document.createTextNode("");
-div.appendChild(text);
+s3ui.sanitizerdiv = document.createElement("div");
+s3ui.sanitizertext = document.createTextNode("");
+s3ui.sanitizerdiv.appendChild(s3ui.sanitizertext);
 function escapeHTMLEntities(str) {
-    text.textContent = str;
-    return div.innerHTML;
+    s3ui.sanitizertext.textContent = str;
+    return s3ui.sanitizerdiv.innerHTML;
 }
 
 function getTimezoneOffsetMinutes(tz_str, dst, getAbbrev) {
@@ -198,7 +210,7 @@ function getUnitString(unitDict) {
     var unitList = [];
     for (unit in unitDict) {
         if (unitDict.hasOwnProperty(unit) && unitDict[unit] > 0) {
-            unitList.push(unit);
+            unitList.push(s3ui.escapeHTMLEntities(unit));
         }
     }
     return unitList.join(", ");

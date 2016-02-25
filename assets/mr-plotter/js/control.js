@@ -511,14 +511,18 @@ function setTimeZoom(self, start, end, resetStart, resetEnd, tz, dst) {
     }
     self.idata.inittrans = (resetStart - start) / (end - start) * self.idata.WIDTH;
     self.idata.initzoom = (resetEnd - resetStart) / (end - start);
+    
+    var naiveStart = new Date(resetStart);
+    var naiveEnd = new Date(resetEnd);
+    var offset;
     try {
-        var naiveStart = new Date(resetStart);
-        var naiveEnd = new Date(resetEnd);
-        self.imethods.setStartTime(new Date(naiveStart.getTime() + 60000 * (naiveStart.getTimezoneOffset() - s3ui.getTimezoneOffsetMinutes(tz, dst))));
-        self.imethods.setEndTime(new Date(naiveEnd.getTime() + 60000 * (naiveEnd.getTimezoneOffset() - s3ui.getTimezoneOffsetMinutes(tz, dst))));
+        offset = s3ui.getTimezoneOffsetMinutes(tz, dst);
     } catch (err) {
-        console.log("Could not execute permalink: " + err.message);
+        console.log("Could not get timezone offset: " + err.message);
+        offset = 0;
     }
+    self.imethods.setStartTime(new Date(naiveStart.getTime() + 60000 * (naiveStart.getTimezoneOffset() - offset)));
+    self.imethods.setEndTime(new Date(naiveEnd.getTime() + 60000 * (naiveEnd.getTimezoneOffset() - offset)));
 }
 
 function setCursors(self, args) {

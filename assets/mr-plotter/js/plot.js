@@ -662,7 +662,8 @@ function drawPlot(self) {
     try {
         var tz = s3ui.getTimezoneOffsetMinutes(selectedTimezone, dst, true)
         self.idata.offset = tz[0] * -60000; // what to add to UTC to get to selected time zone
-        self.idata.xTitle.innerHTML = "Time [" + selectedTimezone + " (" + tz[1] + ")]";
+        // I probably don't need to sanitize the selectedTimezone since we know at this point that it's valid. But, it doesn't hurt.
+        self.idata.xTitle.innerHTML = "Time [" + s3ui.escapeHTMLEntities(selectedTimezone) + " (" + tz[1] + ")]";
         var startDateObj = new timezoneJS.Date(naiveStartDateObj.getFullYear(), naiveStartDateObj.getMonth(), naiveStartDateObj.getDate(), naiveStartDateObj.getHours(), naiveStartDateObj.getMinutes(), naiveStartDateObj.getSeconds(), 'UTC');
         var endDateObj = new timezoneJS.Date(naiveEndDateObj.getFullYear(), naiveEndDateObj.getMonth(), naiveEndDateObj.getDate(), naiveEndDateObj.getHours(), naiveEndDateObj.getMinutes(), naiveEndDateObj.getSeconds(), 'UTC');
         // startDateObj.getTime() and endDateObj.getTime() are in selected time zone
@@ -670,7 +671,8 @@ function drawPlot(self) {
         var endDate = endDateObj.getTime() - self.idata.offset;
         // startDate and endDate are in UTC
     } catch (err) {
-        $loadingElem.html(err);
+        // Be careful, err may contain the user-entered timezone, which may contain a <script>.
+        $loadingElem.html(s3ui.escapeHTMLEntities(err.message));
         return;
     }
     if (startDate >= endDate) {

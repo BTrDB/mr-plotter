@@ -89,7 +89,8 @@ function updateStreamList(self) {
                                                 }
                                                 return {
                                                         id: rootID,
-                                                        text: sourceName,
+                                                        /* This is pathological, but what if the source name is <script> ... </script>? */
+                                                        text: s3ui.escapeHTMLEntities(sourceName),
                                                         data: {
                                                                 toplevel: true,
                                                                 children: function (callback) {
@@ -205,7 +206,7 @@ function pathsToTree(self, sourceName, streamList) {
                 currCache = currCache[levelName].childCache;
             } else {
                 childNode = {
-                    text: levelName,
+                    text: s3ui.escapeHTMLEntities(levelName),
                     children: [],
                     childCache: {},
                     data: { toplevel: false, child: false } // the documentation says I can add additional properties directly, but that doesn't seem to work
@@ -255,10 +256,10 @@ function getContextMenu(self, node, callback) {
                                                  data = JSON.parse(data)[0];
                                                  node.data.streamdata = data;
                                              }
-                                             alert(s3ui.getInfo(node.data.streamdata, "\n"));
+                                             alert(s3ui.getInfo(node.data.streamdata, "\n", false));
                                          });
                                 } else {
-                                    alert(s3ui.getInfo(node.data.streamdata, "\n"));
+                                    alert(s3ui.getInfo(node.data.streamdata, "\n", false));
                                 }
                             }
                     }

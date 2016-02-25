@@ -216,10 +216,13 @@ function getSelectedTimezone(self) {
     var dst = (self.find(".dstButton").getAttribute("aria-pressed") == "true");
     var selection = timezoneSelect[timezoneSelect.selectedIndex].value;
     if (selection == "OTHER") {
-        return [self.find(".otherTimezone").value.trim(), dst];
-    } else {
-        return [selection, dst];
+        /* This is too early to perform the input sanitization in case someone is injecting a <script> here,
+         * because the entry has to given to timezoneJS to look up the timezone.
+         * The sanitization has to happen right before the timezone is ever written to the screen in any way.
+         */
+        selection = self.find(".otherTimezone").value.trim();
     }
+    return [selection, dst];
 }
 
 function createPlotDownload(self) {
@@ -448,7 +451,12 @@ function loggedin(self, username, token) {
     // Creating cookie
     setCookie(self, username, token); // Create cookie, or renew it if it's already there
     self.requester.setToken(token);
-    setLoginText(self, "Logged in as " + username + " ");
+    /* This is pathological, but what if someone' username is <script> ... </script>?
+     * This probably is only going to be a concern if sometime we add the capability
+     * to create an account on the website... but it's still good measure to sanitize
+     * the username.
+     */
+    setLoginText(self, "Logged in as " + s3ui.escapeHTMLEntities(username) + " ");
 }
 
 function logoff(self) {
