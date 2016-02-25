@@ -1,4 +1,5 @@
-USE_WEBSOCKETS = false;
+s3ui.USE_WEBSOCKETS = false;
+s3ui.ERROR_INVALID_TOKEN = "Invalid token";
 
 function DataConn(url) {
     this.ws = new WebSocket(url);
@@ -36,10 +37,11 @@ DataConn.prototype.send = function(message, callback) {
     }
 }
 
-function Requester(backend) {
+function Requester(plotter, backend) {
+    this.plotter = plotter;
     this.backend = backend;
     this.token = "";
-    if (USE_WEBSOCKETS) {
+    if (s3ui.USE_WEBSOCKETS) {
         this.dconnections = [];
         var i;
         for (i = 0; i < this.DATA_CONN; i++) {
@@ -67,6 +69,12 @@ Requester.prototype.setToken = function (token) {
     
 Requester.prototype.getToken = function (token) {
         return this.token;
+    };
+    
+Requester.prototype.checkErrorInvalidToken = function (errorText) {
+        if (errorText == s3ui.ERROR_INVALID_TOKEN) {
+            s3ui.sessionExpired(this.plotter);
+        }
     };
 
 Requester.prototype.makeLoginRequest = function (username, password, success_callback, error_callback) {
@@ -151,7 +159,8 @@ Requester.prototype.makePermalinkRetrievalRequest = function (permalinkStr, succ
     
 Requester.prototype.makeDataRequest = function (request, callback) {
         var request_str = request.join(',') + "," + this.token;
-        if (USE_WEBSOCKETS) {
+        var self = this;
+        if (s3ui.USE_WEBSOCKETS) {
             if (!this.dconnections[this.currDConnection].ready) {
                 var self = this;
                 setTimeout(function () { self.makeDataRequest(request, callback); }, 1000);
@@ -168,21 +177,25 @@ Requester.prototype.makeDataRequest = function (request, callback) {
                     data: request_str,
                     success: callback,
                     dataType: "json",
-                    error: function (jqXHR, status) { callback(status); }
+                    error: function (jqXHR) {
+                            self.checkErrorInvalidToken(jqXHR.responseText);
+                            callback(jqXHR.responseText);
+                        }
                 });
         }
     };
     
 /** REQUEST should be an array of UUIDs whose brackets we want. */
-Requester.prototype.makeBracketRequest = function (request, success_callback, error_callback) {
-        var request_str = request.join(',') + "," + this.token
-        if (USE_WEBSOCKETS) {
+Requester.prototype.makeBracketRequest = function (request, callback) {
+        var request_str = request.join(',') + "," + this.token;
+        var self = this;
+        if (s3ui.USE_WEBSOCKETS) {
             if (!this.bconnections[this.currBConnection].ready) {
                 var self = this;
-                setTimeout(function () { self.makeBracketRequest(request, success_callback, error_callback); }, 1000);
+                setTimeout(function () { self.makeBracketRequest(request, callback); }, 1000);
                 return;
             }
-            this.bconnections[this.currBConnection++].send(request_str, success_callback);
+            this.bconnections[this.currBConnection++].send(request_str, callback);
             if (this.currBConnection == this.BRACK_CONN) {
                 this.currBConnection = 0;
             }
@@ -191,9 +204,12 @@ Requester.prototype.makeBracketRequest = function (request, success_callback, er
                     type: "POST",
                     url: location.protocol + "//" + this.backend + "/bracket",
                     data: request_str,
-                    success: success_callback,
-                    dataType: "text",
-                    error: error_callback == undefined ? function () {} : error_callback
+                    success: callback,
+                    dataType: "json",
+                    error: function (jqXHR) {
+                            self.checkErrorInvalidToken(jqXHR.responseText);
+                            callback(jqXHR.responseText);
+                        }
                 });
         }
     };

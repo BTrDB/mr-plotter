@@ -52,16 +52,11 @@ function startPollingBrackets(self) {
    the program could have avoided that. I thought that the extra computation
    due to this was small enough to ignore. */
 
-function pollBracket(self, uuids, data) {
-    var range;
+function pollBracket(self, uuids, range) {
     var continuePolling = true;
-    try {
-        range = JSON.parse(data);
-    } catch (err) {
-        console.log("Invalid bracket response from server");
-        return;
-    }
-    if (range != undefined) {
+    if (typeof(range) === "string") {
+        console.log("Invalid bracket response from server: " + range);
+    } else if (range != undefined) {
         continuePolling = processBracketResponse(self, uuids, range);
     }
     if (continuePolling) {

@@ -462,8 +462,11 @@ function finishExecutingPermalink(self, streams, colors, args, streamToSelect, s
             start--;
         }
     } else if (args.window_type == "last") {
-        self.requester.makeBracketRequest(self.idata.selectedStreamsBuffer.map(function (s) { return s.uuid; }), function (data) {
-                var response = JSON.parse(data);
+        self.requester.makeBracketRequest(self.idata.selectedStreamsBuffer.map(function (s) { return s.uuid; }), function (response) {
+                if (typeof(response) === "string") {
+                    console.log("Could not execute permalink: " + response);
+                    return;
+                }
                 end = response.Merged[1][0] + (response.Merged[1][1] > 0 ? 1 : 0); // bump it up to be on the safe side
                 start = end - nanos_to_millis(args.window_width);
                 if ((end - start) * 1000000 < args.window_width) {

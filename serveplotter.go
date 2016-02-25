@@ -28,6 +28,7 @@ import (
 const (
 	FORWARD_CHUNKSIZE int = (4 << 10) // 4 KiB
 	MAX_REQSIZE int64 = (16 << 10) // 16 KiB
+	ERROR_INVALID_TOKEN string = "Invalid token"
 )
 
 type CSVRequest struct {
@@ -296,7 +297,7 @@ func datawsHandler(w http.ResponseWriter, r *http.Request) {
 			if token != "" {
 				loginsession = validateToken(token)
 				if loginsession == nil {
-					w.Write([]byte("invalid token"))
+					w.Write([]byte(ERROR_INVALID_TOKEN))
 					return
 				}
 			}
@@ -353,7 +354,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		if token != "" {
 			loginsession = validateToken(token)
 			if loginsession == nil {
-				w.Write([]byte("invalid token"))
+				w.Write([]byte(ERROR_INVALID_TOKEN))
 				return
 			}
 		}
@@ -403,7 +404,7 @@ func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
 			if token != "" {
 				loginsession = validateToken(token)
 				if loginsession == nil {
-					w.Write([]byte("invalid token"))
+					w.Write([]byte(ERROR_INVALID_TOKEN))
 					return
 				}
 			}
@@ -465,7 +466,7 @@ func bracketHandler (w http.ResponseWriter, r *http.Request) {
 			loginsession = validateToken(token)
 			if loginsession == nil {
 				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte("invalid token"))
+				w.Write([]byte(ERROR_INVALID_TOKEN))
 				return
 			}
 		}
@@ -669,7 +670,7 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 	err = jsonCSVReqDecoder.Decode(&jsonCSVReq)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Malformed Request"))
+		w.Write([]byte("Malformed request"))
 		return
 	}
 	
@@ -678,7 +679,8 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		loginsession = validateToken(jsonCSVReq.Token)
 		if loginsession == nil {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Invalid token"))
+			// Don't use ERROR_INVALID_TOKEN since this opens on a new page, not in the plotting application
+			w.Write([]byte("Session expired"))
 			return
 		}
 	}
@@ -897,13 +899,13 @@ func changepwHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	if len(token) != token64len {
-		w.Write([]byte("Error: invalid token"))
+		w.Write([]byte(ERROR_INVALID_TOKEN))
 		return
 	}
 	
 	tokenslice, err = base64.StdEncoding.DecodeString(token)
 	if err != nil || len(tokenslice) != TOKEN_BYTE_LEN {
-		w.Write([]byte("Error: invalid token"))
+		w.Write([]byte(ERROR_INVALID_TOKEN))
 		return
 	}
 	
@@ -924,6 +926,6 @@ func checktokenHandler(w http.ResponseWriter, r *http.Request) {
 	if tokenslice != nil && getloginsession(tokenslice) != nil {
 		w.Write([]byte("ok"))
 	} else {
-		w.Write([]byte("invalid"))
+		w.Write([]byte(ERROR_INVALID_TOKEN))
 	}
 }

@@ -9,7 +9,7 @@ function MrPlotter(container, storagekey, backend, options, cb1, cb2) {
        the same thing since the code assumes it would be like this. */
     this.data = [options, cb1, cb2];
     
-    this.requester = new Requester(backend);
+    this.requester = new Requester(this, backend);
 }
 
 // Meteor provided these two functions on a template, to search inside of it
@@ -247,11 +247,8 @@ function init_graph(self, c1, c2) {
             if (self.idata.selectedStreamsBuffer.length > 0) {
                 self.imethods.resetZoom();
                 var uuids = self.idata.selectedStreamsBuffer.map(function (s) { return s.uuid; });
-                self.requester.makeBracketRequest(uuids, function (data) {
-                        var range;
-                        try {
-                            range = JSON.parse(data);
-                        } catch (err) {
+                self.requester.makeBracketRequest(uuids, function (range) {
+                        if (typeof(range) === "string") {
                             console.log("Autozoom error: " + err.message);
                             return;
                         }

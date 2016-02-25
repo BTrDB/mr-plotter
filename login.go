@@ -166,7 +166,7 @@ func usertags(token []byte) []string {
 func userchangepassword(passwordConn *mgo.Collection, token []byte, oldpw []byte, newpw []byte) string {
 	loginsession := getloginsession(token)
 	if loginsession == nil {
-		return "Bad token"
+		return ERROR_INVALID_TOKEN
 	}
 	
 	var hash []byte

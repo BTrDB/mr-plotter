@@ -522,12 +522,11 @@ function changepw(self, event) {
             if (response === "Success") {
                 loginmessage.innerHTML = "Sucessfully changed password";
                 $loginButton.dropdown("toggle");
-            } else if (response === "Bad token") {
-                loginmessage.innerHTML = "Session expired";
-                logoff(self);
-                $loginButton.dropdown("toggle");
+            } else if (response === s3ui.ERROR_INVALID_TOKEN) {
+                sessionExpired(self);
+                return;
             } else if (response === "Bad password") {
-                loginmessage.innerHTML = "Old password is incorrect";
+                loginmessage.innerHTML = "Current password is incorrect";
                 showChangepwMenu(self);
             } else {
                 errorfunc();
@@ -539,6 +538,15 @@ function changepw(self, event) {
             errorfunc();
             $loginButton.dropdown("toggle");
         });
+}
+
+function sessionExpired(self) {
+    var loginElem = self.find(".logindiv");
+    var $loginButton = $(loginElem.querySelector(".loginMenu"));
+    var loginmessage = loginElem.querySelector(".loginmessage");
+    loginmessage.innerHTML = "Session expired";
+    logoff(self);
+    $loginButton.dropdown("toggle");
 }
 
 function setButtonEnabled($button, enable) {
@@ -657,5 +665,6 @@ s3ui.logoff = logoff;
 s3ui.showChangepwMenu = showChangepwMenu;
 s3ui.hideChangepwMenu = hideChangepwMenu;
 s3ui.changepw = changepw;
+s3ui.sessionExpired = sessionExpired;
 s3ui.setLoginText = setLoginText;
 s3ui.checkCookie = checkCookie;
