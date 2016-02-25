@@ -76,6 +76,26 @@ type Config struct {
 	MetadataServer string `ini:"metadata_server"`
 	MongoServer string `ini:"mongo_server"`
 	CSVURL string `ini:"csv_url"`
+	
+	SessionExpiry int64 `ini:"session_expiry_seconds"`
+	SessionPurgeInterval int64 `ini:"session_purge_interval_seconds"`
+}
+
+var configRequiredKeys = map[string]bool{
+	"http_port": true,
+	"https_port": true,
+	"use_https": true,
+	"https_redirect": true,
+	"plotter_dir": true,
+	"cert_file": true,
+	"key_file": true,
+	"db_addr": true,
+	"num_data_conn": true,
+	"metadata_server": true,
+	"mongo_server": true,
+	"csv_url": true,
+	"session_expiry_seconds": true,
+	"session_purge_interval_seconds": true,
 }
 
 func main() {
@@ -88,9 +108,24 @@ func main() {
 		filename = os.Args[1]
 	}
 	
-	err := ini.MapTo(&config, filename)
+	rawConfig, err := ini.Load(filename)
 	if err != nil {
 		fmt.Printf("Could not parse %s: %v\n", filename, err)
+		return
+	}
+	
+	/* Validate the configuration file. */
+	defaultSect := rawConfig.Section("")
+	for requiredKey, _ := range configRequiredKeys {
+		if !defaultSect.HasKey(requiredKey) {
+			fmt.Printf("Configuration file is missing required key \"%s\"\n", requiredKey)
+			return
+		}
+	}
+	
+	err = rawConfig.MapTo(&config)
+	if err != nil {
+		fmt.Printf("Could not map configuration file: %v\n", err)
 		return
 	}
 
@@ -115,6 +150,8 @@ func main() {
 	if br == nil {
 		os.Exit(1)
 	}
+	
+	go purgeSessionsPeriodically(config.SessionExpiry, config.SessionPurgeInterval)
 	
 	token64len = base64.StdEncoding.EncodedLen(TOKEN_BYTE_LEN)
 	token64dlen = base64.StdEncoding.DecodedLen(token64len)

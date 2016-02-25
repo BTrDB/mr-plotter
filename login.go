@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"time"
 	
 	"golang.org/x/crypto/bcrypt"
 	
@@ -25,6 +26,7 @@ type LoginSession struct {
 	user string
 	token [TOKEN_BYTE_LEN]byte
 	tags []string
+	lastUsed int64
 }
 
 // Monotonically increasing identifier
@@ -35,7 +37,7 @@ var MAX_TOKEN big.Int = big.Int{}
 
 // Maps ID to session
 var sessionsbyid map[[TOKEN_BYTE_LEN]byte]*LoginSession = make(map[[TOKEN_BYTE_LEN]byte]*LoginSession)
-var sessionsbyidlock sync.Mutex = sync.Mutex{}
+var sessionsbyidlock sync.Mutex = sync.Mutex{} // also protects session contents
 // Maps user to session
 var sessionsbyuser map[string]*LoginSession = make(map[string]*LoginSession)
 var sessionsbyuserlock sync.RWMutex = sync.RWMutex{}
@@ -113,6 +115,7 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 			user: user,
 			token: tokenarr,
 			tags: taglist,
+			lastUsed: time.Now().Unix(),
 		}
 		
 		sessionsbyid[tokenarr] = loginsession
@@ -133,8 +136,12 @@ func getloginsession(token []byte) *LoginSession {
 	copy(tokenarr[:], token)
 	
 	var loginsession *LoginSession
+	var now int64 = time.Now().Unix()
 	sessionsbyidlock.Lock()
 	loginsession = sessionsbyid[tokenarr]
+	if loginsession != nil {
+		loginsession.lastUsed = now
+	}
 	sessionsbyidlock.Unlock()
 	return loginsession
 }
@@ -188,8 +195,34 @@ func userchangepassword(passwordConn *mgo.Collection, token []byte, oldpw []byte
 	
 	err = passwordConn.Update(updatepasssel, updatepasscom)
 	if err == nil {
-	    return "Success"
+		return "Success"
 	} else {
-	    return "Server error"
+		return "Server error"
+	}
+}
+
+/* Periodically purges sessions. */
+func purgeSessionsPeriodically(maxAge int64, periodSeconds int64) {
+	var period = time.Duration(periodSeconds) * time.Second
+	for {
+		time.Sleep(period)
+		purgeSessions(maxAge)
+	}
+}
+
+/* Removes sessions that are older than MAXAGE seconds. */
+func purgeSessions(maxAge int64) {
+	sessionsbyidlock.Lock()
+	sessionsbyuserlock.Lock()
+	defer sessionsbyidlock.Unlock()
+	defer sessionsbyuserlock.Unlock()
+	
+	var now int64 = time.Now().Unix()
+	
+	for _, session := range sessionsbyid {
+		if now - session.lastUsed > maxAge {
+			delete(sessionsbyid, session.token)
+			delete(sessionsbyuser, session.user)
+		}
 	}
 }

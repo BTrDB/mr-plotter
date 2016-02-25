@@ -541,12 +541,14 @@ function changepw(self, event) {
 }
 
 function sessionExpired(self) {
-    var loginElem = self.find(".logindiv");
-    var $loginButton = $(loginElem.querySelector(".loginMenu"));
-    var loginmessage = loginElem.querySelector(".loginmessage");
-    loginmessage.innerHTML = "Session expired";
-    logoff(self);
-    $loginButton.dropdown("toggle");
+    if (self.requester.getToken() !== "") {
+        var loginElem = self.find(".logindiv");
+        var $loginButton = $(loginElem.querySelector(".loginMenu"));
+        var loginmessage = loginElem.querySelector(".loginmessage");
+        loginmessage.innerHTML = "Session expired";
+        logoff(self);
+        $loginButton.dropdown("toggle");
+    }
 }
 
 function setButtonEnabled($button, enable) {
