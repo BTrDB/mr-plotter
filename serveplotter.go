@@ -25,6 +25,11 @@ import (
 	ws "github.com/gorilla/websocket"
 )
 
+const (
+	FORWARD_CHUNKSIZE int = (4 << 10) // 4 KiB
+	MAX_REQSIZE int64 = (16 << 10) // 16 KiB
+)
+
 type CSVRequest struct {
 	UUIDs []string `json:"UUIDS"`
 	Labels []string
@@ -262,9 +267,10 @@ func validateToken(token string) *LoginSession {
 }
 
 func datawsHandler(w http.ResponseWriter, r *http.Request) {
-	websocket, upgradeerr := upgrader.Upgrade(w, r, nil)
+	var websocket *ws.Conn
+	var upgradeerr error
+	websocket, upgradeerr = upgrader.Upgrade(w, r, nil)
 	if upgradeerr != nil {
-		// TODO Perhaps we could redirect somehow?
 		w.Write([]byte(fmt.Sprintf("Could not upgrade HTTP connection to WebSocket: %v\n", upgradeerr)))
 		return
 	}
@@ -274,11 +280,13 @@ func datawsHandler(w http.ResponseWriter, r *http.Request) {
 		Conn: websocket,
 	}
 	
+	websocket.SetReadLimit(MAX_REQSIZE)
+	
 	for {
 		_, payload, err := websocket.ReadMessage()
 		
 		if err != nil {
-			return // Most likely the connection was closed
+			return // Most likely the connection was closed or the message was too big
 		}
 		
 		uuidBytes, startTime, endTime, pw, token, echoTag, success := parseDataRequest(string(payload), &cw)
@@ -328,8 +336,8 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	var gzipWriter *gzip.Writer
-
-	// TODO: don't just read the whole thing in one go. Instead give up after a reasonably long limit.
+	
+	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	payload, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.Write([]byte(fmt.Sprintf("Could not read received POST payload: %v", err)))
@@ -366,9 +374,10 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
-	websocket, upgradeerr := upgrader.Upgrade(w, r, nil)
+	var websocket *ws.Conn
+	var upgradeerr error
+	websocket, upgradeerr = upgrader.Upgrade(w, r, nil)
 	if upgradeerr != nil {
-		// TODO Perhaps we could redirect somehow?
 		w.Write([]byte(fmt.Sprintf("Could not upgrade HTTP connection to WebSocket: %v\n", upgradeerr)))
 		return
 	}
@@ -378,11 +387,13 @@ func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
 		Conn: websocket,
 	}
 	
+	websocket.SetReadLimit(MAX_REQSIZE)
+	
 	for {
 		_, payload, err := websocket.ReadMessage()
 		
 		if err != nil {
-			return // Most likely the connection was closed
+			return // Most likely the connection was closed or the message was too big
 		}
 		
 		uuids, token, echoTag, success := parseBracketRequest(string(payload), &cw, true)
@@ -437,8 +448,8 @@ func bracketHandler (w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("You must send a POST request to get data."))
 		return
 	}
-
-	// TODO: don't just read the whole thing in one go. Instead give up after a reasonably long limit.
+	
+	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	payload, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.Write([]byte(fmt.Sprintf("Could not read received POST payload: %v", err)))
@@ -482,6 +493,8 @@ func metadataHandler (w http.ResponseWriter, r *http.Request) {
 	}
 	
 	var n int
+	
+	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	request, err := ioutil.ReadAll(r.Body) // should probably limit the size of this
 	if err != nil {
 		w.Write([]byte("Could not read request."))
@@ -523,7 +536,7 @@ func metadataHandler (w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	var buffer []byte = make([]byte, 1024) // forward the response in 1 KiB chunks
+	var buffer []byte = make([]byte, FORWARD_CHUNKSIZE) // forward the response
 	
 	var bytesRead int
 	var readErr error = nil
@@ -548,6 +561,7 @@ func permalinkHandler(w http.ResponseWriter, r *http.Request) {
 	var jsonPermalink map[string]interface{}
 	var id bson.ObjectId
 	
+	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	if r.Method == "GET" {
 		r.ParseForm()
 		var id64str string = r.Form.Get("id")
@@ -641,6 +655,8 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	var err error
+	
+	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	_, err = io.ReadFull(r.Body, make([]byte, 5)) // Remove the "json="
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -714,7 +730,7 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	var buffer []byte = make([]byte, 4096) // forward the response in 4 KiB chunks
+	var buffer []byte = make([]byte, FORWARD_CHUNKSIZE) // forward the response in 4 KiB chunks
 	
 	var bytesRead int
 	var readErr error = nil
@@ -742,6 +758,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	var password string
 	var ok bool
 	
+	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	var loginDecoder *json.Decoder = json.NewDecoder(r.Body)
 
 	err = loginDecoder.Decode(&jsonLogin)
@@ -805,6 +822,7 @@ func logoffHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
+	// parseToken doesn't buffer the whole request in memory, so we don't need to use http.MaxBytesReader
 	tokenslice := parseToken(r.Body)
 	
 	if tokenslice != nil && userlogoff(tokenslice) {
@@ -833,6 +851,7 @@ func changepwHandler(w http.ResponseWriter, r *http.Request) {
 	var ok bool
 	var tokenslice []byte
 	
+	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	var pwDecoder *json.Decoder = json.NewDecoder(r.Body)
 
 	err = pwDecoder.Decode(&jsonChangePassword)
