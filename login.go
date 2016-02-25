@@ -27,6 +27,9 @@ type LoginSession struct {
 	tags []string
 }
 
+// Monotonically increasing identifier
+var useid uint64
+
 /* Initialized to the above byte value on use. */
 var MAX_TOKEN big.Int = big.Int{}
 
