@@ -60,6 +60,7 @@ var accountConn *mgo.Collection
 var csvURL string
 var token64len int
 var token64dlen int
+var csvMaxPoints int64
 
 type Config struct {
 	HttpPort uint16
@@ -79,6 +80,7 @@ type Config struct {
 	
 	SessionExpirySeconds int64
 	SessionPurgeIntervalSeconds int64
+	CsvMaxPointsPerStream int64
 }
 
 var configRequiredKeys = map[string]bool{
@@ -96,6 +98,7 @@ var configRequiredKeys = map[string]bool{
 	"csv_url": true,
 	"session_expiry_seconds": true,
 	"session_purge_interval_seconds": true,
+	"csv_max_points_per_stream": true,
 }
 
 func main() {
@@ -132,6 +135,7 @@ func main() {
 
 	mdServer = config.MetadataServer
 	csvURL = config.CsvUrl
+	csvMaxPoints = config.CsvMaxPointsPerStream
 	
 	mongoConn, err := mgo.Dial(config.MongoServer)
 	if err != nil {
@@ -709,6 +713,43 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Malformed request"))
+		return
+	}
+	
+	if jsonCSVReq.PointWidth > 62 {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(fmt.Sprintf("Invalid point width: %d", jsonCSVReq.PointWidth)))
+		return
+	}
+	
+	/* Check the number of points per stream to see if this request is reasonable. */
+	var deltaT int64 = jsonCSVReq.EndTime - jsonCSVReq.StartTime
+	
+	/* Taken from the BTrDB HTTP interface bindings, to make sure I handle the units in the same way. */
+	switch jsonCSVReq.UnitofTime {
+	case "":
+		fallthrough
+	case "ms":
+		deltaT *= 1000000
+	case "ns":
+	case "us":
+		deltaT *= 1000
+	case "s":
+		deltaT *= 1000000000
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(fmt.Sprintf("Invalid unit of time: must be 'ns', 'ms', 'us' or 's' (got '%s')", jsonCSVReq.UnitofTime)))
+		return
+	}
+	
+	var pps int64 = deltaT >> jsonCSVReq.PointWidth
+	if deltaT & ((1 << jsonCSVReq.PointWidth) - 1) != 0 {
+		pps += 1
+	}
+	fmt.Println(pps)
+	if pps > csvMaxPoints {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(fmt.Sprintf("CSV file too big: estimated %d points", pps)))
 		return
 	}
 	
