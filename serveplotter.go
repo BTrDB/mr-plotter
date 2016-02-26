@@ -746,7 +746,6 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 	if deltaT & ((1 << jsonCSVReq.PointWidth) - 1) != 0 {
 		pps += 1
 	}
-	fmt.Println(pps)
 	if pps > csvMaxPoints {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(fmt.Sprintf("CSV file too big: estimated %d points", pps)))
