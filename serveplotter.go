@@ -62,23 +62,23 @@ var token64len int
 var token64dlen int
 
 type Config struct {
-	HTTPPort uint16 `ini:"http_port"`
-	HTTPSPort uint16 `ini:"https_port"`
-	UseHTTPS bool `ini:"use_https"`
-	HTTPSRedirect bool `ini:"https_redirect"`
-	PlotterDir string `ini:"plotter_dir"`
-	CertFile string `ini:"cert_file"`
-	KeyFile string `ini:"key_file"`
+	HttpPort uint16
+	HttpsPort uint16
+	UseHttps bool
+	HttpsRedirect bool
+	PlotterDir string
+	CertFile string
+	KeyFile string
 	
-	DBAddr string `ini:"db_addr"`
-	NumDataConn uint16 `ini:"num_data_conn"`
-	NumBracketConn uint16 `ini:"num_bracket_conn"`
-	MetadataServer string `ini:"metadata_server"`
-	MongoServer string `ini:"mongo_server"`
-	CSVURL string `ini:"csv_url"`
+	DbAddr string
+	NumDataConn uint16
+	NumBracketConn uint16
+	MetadataServer string
+	MongoServer string
+	CsvUrl string
 	
-	SessionExpiry int64 `ini:"session_expiry_seconds"`
-	SessionPurgeInterval int64 `ini:"session_purge_interval_seconds"`
+	SessionExpirySeconds int64
+	SessionPurgeIntervalSeconds int64
 }
 
 var configRequiredKeys = map[string]bool{
@@ -123,6 +123,7 @@ func main() {
 		}
 	}
 	
+	rawConfig.NameMapper = ini.TitleUnderscore
 	err = rawConfig.MapTo(&config)
 	if err != nil {
 		fmt.Printf("Could not map configuration file: %v\n", err)
@@ -130,7 +131,7 @@ func main() {
 	}
 
 	mdServer = config.MetadataServer
-	csvURL = config.CSVURL
+	csvURL = config.CsvUrl
 	
 	mongoConn, err := mgo.Dial(config.MongoServer)
 	if err != nil {
@@ -142,16 +143,16 @@ func main() {
 	permalinkConn = plotterDBConn.C("permalinks")
 	accountConn = plotterDBConn.C("accounts")
 	
-	dr = NewDataRequester(config.DBAddr, int(config.NumDataConn), 8, false)
+	dr = NewDataRequester(config.DbAddr, int(config.NumDataConn), 8, false)
 	if dr == nil {
 		os.Exit(1)
 	}
-	br = NewDataRequester(config.DBAddr, int(config.NumBracketConn), 8, true)
+	br = NewDataRequester(config.DbAddr, int(config.NumBracketConn), 8, true)
 	if br == nil {
 		os.Exit(1)
 	}
 	
-	go purgeSessionsPeriodically(config.SessionExpiry, config.SessionPurgeInterval)
+	go purgeSessionsPeriodically(config.SessionExpirySeconds, config.SessionPurgeIntervalSeconds)
 	
 	token64len = base64.StdEncoding.EncodedLen(TOKEN_BYTE_LEN)
 	token64dlen = base64.StdEncoding.DecodedLen(token64len)
@@ -169,15 +170,15 @@ func main() {
 	http.HandleFunc("/changepw", changepwHandler)
 	http.HandleFunc("/checktoken", checktokenHandler)
 	
-	var portStrHTTP string = fmt.Sprintf(":%d", config.HTTPPort)
-	if config.UseHTTPS {
-		var portStrHTTPS string = fmt.Sprintf(":%d", config.HTTPSPort)
+	var portStrHTTP string = fmt.Sprintf(":%d", config.HttpPort)
+	if config.UseHttps {
+		var portStrHTTPS string = fmt.Sprintf(":%d", config.HttpsPort)
 		go func () {
 				log.Fatal(http.ListenAndServeTLS(portStrHTTPS, config.CertFile, config.KeyFile, nil))
 				os.Exit(1)
 			}()
 			
-		if config.HTTPSRedirect {
+		if config.HttpsRedirect {
 			var redirect http.Handler = http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
 					var url *url.URL = r.URL
 					url.Scheme = "https"
