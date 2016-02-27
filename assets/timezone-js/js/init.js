@@ -1,2 +1,2 @@
 timezoneJS.timezone.zoneFileBasePath = "timezone-js/tz";
-timezoneJS.timezone.init();
+timezoneJS.timezone.init({async: false});
