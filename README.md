@@ -78,6 +78,10 @@ same, one can simply put s3ui.default\_cb1 and s3ui.default\_cb2 into the
 array. One can also do a partial override, i.e. use a function that calls the
 default callback and does additional work.
 
+The purpose of the callbacks is to allow you to perform actions after the plot
+is fully loaded. In particular, you should make no assumptions about how much
+of the plot is fully loaded after the mr_plotter function returns.
+
 Custom Layouts
 --------------
 Simply including the s3plot template provides a default layout, and the first

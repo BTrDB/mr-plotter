@@ -39,7 +39,15 @@ function mr_plotter(parent, storagekey, options, cb1, cb2, backend) {
     container.appendChild(docfrag);
     parent.appendChild(container);
     var instance = new MrPlotter(container, storagekey, backend, options, cb1, cb2);
-    s3ui.__init__(instance);
+    
+    var initialize = function () { s3ui.__init__(instance); };
+    
+    // Wait until after timezoneJS has initialized before initializing the plot.
+    if (timezoneJS.isInitialized()) {
+        initialize();
+    } else {
+        timezoneJS.addCallback(initialize);
+    }
     return instance;
 }
 
