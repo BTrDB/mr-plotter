@@ -158,6 +158,7 @@ func NewDataRequester(dbAddr string, numConnections int, maxPending uint32, brac
 		sendLocks: locks,
 		currID: 0,
 		connID: 0,
+		totalWaiting: 0,
 		pending: 0,
 		maxPending: maxPending,
 		pendingLock: pendingLock,
