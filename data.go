@@ -125,7 +125,7 @@ type DataRequester struct {
 	pendingCondVar *sync.Cond
 	responseWriters map[uint64]Writable
 	synchronizers map[uint64]chan bool
-	stateLock *sync.Mutex
+	stateLock *sync.RWMutex
 	gotFirstSeg map[uint64]bool
 	gotFirstSegLock *sync.RWMutex
 	boundaries map[uint64]int64
@@ -164,7 +164,7 @@ func NewDataRequester(dbAddr string, numConnections int, maxPending uint32, brac
 		pendingCondVar: sync.NewCond(pendingLock),
 		responseWriters: make(map[uint64]Writable),
 		synchronizers: make(map[uint64]chan bool),
-		stateLock: &sync.Mutex{},
+		stateLock: &sync.RWMutex{},
 		gotFirstSeg: make(map[uint64]bool),
 		gotFirstSegLock: &sync.RWMutex{},
 		boundaries: make(map[uint64]int64),
@@ -286,7 +286,10 @@ func (dr *DataRequester) handleDataResponse(connection net.Conn) {
 			delete(dr.gotFirstSeg, id)
 			dr.gotFirstSegLock.Unlock()
 		}
+		
+		dr.stateLock.RLock()
 		writ := dr.responseWriters[id]
+		dr.stateLock.RUnlock()
 		
 		w := writ.GetWriter()
 		
