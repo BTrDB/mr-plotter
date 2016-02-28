@@ -98,6 +98,7 @@ type DataRequester struct {
 	sendLocks []*sync.Mutex
 	currID uint64
 	connID uint32
+	totalWaiting uint64
 	pending uint32
 	maxPending uint32
 	pendingLock *sync.Mutex
@@ -167,6 +168,9 @@ func NewDataRequester(dbAddr string, numConnections int, maxPending uint32, brac
 
 /* Makes a request for data and writes the result to the specified Writer. */
 func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, endTime int64, pw uint8, writ Writable) {
+	atomic.AddUint64(&dr.totalWaiting, 1)
+	defer atomic.AddUint64(&dr.totalWaiting, 0xFFFFFFFFFFFFFFFF)
+	
 	dr.pendingLock.Lock()
 	for dr.pending == dr.maxPending {
 		dr.pendingCondVar.Wait()
@@ -211,11 +215,12 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 	if sendErr != nil {
 		w := writ.GetWriter()
 		w.Write([]byte(fmt.Sprintf("Could not send query to database: %v", sendErr)))
-		return
+		goto finish
 	}
 	
 	<- dr.synchronizers[id]
 	
+	finish:
 	dr.stateLock.Lock()
 	delete(dr.responseWriters, id)
 	delete(dr.synchronizers, id)
@@ -300,6 +305,9 @@ func (dr *DataRequester) handleDataResponse(connection net.Conn) {
 }
 
 func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
+	atomic.AddUint64(&dr.totalWaiting, 1)
+	defer atomic.AddUint64(&dr.totalWaiting, 0xFFFFFFFFFFFFFFFF)
+	
 	dr.pendingLock.Lock()
 	for dr.pending == dr.maxPending {
 		dr.pendingCondVar.Wait()

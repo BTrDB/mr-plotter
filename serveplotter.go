@@ -15,12 +15,14 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	
 	"gopkg.in/ini.v1"
 	
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	
+	httpHandlers "github.com/gorilla/handlers"
 	uuid "github.com/pborman/uuid"
 	ws "github.com/gorilla/websocket"
 )
@@ -74,6 +76,7 @@ type Config struct {
 	DbAddr string
 	NumDataConn uint16
 	NumBracketConn uint16
+	MaxRequestsPerConn uint32
 	MetadataServer string
 	MongoServer string
 	CsvUrl string
@@ -81,6 +84,7 @@ type Config struct {
 	SessionExpirySeconds int64
 	SessionPurgeIntervalSeconds int64
 	CsvMaxPointsPerStream int64
+	OutstandingRequestLogInterval int64
 }
 
 var configRequiredKeys = map[string]bool{
@@ -99,6 +103,8 @@ var configRequiredKeys = map[string]bool{
 	"session_expiry_seconds": true,
 	"session_purge_interval_seconds": true,
 	"csv_max_points_per_stream": true,
+	"max_requests_per_conn": true,
+	"outstanding_request_log_interval": true,
 }
 
 func main() {
@@ -158,6 +164,8 @@ func main() {
 	
 	go purgeSessionsPeriodically(config.SessionExpirySeconds, config.SessionPurgeIntervalSeconds)
 	
+	go logWaitingRequests(os.Stdout, time.Duration(config.OutstandingRequestLogInterval) * time.Second)
+	
 	token64len = base64.StdEncoding.EncodedLen(TOKEN_BYTE_LEN)
 	token64dlen = base64.StdEncoding.DecodedLen(token64len)
 	
@@ -174,11 +182,13 @@ func main() {
 	http.HandleFunc("/changepw", changepwHandler)
 	http.HandleFunc("/checktoken", checktokenHandler)
 	
+	var loggedHandler http.Handler = httpHandlers.CombinedLoggingHandler(os.Stdout, http.DefaultServeMux)
+	
 	var portStrHTTP string = fmt.Sprintf(":%d", config.HttpPort)
 	if config.UseHttps {
 		var portStrHTTPS string = fmt.Sprintf(":%d", config.HttpsPort)
 		go func () {
-				log.Fatal(http.ListenAndServeTLS(portStrHTTPS, config.CertFile, config.KeyFile, nil))
+				log.Fatal(http.ListenAndServeTLS(portStrHTTPS, config.CertFile, config.KeyFile, loggedHandler))
 				os.Exit(1)
 			}()
 			
@@ -189,14 +199,22 @@ func main() {
 					url.Host = r.Host + portStrHTTPS
 					http.Redirect(w, r, url.String(), http.StatusFound)
 				})
-			log.Fatal(http.ListenAndServe(portStrHTTP, redirect))
+			var loggedRedirect http.Handler = httpHandlers.CombinedLoggingHandler(os.Stdout, redirect)
+			log.Fatal(http.ListenAndServe(portStrHTTP, loggedRedirect))
 		} else {
-			log.Fatal(http.ListenAndServe(portStrHTTP, nil))
+			log.Fatal(http.ListenAndServe(portStrHTTP, loggedHandler))
 		}
 	} else {
-		log.Fatal(http.ListenAndServe(portStrHTTP, nil))
+		log.Fatal(http.ListenAndServe(portStrHTTP, loggedHandler))
 	}
 	os.Exit(1);
+}
+
+func logWaitingRequests(output io.Writer, period time.Duration) {
+	for {
+		time.Sleep(period)
+		output.Write([]byte(fmt.Sprintf("Waiting data requests: %v; Waiting bracket requests: %v\n", dr.totalWaiting, br.totalWaiting)))
+	}
 }
 
 func parseDataRequest(request string, writ Writable) (uuidBytes uuid.UUID, startTime int64, endTime int64, pw uint8, extra1 string, extra2 string, success bool) {
