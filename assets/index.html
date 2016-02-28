@@ -34,7 +34,7 @@
     <script src="mr-plotter/js/requester.js"></script>
     <script>
         $(function () {
-                mr_plotter(document.body, "mrplotter");
+                mr_plotter(document.getElementById("plotter"), "mrplotter");
             });
     </script>
     <body>
@@ -45,6 +45,15 @@
             <div class="navbar-collapse collapse">
             </div>
         </div>
+        
+        <div id="plotter">
+        </div>
+        
+        <footer>
+            <div class="container" style="width: 100%;">
+                <p class="text-muted">&copy; 2016 Sam Kumar, Michael Andersen, and University of California, Berkeley.</p>
+            </div>
+        </footer>
     </body>
 </html>
 
