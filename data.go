@@ -219,7 +219,8 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 	
 	dr.stateLock.Lock()
 	dr.responseWriters[id] = writ
-	dr.synchronizers[id] = make(chan bool)
+	syncchan := make(chan bool)
+	dr.synchronizers[id] = syncchan
 	dr.stateLock.Unlock()
 	
 	dr.gotFirstSegLock.Lock()
@@ -238,7 +239,7 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 		goto finish
 	}
 	
-	<- dr.synchronizers[id]
+	<- syncchan
 	
 	finish:
 	dr.stateLock.Lock()
@@ -289,6 +290,7 @@ func (dr *DataRequester) handleDataResponse(connection net.Conn) {
 		
 		dr.stateLock.RLock()
 		writ := dr.responseWriters[id]
+		syncchan := dr.synchronizers[id]
 		dr.stateLock.RUnlock()
 		
 		w := writ.GetWriter()
@@ -297,7 +299,7 @@ func (dr *DataRequester) handleDataResponse(connection net.Conn) {
 			fmt.Printf("Bad status code: %v\n", status)
 			w.Write([]byte(fmt.Sprintf("Database returns status code %v", status)))
 			if final {
-				dr.synchronizers[id] <- false
+				syncchan <- false
 			}
 			continue
 		}
@@ -322,7 +324,7 @@ func (dr *DataRequester) handleDataResponse(connection net.Conn) {
 		}
 		
 		if final {
-			dr.synchronizers[id] <- true
+			syncchan <- true
 		}
 	}
 }
@@ -499,9 +501,13 @@ func (dr *DataRequester) handleBracketResponse(connection net.Conn) {
 		status := responseSeg.StatusCode()
 		records := responseSeg.Records().Values()
 		
+		dr.stateLock.RLock()
+		syncchan := dr.synchronizers[id]
+		dr.stateLock.RUnlock()
+		
 		if status != cpint.STATUSCODE_OK {
 			fmt.Printf("Error in bracket call: database returns status code %v\n", status)
-			dr.synchronizers[id] <- false
+			syncchan <- false
 			continue
 		}
 		
@@ -511,7 +517,7 @@ func (dr *DataRequester) handleBracketResponse(connection net.Conn) {
 			dr.boundaryLock.Unlock()
 		}
 		
-		dr.synchronizers[id] <- true
+		syncchan <- true
 	}
 }
 
