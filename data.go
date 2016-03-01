@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"sync"
 	"sync/atomic"
 	
@@ -276,7 +277,7 @@ func (dr *DataRequester) handleDataResponse(connection net.Conn) {
 				break
 			}
 			fmt.Printf("Error in receiving response: %v\n", respErr)
-			continue
+			os.Exit(1)
 		}
 		
 		responseSeg := cpint.ReadRootResponse(responseSegment)
@@ -502,7 +503,7 @@ func (dr *DataRequester) handleBracketResponse(connection net.Conn) {
 				break
 			}
 			fmt.Printf("Error in receiving response: %v\n", respErr)
-			continue
+			os.Exit(1)
 		}
 		
 		responseSeg := cpint.ReadRootResponse(responseSegment)
