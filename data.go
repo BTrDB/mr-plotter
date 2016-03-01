@@ -21,6 +21,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net"
@@ -265,9 +266,10 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 	You shouldn't ever have to invoke this function. It is used internally by
 	the constructor function. */
 func (dr *DataRequester) handleDataResponse(connection net.Conn) {
+	var reusable bytes.Buffer
 	for dr.alive {
 		// Only one goroutine will be reading at a time, so a lock isn't needed
-		responseSegment, respErr := capnp.ReadFromStream(connection, nil)
+		responseSegment, respErr := capnp.ReadFromStream(connection, &reusable)
 		
 		if respErr != nil {
 			if !dr.alive {
@@ -489,9 +491,10 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 	You shouldn't ever have to invoke this function. It is used internally by
 	the constructor function. */
 func (dr *DataRequester) handleBracketResponse(connection net.Conn) {
+	var reusable bytes.Buffer
 	for dr.alive {
 		// Only one goroutine will be reading at a time, so a lock isn't needed
-		responseSegment, respErr := capnp.ReadFromStream(connection, nil)
+		responseSegment, respErr := capnp.ReadFromStream(connection, &reusable)
 		
 		if respErr != nil {
 			if !dr.alive {
