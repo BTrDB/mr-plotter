@@ -228,6 +228,7 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 	dr.gotFirstSeg[id] = false
 	dr.gotFirstSegLock.Unlock()
 	
+	fmt.Printf("Issuing data request %v\n", id)
 	dr.sendLocks[cid].Lock()
 	_, sendErr := segment.WriteTo(dr.connections[cid])
 	dr.sendLocks[cid].Unlock()
@@ -235,6 +236,8 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 	queryPool.Put(mp)
 	
 	if sendErr != nil {
+		fmt.Printf("Data request %v FAILS: %v\n", id, sendErr)
+		
 		w := writ.GetWriter()
 		w.Write([]byte(fmt.Sprintf("Could not send query to database: %v", sendErr)))
 		goto finish
@@ -294,6 +297,8 @@ func (dr *DataRequester) handleDataResponse(connection net.Conn) {
 		syncchan := dr.synchronizers[id]
 		dr.stateLock.RUnlock()
 		
+		fmt.Printf("Got data response for request %v: FirstSeg = %v, FinalSeg = %v\n", id, firstSeg, final)
+		
 		w := writ.GetWriter()
 		
 		if status != cpint.STATUSCODE_OK {
@@ -322,9 +327,6 @@ func (dr *DataRequester) handleDataResponse(connection net.Conn) {
 		
 		if final {
 			w.Write([]byte("]"))
-		}
-		
-		if final {
 			syncchan <- true
 		}
 	}
@@ -374,6 +376,7 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 		dr.synchronizers[id] = responseChan
 		dr.stateLock.Unlock()
 		
+		fmt.Printf("Issuing bracket request %v\n", id)
 		dr.sendLocks[cid].Lock()
 		_, sendErr = segment.WriteTo(dr.connections[cid])
 		dr.sendLocks[cid].Unlock()
@@ -400,6 +403,7 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 		dr.synchronizers[id] = responseChan
 		dr.stateLock.Unlock()
 		
+		fmt.Printf("Issuing bracket request %v\n", id)
 		dr.sendLocks[cid].Lock()
 		_, sendErr = segment.WriteTo(dr.connections[cid])
 		dr.sendLocks[cid].Unlock()
@@ -505,6 +509,8 @@ func (dr *DataRequester) handleBracketResponse(connection net.Conn) {
 		dr.stateLock.RLock()
 		syncchan := dr.synchronizers[id]
 		dr.stateLock.RUnlock()
+		
+		fmt.Printf("Got bracket response for request %v\n", id)
 		
 		if status != cpint.STATUSCODE_OK {
 			fmt.Printf("Error in bracket call: database returns status code %v\n", status)
