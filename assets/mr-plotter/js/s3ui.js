@@ -276,7 +276,7 @@ function init_graph(self, c1, c2) {
                 var uuids = self.idata.selectedStreamsBuffer.map(function (s) { return s.uuid; });
                 self.requester.makeBracketRequest(uuids, function (range) {
                         if (typeof(range) === "string") {
-                            console.log("Autozoom error: " + err.message);
+                            console.log("Autozoom error: " + range);
                             return;
                         }
                         if (range == undefined || range.Merged == undefined || range.Brackets == undefined) {
