@@ -21,7 +21,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"net"
@@ -125,13 +124,8 @@ type DataRequester struct {
 	maxPending uint32
 	pendingLock *sync.Mutex
 	pendingCondVar *sync.Cond
-	responseWriters map[uint64]Writable
-	synchronizers map[uint64]chan bool
+	synchronizers map[uint64]chan cpint.Response
 	stateLock *sync.RWMutex
-	gotFirstSeg map[uint64]bool
-	gotFirstSegLock *sync.RWMutex
-	boundaries map[uint64]int64
-	boundaryLock *sync.Mutex
 	alive bool
 }
 
@@ -165,25 +159,13 @@ func NewDataRequester(dbAddr string, numConnections int, maxPending uint32, brac
 		maxPending: maxPending,
 		pendingLock: pendingLock,
 		pendingCondVar: sync.NewCond(pendingLock),
-		responseWriters: make(map[uint64]Writable),
-		synchronizers: make(map[uint64]chan bool),
+		synchronizers: make(map[uint64]chan cpint.Response),
 		stateLock: &sync.RWMutex{},
-		gotFirstSeg: make(map[uint64]bool),
-		gotFirstSegLock: &sync.RWMutex{},
-		boundaries: make(map[uint64]int64),
-		boundaryLock: &sync.Mutex{},
 		alive: true,
 	}
 	
-	var responseHandler func(net.Conn)
-	if bracket {
-		responseHandler = dr.handleBracketResponse
-	} else {
-		responseHandler = dr.handleDataResponse
-	}
-	
 	for i = 0; i < numConnections; i++ {
-		go responseHandler(connections[i])
+		go dr.handleResponses(connections[i])
 	}
 	
 	return dr
@@ -200,6 +182,10 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 	}
 	dr.pending += 1
 	dr.pendingLock.Unlock()
+	
+	var respchan = make(chan cpint.Response, 10)
+	
+	var firstSeg bool
 	
 	var mp QueryMessagePart = queryPool.Get().(QueryMessagePart)
 	
@@ -221,14 +207,8 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 	cid := atomic.AddUint32(&dr.connID, 1) % uint32(len(dr.connections))
 	
 	dr.stateLock.Lock()
-	dr.responseWriters[id] = writ
-	syncchan := make(chan bool)
-	dr.synchronizers[id] = syncchan
+	dr.synchronizers[id] = respchan
 	dr.stateLock.Unlock()
-	
-	dr.gotFirstSegLock.Lock()
-	dr.gotFirstSeg[id] = false
-	dr.gotFirstSegLock.Unlock()
 	
 	fmt.Printf("Issuing data request %v\n", id)
 	dr.sendLocks[cid].Lock()
@@ -245,60 +225,11 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 		goto finish
 	}
 	
-	<- syncchan
-	
-	finish:
-	dr.stateLock.Lock()
-	delete(dr.responseWriters, id)
-	delete(dr.synchronizers, id)
-	dr.stateLock.Unlock()
-	
-	dr.pendingLock.Lock()
-	if dr.pending == dr.maxPending {
-		dr.pending -= 1
-		dr.pendingCondVar.Signal()
-	} else {
-		dr.pending -= 1
-	}
-	dr.pendingLock.Unlock()
-}
-
-/** A function designed to handle QUASAR's response over Cap'n Proto.
-	You shouldn't ever have to invoke this function. It is used internally by
-	the constructor function. */
-func (dr *DataRequester) handleDataResponse(connection net.Conn) {
-	var reusable bytes.Buffer
-	for dr.alive {
-		// Only one goroutine will be reading at a time, so a lock isn't needed
-		responseSegment, respErr := capnp.ReadFromStream(connection, &reusable)
-		
-		if respErr != nil {
-			if !dr.alive {
-				break
-			}
-			fmt.Printf("Error in receiving response: %v\n", respErr)
-			os.Exit(1)
-		}
-		
-		responseSeg := cpint.ReadRootResponse(responseSegment)
-		id := responseSeg.EchoTag()
+	firstSeg = true
+	for responseSeg := range respchan {
 		status := responseSeg.StatusCode()
 		records := responseSeg.StatisticalRecords().Values()
 		final := responseSeg.Final()
-		
-		dr.gotFirstSegLock.RLock()
-		_, firstSeg := dr.gotFirstSeg[id]
-		dr.gotFirstSegLock.RUnlock()
-		if firstSeg {
-			dr.gotFirstSegLock.Lock()
-			delete(dr.gotFirstSeg, id)
-			dr.gotFirstSegLock.Unlock()
-		}
-		
-		dr.stateLock.RLock()
-		writ := dr.responseWriters[id]
-		syncchan := dr.synchronizers[id]
-		dr.stateLock.RUnlock()
 		
 		fmt.Printf("Got data response for request %v: FirstSeg = %v, FinalSeg = %v\n", id, firstSeg, final)
 		
@@ -307,10 +238,7 @@ func (dr *DataRequester) handleDataResponse(connection net.Conn) {
 		if status != cpint.STATUSCODE_OK {
 			fmt.Printf("Bad status code: %v\n", status)
 			w.Write([]byte(fmt.Sprintf("Database returns status code %v", status)))
-			if final {
-				syncchan <- false
-			}
-			continue
+			break
 		}
 		
 		length := records.Len()
@@ -330,8 +258,52 @@ func (dr *DataRequester) handleDataResponse(connection net.Conn) {
 		
 		if final {
 			w.Write([]byte("]"))
-			syncchan <- true
+			break
 		}
+		
+		firstSeg = false
+	}
+	close(respchan)
+	
+finish:
+	dr.stateLock.Lock()
+	delete(dr.synchronizers, id)
+	dr.stateLock.Unlock()
+	
+	dr.pendingLock.Lock()
+	if dr.pending == dr.maxPending {
+		dr.pending -= 1
+		dr.pendingCondVar.Signal()
+	} else {
+		dr.pending -= 1
+	}
+	dr.pendingLock.Unlock()
+}
+
+/** A function designed to handle QUASAR's response over Cap'n Proto.
+	You shouldn't ever have to invoke this function. It is used internally by
+	the constructor function. */
+func (dr *DataRequester) handleDataResponse(connection net.Conn) {
+	for dr.alive {
+		// Only one goroutine will be reading at a time, so a lock isn't needed
+		responseSegment, respErr := capnp.ReadFromStream(connection, nil)
+		
+		if respErr != nil {
+			if !dr.alive {
+				break
+			}
+			fmt.Printf("Error in receiving response: %v\n", respErr)
+			os.Exit(1)
+		}
+		
+		responseSeg := cpint.ReadRootResponse(responseSegment)
+		id := responseSeg.EchoTag()
+		
+		dr.stateLock.RLock()
+		respchan := dr.synchronizers[id]
+		dr.stateLock.RUnlock()
+		
+		respchan <- responseSeg
 	}
 }
 
@@ -352,32 +324,39 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 	request := mp.request
 	bquery := mp.bquery
 	
-	var numResponses int = len(uuids) << 1
-	var responseChan chan bool = make(chan bool, numResponses)
+	var numResponses uint64 = uint64(len(uuids)) << 1
+	var responseChan chan cpint.Response = make(chan cpint.Response, numResponses)
 	
-	var idsUsed []uint64 = make([]uint64, numResponses) // Due to concurrency, we could use a non-contiguous block of IDs
+	/* Get a contiguous block of IDs. */
+	var startNext uint64 = atomic.AddUint64(&dr.currID, numResponses) + 1
+	var startID uint64 = startNext - numResponses
 	
 	var i int
-	var id uint64
+	var j uint64
+	var id uint64 = startID
 	var cid uint32
 	var sendErr error
+	
+	var boundarySlice []int64 = make([]int64, numResponses)
+	
+	dr.stateLock.Lock()
+	for id = startID; id != startNext; id++ {
+		dr.synchronizers[id] = responseChan
+	}
+	dr.stateLock.Unlock()
+	
+	id = startID
+	
 	for i = 0; i < len(uuids); i++ {
 		bquery.SetUuid([]byte(uuids[i]))
 		bquery.SetTime(QUASAR_LOW)
 		bquery.SetBackward(false)
 	
-		id = atomic.AddUint64(&dr.currID, 1)
-		idsUsed[i << 1] = id
-	
 		request.SetEchoTag(id)
 	
 		request.SetQueryNearestValue(*bquery)
 	
 		cid = atomic.AddUint32(&dr.connID, 1) % uint32(len(dr.connections))
-		
-		dr.stateLock.Lock()
-		dr.synchronizers[id] = responseChan
-		dr.stateLock.Unlock()
 		
 		fmt.Printf("Issuing bracket request %v\n", id)
 		dr.sendLocks[cid].Lock()
@@ -387,24 +366,20 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 		if sendErr != nil {
 			w := writ.GetWriter()
 			w.Write([]byte(fmt.Sprintf("Could not send query to database: %v", sendErr)))
+			bracketPool.Put(mp)
 			goto finish
 		}
+		
+		id += 1
 		
 		bquery.SetTime(QUASAR_HIGH)
 		bquery.SetBackward(true)
-		
-		id = atomic.AddUint64(&dr.currID, 1)
-		idsUsed[(i << 1) + 1] = id
 	
 		request.SetEchoTag(id)
 	
 		request.SetQueryNearestValue(*bquery)
 	
 		cid = atomic.AddUint32(&dr.connID, 1) % uint32(len(dr.connections))
-	
-		dr.stateLock.Lock()
-		dr.synchronizers[id] = responseChan
-		dr.stateLock.Unlock()
 		
 		fmt.Printf("Issuing bracket request %v\n", id)
 		dr.sendLocks[cid].Lock()
@@ -414,21 +389,35 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 		if sendErr != nil {
 			w := writ.GetWriter()
 			w.Write([]byte(fmt.Sprintf("Could not send query to database: %v", sendErr)))
+			bracketPool.Put(mp)
 			goto finish
 		}
+		
+		id += 1
 	}
 	
 	bracketPool.Put(mp)
 	
-	for i = 0; i < numResponses; i++ {
-		<- responseChan
+	for j = 0; j < numResponses; j++ {
+		responseSeg := <- responseChan
+		id := responseSeg.EchoTag()
+		status := responseSeg.StatusCode()
+		records := responseSeg.Records().Values()
+		
+		fmt.Printf("Got bracket response for request %v\n", id)
+		
+		if status != cpint.STATUSCODE_OK || records.Len() == 0 {
+			fmt.Printf("Error in bracket call request %v: database returns status code %v\n", id, status)
+			boundarySlice[id - startID] = INVALID_TIME
+			continue
+		} else {
+			boundarySlice[id - startID] = records.At(0).Time()
+		}
 	}
 	
-	finish:
+finish:
 	var (
 		boundary int64
-		ok bool
-		boundarySlice []int64 = make([]int64, numResponses)
 		lNanos int32
 		lMillis int64
 		rNanos int32
@@ -437,19 +426,10 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 		highest int64 = QUASAR_LOW
 		trailchar rune = ','
 	)
-	dr.boundaryLock.Lock()
-	for i = 0; i < numResponses; i++ {
-		boundarySlice[i], ok = dr.boundaries[idsUsed[i]]
-		if !ok {
-			boundarySlice[i] = INVALID_TIME
-		}
-		delete(dr.boundaries, idsUsed[i])
-	}
-	dr.boundaryLock.Unlock()
 	
 	dr.stateLock.Lock()
-	for i = 0; i < numResponses; i++ {
-		delete(dr.synchronizers, idsUsed[i])
+	for id = startID; id != startNext; id++ {
+		delete(dr.synchronizers, id)
 	}
 	dr.stateLock.Unlock()
 	
@@ -489,14 +469,14 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 	dr.pendingLock.Unlock()
 }
 
+
 /** A function designed to handle QUASAR's response over Cap'n Proto.
 	You shouldn't ever have to invoke this function. It is used internally by
 	the constructor function. */
-func (dr *DataRequester) handleBracketResponse(connection net.Conn) {
-	var reusable bytes.Buffer
+func (dr *DataRequester) handleResponses(connection net.Conn) {
 	for dr.alive {
 		// Only one goroutine will be reading at a time, so a lock isn't needed
-		responseSegment, respErr := capnp.ReadFromStream(connection, &reusable)
+		responseSegment, respErr := capnp.ReadFromStream(connection, nil)
 		
 		if respErr != nil {
 			if !dr.alive {
@@ -508,28 +488,14 @@ func (dr *DataRequester) handleBracketResponse(connection net.Conn) {
 		
 		responseSeg := cpint.ReadRootResponse(responseSegment)
 		id := responseSeg.EchoTag()
-		status := responseSeg.StatusCode()
-		records := responseSeg.Records().Values()
+		
+		fmt.Printf("Got response to request %v\n", id)
 		
 		dr.stateLock.RLock()
-		syncchan := dr.synchronizers[id]
+		respchan := dr.synchronizers[id]
 		dr.stateLock.RUnlock()
 		
-		fmt.Printf("Got bracket response for request %v\n", id)
-		
-		if status != cpint.STATUSCODE_OK {
-			fmt.Printf("Error in bracket call: database returns status code %v\n", status)
-			syncchan <- false
-			continue
-		}
-		
-		if records.Len() > 0 {
-			dr.boundaryLock.Lock()
-			dr.boundaries[id] = records.At(0).Time()
-			dr.boundaryLock.Unlock()
-		}
-		
-		syncchan <- true
+		respchan <- responseSeg
 	}
 }
 
