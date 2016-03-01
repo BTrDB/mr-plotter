@@ -386,7 +386,7 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 		if sendErr != nil {
 			w := writ.GetWriter()
 			w.Write([]byte(fmt.Sprintf("Could not send query to database: %v", sendErr)))
-			return
+			goto finish
 		}
 		
 		bquery.SetTime(QUASAR_HIGH)
@@ -413,7 +413,7 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 		if sendErr != nil {
 			w := writ.GetWriter()
 			w.Write([]byte(fmt.Sprintf("Could not send query to database: %v", sendErr)))
-			return
+			goto finish
 		}
 	}
 	
@@ -423,6 +423,7 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 		<- responseChan
 	}
 	
+	finish:
 	var (
 		boundary int64
 		ok bool
