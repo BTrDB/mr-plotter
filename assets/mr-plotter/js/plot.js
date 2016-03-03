@@ -106,7 +106,7 @@ function repaintZoom(self) {
     drawStreams(self, self.idata.oldData, self.idata.selectedStreams, self.idata.streamSettings, self.idata.oldXScale, self.idata.oldYScales, self.idata.oldYAxisArray, self.idata.oldAxisData, self.idata.$loadingElem, true);
 }
 
-// In these functions, I abbreviate point self.idata.WIDTH exponent with pwe
+// In these functions, I abbreviate point width exponent with pwe
 
 function cacheData(self, uuid, drawID, pwe, startTime, endTime) {
     var sideCache = endTime - startTime;
@@ -125,12 +125,12 @@ function cacheData(self, uuid, drawID, pwe, startTime, endTime) {
                 }
                 s3ui.ensureData(self, uuid, pwe - 1, startTime - sideCache, endTime + sideCache,
                 function () {
-                    if (drawID != self.idata.drawRequestID || pwe == 1) {
+                    if (drawID != self.idata.drawRequestID || pwe == 62) {
                         return;
                     }
                     s3ui.ensureData(self, uuid, pwe + 1, startTime - sideCache, endTime + sideCache,
                     function () {
-                        if (drawID != self.idata.drawRequestID) {
+                        if (drawID != self.idata.drawRequestID || pwe == 1) {
                             return;
                         }
                         s3ui.ensureData(self, uuid, pwe - 2, startTime - sideCache, endTime + sideCache, function () { s3ui.setStreamMessage(self, uuid, undefined, 1); }, true);
