@@ -128,13 +128,7 @@ function cacheData(self, uuid, drawID, pwe, startTime, endTime) {
                     if (drawID != self.idata.drawRequestID || pwe == 62) {
                         return;
                     }
-                    s3ui.ensureData(self, uuid, pwe + 1, startTime - sideCache, endTime + sideCache,
-                    function () {
-                        if (drawID != self.idata.drawRequestID || pwe == 1) {
-                            return;
-                        }
-                        s3ui.ensureData(self, uuid, pwe - 2, startTime - sideCache, endTime + sideCache, function () { s3ui.setStreamMessage(self, uuid, undefined, 1); }, true);
-                    }, true);
+                    s3ui.ensureData(self, uuid, pwe + 1, startTime - sideCache, endTime + sideCache, function () { s3ui.setStreamMessage(self, uuid, undefined, 1); }, true);
                 }, true);
             }, true);
         }, true);
@@ -165,7 +159,7 @@ function repaintZoomNewData(self, callback, stopCache, widthEstimate) {
             numResponses++;
             s3ui.setStreamMessage(self, stream.uuid, undefined, 5);
             if (!stopCache) {
-                s3ui.setStreamMessage(self, stream.uuid, "Caching data...", 1);
+                s3ui.setStreamMessage(self, stream.uuid, "Prefetching data...", 1);
                 setTimeout(function () { cacheData(self, stream.uuid, thisID, pwe, startTime, endTime); }, 0); // do it asynchronously
             }
             if (numResponses == selectedStreams.length) {
