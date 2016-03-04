@@ -323,7 +323,10 @@ function createVerticalCursor(xCoord) {
         return false;
     }
     var self = this;
-    var newCursor = new s3ui.Cursor(this, xCoord, this.idata.cursorgroup, this.idata.HEIGHT + 65, -65, true, this.idata.$background, function () { s3ui.updateVertCursorStats(self); });
+    var newCursor = new s3ui.Cursor(this, xCoord, this.idata.cursorgroup, this.idata.HEIGHT + 65, -65, true, this.idata.$background, function () {
+            self.find(".permalink").innerHTML = "";
+            s3ui.updateVertCursorStats(self);
+        });
     if (this.idata.vertCursor1 == undefined) {
         this.idata.vertCursor1 = newCursor;
     } else{
@@ -337,7 +340,10 @@ function createHorizontalCursor(yCoord) {
         return false;
     }
     var self = this;
-    var newCursor = new s3ui.Cursor(this, yCoord, this.idata.cursorgroup, this.idata.WIDTH, 0, false, this.idata.$background, function () { s3ui.updateHorizCursorStats(self); });
+    var newCursor = new s3ui.Cursor(this, yCoord, this.idata.cursorgroup, this.idata.WIDTH, 0, false, this.idata.$background, function () {
+            self.find(".permalink").innerHTML = "";
+            s3ui.updateHorizCursorStats(self);
+        });
     if (this.idata.horizCursor1 == undefined) {
         this.idata.horizCursor1 = newCursor;
     } else {
