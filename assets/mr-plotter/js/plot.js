@@ -1329,6 +1329,9 @@ function resetZoom(self) {
 function applyDisplayColor(self, axisObj, streamSettings) {
     var color = s3ui.getDisplayColor(axisObj, streamSettings);
     yAxisDOMElem = self.find(".drawnAxis-" + axisObj.axisid);
+    if (yAxisDOMElem === null) {
+        return;
+    }
     yAxisDOMElem.style.fill = color;
     $(yAxisDOMElem.querySelectorAll("line")).css("stroke", color);
     yAxisDOMElem.querySelector("path").style.stroke = color;
