@@ -77,7 +77,10 @@ function init_plot(self) {
     
     self.idata.zoom = d3.behavior.zoom()
         .on("zoomstart", function () { repaintZoomNewData(self, function () {}, true); })
-        .on("zoom", function () { repaintZoom(self); })
+        .on("zoom", function () {
+                self.find(".permalink").innerHTML = "";
+                repaintZoom(self);
+            })
         .on("zoomend", function () { repaintZoomNewData(self); })
         .size([self.idata.WIDTH, self.idata.HEIGHT]);
         
@@ -136,7 +139,10 @@ function cacheData(self, uuid, drawID, pwe, startTime, endTime) {
 
 function repaintZoomNewData(self, callback, stopCache, widthEstimate) {
     if (callback == undefined) {
-        callback = function () { repaintZoom(self); };
+        callback = function () {
+                self.find(".permalink").innerHTML = "";
+                repaintZoom(self);
+            };
     }
     var selectedStreams = self.idata.selectedStreams;
     var domain = self.idata.oldXScale.domain();
@@ -969,6 +975,7 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
         s3ui.applyDisplayColor(self, toDraw[i], streamSettings);
     }
     
+    self.find(".permalink").innerHTML = "";
     drawStreams(self, data, streams, streamSettings, xScale, yScales, yAxisArray, axisData, $loadingElem, false);
 }
 
@@ -976,9 +983,6 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
    paticular new streams are not added and old ones not removed (DRAWFAST tells it to optimize for scrolling).
 */
 function drawStreams (self, data, streams, streamSettings, xScale, yScales, yAxisArray, axisData, $loadingElem, drawFast) {
-    if (self.idata.loadedData) {
-        self.find(".permalink").innerHTML = "";
-    }
     if (!drawFast && (streams.length == 0 || yAxisArray.length == 0)) {
         if (streams.length == 0) {
             $loadingElem.html("Error: No streams are selected.");
@@ -1339,6 +1343,7 @@ function applyDisplayColor(self, axisObj, streamSettings) {
 }
 
 s3ui.init_plot = init_plot;
+s3ui.repaintZoom = repaintZoom;
 s3ui.repaintZoomNewData = repaintZoomNewData;
 s3ui.updateSize = updateSize;
 s3ui.updatePlot = updatePlot;

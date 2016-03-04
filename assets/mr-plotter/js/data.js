@@ -121,7 +121,7 @@ function processBracketResponse(self, uuids, response) {
         }
     }
     if (loadNewData) {
-        s3ui.repaintZoomNewData(self);
+        s3ui.repaintZoomNewData(self, function () { s3ui.repaintZoom(self); });
     }
     return continuePolling;
 }
