@@ -27,6 +27,7 @@ import (
 	"os"
 	"sync"
 	"sync/atomic"
+	"time"
 	
 	cpint "github.com/SoftwareDefinedBuildings/btrdb/cpinterface"
 	capnp "github.com/glycerine/go-capnproto"
@@ -117,6 +118,7 @@ func (cw *ConnWrapper) GetWriter() io.Writer {
 type DataRequester struct {
 	connections []net.Conn
 	sendLocks []*sync.Mutex
+	timeout time.Duration
 	currID uint64
 	connID uint32
 	totalWaiting uint64
@@ -133,8 +135,9 @@ type DataRequester struct {
 	dbAddr - the address of the database from where to obtain data.
 	numConnections - the number of connections to use.
 	maxPending - a limit on the maximum number of pending requests.
+	timeout - timeout on requests to the database.
 	bracket - whether or not the new DataRequester will be used for bracket calls. */
-func NewDataRequester(dbAddr string, numConnections int, maxPending uint32, bracket bool) *DataRequester {
+func NewDataRequester(dbAddr string, numConnections int, maxPending uint32, timeout time.Duration, bracket bool) *DataRequester {
 	var connections []net.Conn = make([]net.Conn, numConnections)
 	var locks []*sync.Mutex = make([]*sync.Mutex, numConnections)
 	var err error
@@ -152,6 +155,7 @@ func NewDataRequester(dbAddr string, numConnections int, maxPending uint32, brac
 	var dr *DataRequester = &DataRequester{
 		connections: connections,
 		sendLocks: locks,
+		timeout: timeout,
 		currID: 0,
 		connID: 0,
 		totalWaiting: 0,
@@ -189,6 +193,8 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 	
 	var mp QueryMessagePart = queryPool.Get().(QueryMessagePart)
 	
+	var timeoutchan <-chan time.Time
+	
 	segment := mp.segment
 	request := mp.request
 	query := mp.query
@@ -210,60 +216,68 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 	dr.synchronizers[id] = respchan
 	dr.stateLock.Unlock()
 	
-	fmt.Printf("Issuing data request %v\n", id)
+	fmt.Printf("Issuing data request %v (UUID = %s, start = %v, end = %v, pw = %v)\n", id, uuidBytes.String(), startTime, endTime, pw)
 	dr.sendLocks[cid].Lock()
 	_, sendErr := segment.WriteTo(dr.connections[cid])
 	dr.sendLocks[cid].Unlock()
 	
 	queryPool.Put(mp)
 	
+	w := writ.GetWriter()
 	if sendErr != nil {
 		fmt.Printf("Data request %v FAILS: %v\n", id, sendErr)
 		
-		w := writ.GetWriter()
 		w.Write([]byte(fmt.Sprintf("Could not send query to database: %v", sendErr)))
 		goto finish
 	}
 	
 	firstSeg = true
-	for responseSeg := range respchan {
-		status := responseSeg.StatusCode()
-		records := responseSeg.StatisticalRecords().Values()
-		final := responseSeg.Final()
+	timeoutchan = time.After(dr.timeout)
+	
+readloop:
+	for {
+		select {
+		case responseSeg := <-respchan:
+			status := responseSeg.StatusCode()
+			records := responseSeg.StatisticalRecords().Values()
+			final := responseSeg.Final()
 		
-		fmt.Printf("Got data response for request %v: FirstSeg = %v, FinalSeg = %v\n", id, firstSeg, final)
+			fmt.Printf("Got data response for request %v: FirstSeg = %v, FinalSeg = %v\n", id, firstSeg, final)
 		
-		w := writ.GetWriter()
-		
-		if status != cpint.STATUSCODE_OK {
-			fmt.Printf("Bad status code: %v\n", status)
-			w.Write([]byte(fmt.Sprintf("Database returns status code %v", status)))
-			break
-		}
-		
-		length := records.Len()
-		
-		if firstSeg {
-			w.Write([]byte("["))
-		}
-		for i := 0; i < length; i++ {
-			record := records.At(i)
-			millis, nanos := splitTime(record.Time())
-			if firstSeg && i == 0 {
-				w.Write([]byte(fmt.Sprintf("[%v,%v,%v,%v,%v,%v]", millis, nanos, record.Min(), record.Mean(), record.Max(), record.Count())))
-			} else {
-				w.Write([]byte(fmt.Sprintf(",[%v,%v,%v,%v,%v,%v]", millis, nanos, record.Min(), record.Mean(), record.Max(), record.Count())))
+			if status != cpint.STATUSCODE_OK {
+				fmt.Printf("Bad status code: %v\n", status)
+				w.Write([]byte(fmt.Sprintf("Database returns status code %v", status)))
+				break readloop
 			}
-		}
 		
-		if final {
-			w.Write([]byte("]"))
-			break
-		}
+			length := records.Len()
 		
-		firstSeg = false
+			if firstSeg {
+				w.Write([]byte("["))
+			}
+			for i := 0; i < length; i++ {
+				record := records.At(i)
+				millis, nanos := splitTime(record.Time())
+				if firstSeg && i == 0 {
+					w.Write([]byte(fmt.Sprintf("[%v,%v,%v,%v,%v,%v]", millis, nanos, record.Min(), record.Mean(), record.Max(), record.Count())))
+				} else {
+					w.Write([]byte(fmt.Sprintf(",[%v,%v,%v,%v,%v,%v]", millis, nanos, record.Min(), record.Mean(), record.Max(), record.Count())))
+				}
+			}
+		
+			if final {
+				w.Write([]byte("]"))
+				break readloop
+			}
+		
+			firstSeg = false
+			
+		case <-timeoutchan:
+			fmt.Printf("WARNING: request %v (UUID = %s, start = %v, end = %v, pw = %v) timed out\n", id, uuidBytes.String(), startTime, endTime, pw)
+			w.Write([]byte("Timed out"))
+			break readloop
+		}
 	}
-	close(respchan)
 	
 finish:
 	dr.stateLock.Lock()
@@ -278,33 +292,6 @@ finish:
 		dr.pending -= 1
 	}
 	dr.pendingLock.Unlock()
-}
-
-/** A function designed to handle QUASAR's response over Cap'n Proto.
-	You shouldn't ever have to invoke this function. It is used internally by
-	the constructor function. */
-func (dr *DataRequester) handleDataResponse(connection net.Conn) {
-	for dr.alive {
-		// Only one goroutine will be reading at a time, so a lock isn't needed
-		responseSegment, respErr := capnp.ReadFromStream(connection, nil)
-		
-		if respErr != nil {
-			if !dr.alive {
-				break
-			}
-			fmt.Printf("Error in receiving response: %v\n", respErr)
-			os.Exit(1)
-		}
-		
-		responseSeg := cpint.ReadRootResponse(responseSegment)
-		id := responseSeg.EchoTag()
-		
-		dr.stateLock.RLock()
-		respchan := dr.synchronizers[id]
-		dr.stateLock.RUnlock()
-		
-		respchan <- responseSeg
-	}
 }
 
 func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
@@ -337,7 +324,22 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 	var cid uint32
 	var sendErr error
 	
+	var timeoutchan <-chan time.Time
+	
 	var boundarySlice []int64 = make([]int64, numResponses)
+	
+	// For final processing once all responses are received
+	var (
+		boundary int64
+		lNanos int32
+		lMillis int64
+		rNanos int32
+		rMillis int64
+		lowest int64 = QUASAR_HIGH
+		highest int64 = QUASAR_LOW
+		trailchar rune = ','
+		w io.Writer
+	)
 	
 	dr.stateLock.Lock()
 	for id = startID; id != startNext; id++ {
@@ -398,42 +400,37 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 	
 	bracketPool.Put(mp)
 	
+	timeoutchan = time.After(dr.timeout)
+	w = writ.GetWriter()
 	for j = 0; j < numResponses; j++ {
-		responseSeg := <- responseChan
-		id := responseSeg.EchoTag()
-		status := responseSeg.StatusCode()
-		records := responseSeg.Records().Values()
+		select {
+		case responseSeg := <-responseChan:
+			id := responseSeg.EchoTag()
+			status := responseSeg.StatusCode()
+			records := responseSeg.Records().Values()
 		
-		fmt.Printf("Got bracket response for request %v\n", id)
+			fmt.Printf("Got bracket response for request %v\n", id)
 		
-		if status != cpint.STATUSCODE_OK || records.Len() == 0 {
-			fmt.Printf("Error in bracket call request %v: database returns status code %v\n", id, status)
-			boundarySlice[id - startID] = INVALID_TIME
-			continue
-		} else {
-			boundarySlice[id - startID] = records.At(0).Time()
+			if status != cpint.STATUSCODE_OK || records.Len() == 0 {
+				fmt.Printf("Error in bracket call request %v: database returns status code %v\n", id, status)
+				boundarySlice[id - startID] = INVALID_TIME
+				continue
+			} else {
+				boundarySlice[id - startID] = records.At(0).Time()
+			}
+		case <-timeoutchan:
+			fmt.Printf("WARNING: bracket request in [%v, %v) timed out\n", startID, startNext)
+			w.Write([]byte("Timed out"))
+			goto exit
 		}
 	}
 	
 finish:
-	var (
-		boundary int64
-		lNanos int32
-		lMillis int64
-		rNanos int32
-		rMillis int64
-		lowest int64 = QUASAR_HIGH
-		highest int64 = QUASAR_LOW
-		trailchar rune = ','
-	)
-	
 	dr.stateLock.Lock()
 	for id = startID; id != startNext; id++ {
 		delete(dr.synchronizers, id)
 	}
 	dr.stateLock.Unlock()
-	
-	w := writ.GetWriter()
 	w.Write([]byte("{\"Brackets\": ["))
 	
 	for i = 0; i < len(uuids); i++ {
@@ -459,6 +456,7 @@ finish:
 	rMillis, rNanos = splitTime(highest)
 	w.Write([]byte(fmt.Sprintf(",\"Merged\":[[%v,%v],[%v,%v]]}", lMillis, lNanos, rMillis, rNanos)))
 	
+exit:
 	dr.pendingLock.Lock()
 	if dr.pending == dr.maxPending {
 		dr.pending -= 1
@@ -495,7 +493,11 @@ func (dr *DataRequester) handleResponses(connection net.Conn) {
 		respchan := dr.synchronizers[id]
 		dr.stateLock.RUnlock()
 		
-		respchan <- responseSeg
+		if respchan == nil {
+			fmt.Printf("Dropping extraneous response for request %v\n", id)
+		} else {
+    		respchan <- responseSeg
+    	}
 	}
 }
 

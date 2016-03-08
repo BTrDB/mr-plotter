@@ -96,7 +96,8 @@ type Config struct {
 	DbAddr string
 	NumDataConn uint16
 	NumBracketConn uint16
-	MaxRequestsPerConn uint32
+	MaxDataRequests uint32
+	MaxBracketRequests uint32
 	MetadataServer string
 	MongoServer string
 	CsvUrl string
@@ -105,6 +106,8 @@ type Config struct {
 	SessionPurgeIntervalSeconds int64
 	CsvMaxPointsPerStream int64
 	OutstandingRequestLogInterval int64
+	DbDataTimeoutSeconds int64
+	DbBracketTimeoutSeconds int64
 }
 
 var configRequiredKeys = map[string]bool{
@@ -115,16 +118,22 @@ var configRequiredKeys = map[string]bool{
 	"plotter_dir": true,
 	"cert_file": true,
 	"key_file": true,
+	
 	"db_addr": true,
 	"num_data_conn": true,
+	"num_bracket_conn": true,
+	"max_data_requests": true,
+	"max_bracket_requests": true,
 	"metadata_server": true,
 	"mongo_server": true,
 	"csv_url": true,
+	
 	"session_expiry_seconds": true,
 	"session_purge_interval_seconds": true,
 	"csv_max_points_per_stream": true,
-	"max_requests_per_conn": true,
 	"outstanding_request_log_interval": true,
+	"db_data_timeout_seconds": true,
+	"db_bracket_timeout_seconds": true,
 }
 
 func main() {
@@ -173,11 +182,11 @@ func main() {
 	permalinkConn = plotterDBConn.C("permalinks")
 	accountConn = plotterDBConn.C("accounts")
 	
-	dr = NewDataRequester(config.DbAddr, int(config.NumDataConn), 8, false)
+	dr = NewDataRequester(config.DbAddr, int(config.NumDataConn), config.MaxDataRequests, time.Duration(config.DbDataTimeoutSeconds) * time.Second, false)
 	if dr == nil {
 		os.Exit(1)
 	}
-	br = NewDataRequester(config.DbAddr, int(config.NumBracketConn), 8, true)
+	br = NewDataRequester(config.DbAddr, int(config.NumBracketConn), config.MaxBracketRequests, time.Duration(config.DbBracketTimeoutSeconds) * time.Second, true)
 	if br == nil {
 		os.Exit(1)
 	}
