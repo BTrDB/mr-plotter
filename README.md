@@ -298,3 +298,7 @@ viewable by users with that tag.
 If a user logs in or out while streams are selected, the plotting application
 will maintain the streams being plotted as far as possible, ensuring that the
 new user is still authorized to see those streams.
+
+License
+-------
+Mr-plotter is under GPL v3
