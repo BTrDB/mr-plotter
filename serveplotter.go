@@ -87,6 +87,7 @@ var csvMaxPoints int64
 type Config struct {
 	HttpPort uint16
 	HttpsPort uint16
+	UseHttp bool
 	UseHttps bool
 	HttpsRedirect bool
 	PlotterDir string
@@ -113,6 +114,7 @@ type Config struct {
 var configRequiredKeys = map[string]bool{
 	"http_port": true,
 	"https_port": true,
+	"use_http": true,
 	"use_https": true,
 	"https_redirect": true,
 	"plotter_dir": true,
@@ -214,8 +216,8 @@ func main() {
 	var loggedHandler http.Handler = httpHandlers.CombinedLoggingHandler(os.Stdout, http.DefaultServeMux)
 	
 	var portStrHTTP string = fmt.Sprintf(":%d", config.HttpPort)
-	if config.UseHttps {
-		var portStrHTTPS string = fmt.Sprintf(":%d", config.HttpsPort)
+	var portStrHTTPS string = fmt.Sprintf(":%d", config.HttpsPort)
+	if config.UseHttp && config.UseHttps {
 		go func () {
 				log.Fatal(http.ListenAndServeTLS(portStrHTTPS, config.CertFile, config.KeyFile, loggedHandler))
 				os.Exit(1)
@@ -233,7 +235,9 @@ func main() {
 		} else {
 			log.Fatal(http.ListenAndServe(portStrHTTP, loggedHandler))
 		}
-	} else {
+	} else if config.UseHttps {
+		log.Fatal(http.ListenAndServeTLS(portStrHTTPS, config.CertFile, config.KeyFile, loggedHandler))
+	} else if config.UseHttp {
 		log.Fatal(http.ListenAndServe(portStrHTTP, loggedHandler))
 	}
 	os.Exit(1);
