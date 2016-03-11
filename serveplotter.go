@@ -51,6 +51,8 @@ const (
 	FORWARD_CHUNKSIZE int = (4 << 10) // 4 KiB
 	MAX_REQSIZE int64 = (16 << 10) // 16 KiB
 	ERROR_INVALID_TOKEN string = "Invalid token"
+	
+	MONGO_ID_LEN int = 12
 )
 
 type CSVRequest struct {
@@ -82,6 +84,8 @@ var accountConn *mgo.Collection
 var csvURL string
 var token64len int
 var token64dlen int
+var permalinklen int
+var permalinkdlen int
 var csvMaxPoints int64
 
 type Config struct {
@@ -199,6 +203,8 @@ func main() {
 	
 	token64len = base64.StdEncoding.EncodedLen(TOKEN_BYTE_LEN)
 	token64dlen = base64.StdEncoding.DecodedLen(token64len)
+	permalinklen = base64.URLEncoding.EncodedLen(MONGO_ID_LEN)
+	permalinkdlen = base64.URLEncoding.DecodedLen(permalinklen)
 	
 	http.Handle("/", http.FileServer(http.Dir(config.PlotterDir)))
 	http.HandleFunc("/dataws", datawsHandler)
@@ -664,8 +670,9 @@ func permalinkHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		
-		var idslice []byte
-		idslice, err = base64.URLEncoding.DecodeString(id64str)
+		/* For backwards-compatibility with permalinks from the Meteor plotter, only look at the first 16 bytes. */
+		var idslice []byte = make([]byte, permalinkdlen)
+		_, err = base64.URLEncoding.Decode(idslice, []byte(id64str)[:permalinklen])
 		
 		if err != nil {
 			w.Write([]byte(PERMALINK_HELP))

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 from SocketServer import ThreadingMixIn
 import json
@@ -89,7 +89,7 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
             returnstr = '['
             for stream in streams:
                 returnstr += stream + ", "
-            self.wfile.write(returnstr[:-2] + ']')
+            self.wfile.write((returnstr if len(returnstr) == 1 else returnstr[:-2]) + ']')
         elif self.query.startswith('select * where uuid ='): # I assume that it's a sequence of ORs
             parts = self.query.split('"')
             uuids = []
@@ -109,7 +109,7 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
             returnstr = '['
             for stream in streams:
                 returnstr += stream + ", "
-            self.wfile.write(returnstr[:-2] + ']')
+            self.wfile.write((returnstr if len(returnstr) == 1 else returnstr[:-2]) + ']')
         else:
             self.wfile.write('[]')
                     
