@@ -50,12 +50,16 @@ MrPlotter.prototype.$ = function (expr) {
 function mr_plotter(parent, storagekey, options, cb1, cb2, backend) {
     // This is the one place in the entire code that I use the ID of an element
     var template = document.getElementById("mrplotter");
-    var docfrag = document.importNode(template.content, true);
     var container = document.createElement("div");
     if (backend == undefined) {
         backend = window.location.hostname + (window.location.port ? ":" + window.location.port : "");
     }
-    container.appendChild(docfrag);
+    try {
+        a.b();
+        container.appendChild(document.importNode(template.content, true));
+    } catch (err) {
+        container.innerHTML = template.innerHTML;
+    }
     parent.appendChild(container);
     var instance = new MrPlotter(container, storagekey, backend, options, cb1, cb2);
     

@@ -22,7 +22,6 @@ package main
 
 import (
 	"bytes"
-	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -219,7 +218,7 @@ func main() {
 	http.HandleFunc("/changepw", changepwHandler)
 	http.HandleFunc("/checktoken", checktokenHandler)
 	
-	var loggedHandler http.Handler = httpHandlers.CombinedLoggingHandler(os.Stdout, http.DefaultServeMux)
+	var loggedHandler http.Handler = httpHandlers.CompressHandler(httpHandlers.CombinedLoggingHandler(os.Stdout, http.DefaultServeMux))
 	
 	var portStrHTTP string = fmt.Sprintf(":%d", config.HttpPort)
 	var portStrHTTPS string = fmt.Sprintf(":%d", config.HttpsPort)
@@ -236,7 +235,7 @@ func main() {
 					url.Host = r.Host + portStrHTTPS
 					http.Redirect(w, r, url.String(), http.StatusFound)
 				})
-			var loggedRedirect http.Handler = httpHandlers.CombinedLoggingHandler(os.Stdout, redirect)
+			var loggedRedirect http.Handler = httpHandlers.CompressHandler(httpHandlers.CombinedLoggingHandler(os.Stdout, redirect))
 			log.Fatal(http.ListenAndServe(portStrHTTP, loggedRedirect))
 		} else {
 			log.Fatal(http.ListenAndServe(portStrHTTP, loggedHandler))
@@ -435,8 +434,6 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	var gzipWriter *gzip.Writer
-	
 	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	payload, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -456,14 +453,6 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				w.Write([]byte(ERROR_INVALID_TOKEN))
 				return
 			}
-		}
-		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			gzipWriter = gzip.NewWriter(w)
-			defer gzipWriter.Close()
-		
-			wrapper = RespWrapper{gzipWriter}
-			w.Header().Set("Content-Encoding", "gzip")
-			w.Header().Set("Content-Type", "application/json")
 		}
 		if hasPermission(loginsession, uuidBytes) {
 			dr.MakeDataRequest(uuidBytes, startTime, endTime, uint8(pw), wrapper)

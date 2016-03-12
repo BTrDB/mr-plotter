@@ -1,0 +1,336 @@
+Zone Africa/Addis_Ababa	2:34:48 -	LMT	1870
+			2:35:20	-	ADMT	1936 May  5 # Adis Dera MT
+			3:00	-	EAT
+Zone	Africa/Asmara	2:35:32 -	LMT	1870
+			2:35:32	-	AMT	1890        # Asmara Mean Time
+			2:35:20	-	ADMT	1936 May  5 # Adis Dera MT
+			3:00	-	EAT
+Link Africa/Asmara Africa/Asmera
+Zone	Africa/Bamako	-0:32:00 -	LMT	1912
+			 0:00	-	GMT	1934 Feb 26
+			-1:00	-	WAT	1960 Jun 20
+			 0:00	-	GMT
+Zone	Africa/Bangui	1:14:20	-	LMT	1912
+			1:00	-	WAT
+Zone	Africa/Banjul	-1:06:36 -	LMT	1912
+			-1:06:36 -	BMT	1935 # Banjul Mean Time
+			-1:00	-	WAT	1964
+			 0:00	-	GMT
+Zone	Africa/Blantyre	2:20:00 -	LMT	1903 Mar
+			2:00	-	CAT
+Zone Africa/Brazzaville	1:01:08 -	LMT	1912
+			1:00	-	WAT
+Zone Africa/Bujumbura	1:57:28	-	LMT	1890
+			2:00	-	CAT
+Zone	Africa/Conakry	-0:54:52 -	LMT	1912
+			 0:00	-	GMT	1934 Feb 26
+			-1:00	-	WAT	1960
+			 0:00	-	GMT
+Zone	Africa/Dakar	-1:09:44 -	LMT	1912
+			-1:00	-	WAT	1941 Jun
+			 0:00	-	GMT
+Zone Africa/Dar_es_Salaam 2:37:08 -	LMT	1931
+			3:00	-	EAT	1948
+			2:45	-	BEAUT	1961
+			3:00	-	EAT
+Zone	Africa/Djibouti	2:52:36 -	LMT	1911 Jul
+			3:00	-	EAT
+Zone	Africa/Douala	0:38:48	-	LMT	1912
+			1:00	-	WAT
+Rule	SL	1935	1942	-	Jun	 1	0:00	0:40	SLST
+Rule	SL	1935	1942	-	Oct	 1	0:00	0	WAT
+Rule	SL	1957	1962	-	Jun	 1	0:00	1:00	SLST
+Rule	SL	1957	1962	-	Sep	 1	0:00	0	GMT
+Zone	Africa/Freetown	-0:53:00 -	LMT	1882
+			-0:53:00 -	FMT	1913 Jun # Freetown Mean Time
+			-1:00	SL	%s	1957
+			 0:00	SL	%s
+Zone	Africa/Gaborone	1:43:40 -	LMT	1885
+			1:30	-	SAST	1903 Mar
+			2:00	-	CAT	1943 Sep 19  2:00
+			2:00	1:00	CAST	1944 Mar 19  2:00
+			2:00	-	CAT
+Zone	Africa/Harare	2:04:12 -	LMT	1903 Mar
+			2:00	-	CAT
+Zone	Africa/Juba	2:06:24 -	LMT	1931
+			2:00	Sudan	CA%sT	2000 Jan 15 12:00
+			3:00	-	EAT
+Zone	Africa/Kampala	2:09:40 -	LMT	1928 Jul
+			3:00	-	EAT	1930
+			2:30	-	BEAT	1948
+			2:45	-	BEAUT	1957
+			3:00	-	EAT
+Zone	Africa/Kigali	2:00:16 -	LMT	1935 Jun
+			2:00	-	CAT
+Zone Africa/Kinshasa	1:01:12 -	LMT	1897 Nov  9
+			1:00	-	WAT
+Zone Africa/Libreville	0:37:48 -	LMT	1912
+			1:00	-	WAT
+Zone	Africa/Lome	0:04:52 -	LMT	1893
+			0:00	-	GMT
+Zone	Africa/Luanda	0:52:56	-	LMT	1892
+			0:52:04	-	AOT	1912 Jan  1 # Angola Time
+			1:00	-	WAT
+Zone Africa/Lubumbashi	1:49:52 -	LMT	1897 Nov 9
+			2:00	-	CAT
+Zone	Africa/Lusaka	1:53:08 -	LMT	1903 Mar
+			2:00	-	CAT
+Zone	Africa/Malabo	0:35:08 -	LMT	1912
+			0:00	-	GMT	1963 Dec 15
+			1:00	-	WAT
+Zone	Africa/Maseru	1:50:00 -	LMT	1903 Mar
+			2:00	-	SAST	1943 Sep 19  2:00
+			2:00	1:00	SAST	1944 Mar 19  2:00
+			2:00	-	SAST
+Zone	Africa/Mbabane	2:04:24 -	LMT	1903 Mar
+			2:00	-	SAST
+Zone Africa/Mogadishu	3:01:28 -	LMT	1893 Nov
+			3:00	-	EAT	1931
+			2:30	-	BEAT	1957
+			3:00	-	EAT
+Zone	Africa/Niamey	 0:08:28 -	LMT	1912
+			-1:00	-	WAT	1934 Feb 26
+			 0:00	-	GMT	1960
+			 1:00	-	WAT
+Zone Africa/Nouakchott	-1:03:48 -	LMT	1912
+			 0:00	-	GMT	1934 Feb 26
+			-1:00	-	WAT	1960 Nov 28
+			 0:00	-	GMT
+Zone Africa/Ouagadougou	-0:06:04 -	LMT	1912
+			 0:00	-	GMT
+Zone Africa/Porto-Novo	0:10:28	-	LMT	1912 Jan  1
+			0:00	-	GMT	1934 Feb 26
+			1:00	-	WAT
+Zone	Africa/Sao_Tome	 0:26:56 -	LMT	1884
+			-0:36:32 -	LMT	1912 # Lisbon Mean Time
+			 0:00	-	GMT
+Zone	Africa/Timbuktu	-0:12:04 -	LMT	1912
+			 0:00	-	GMT
+Zone America/Anguilla	-4:12:16 -	LMT	1912 Mar  2
+			-4:00	-	AST
+Zone	America/Antigua	-4:07:12 -	LMT	1912 Mar 2
+			-5:00	-	EST	1951
+			-4:00	-	AST
+Zone America/Argentina/ComodRivadavia -4:30:00 - LMT	1894 Oct 31
+			-4:16:48 -	CMT	1920 May
+			-4:00	-	ART	1930 Dec
+			-4:00	Arg	AR%sT	1969 Oct  5
+			-3:00	Arg	AR%sT	1991 Mar  3
+			-4:00	-	WART	1991 Oct 20
+			-3:00	Arg	AR%sT	1999 Oct  3
+			-4:00	Arg	AR%sT	2000 Mar  3
+			-3:00	-	ART	2004 Jun  1
+			-4:00	-	WART	2004 Jun 20
+			-3:00	-	ART
+Zone	America/Aruba	-4:40:24 -	LMT	1912 Feb 12 # Oranjestad
+			-4:30	-	ANT	1965 # Netherlands Antilles Time
+			-4:00	-	AST
+Zone	America/Cayman	-5:25:32 -	LMT	1890     # Georgetown
+			-5:07:11 -	KMT	1912 Feb # Kingston Mean Time
+			-5:00	-	EST
+Zone America/Coral_Harbour -5:32:40 -	LMT	1884
+			-5:00	NT_YK	E%sT	1946
+			-5:00	-	EST
+Zone America/Dominica	-4:05:36 -	LMT	1911 Jul  1  0:01 # Roseau
+			-4:00	-	AST
+Zone America/Ensenada	-7:46:28 -	LMT	1922 Jan  1  0:13:32
+			-8:00	-	PST	1927 Jun 10 23:00
+			-7:00	-	MST	1930 Nov 16
+			-8:00	-	PST	1942 Apr
+			-7:00	-	MST	1949 Jan 14
+			-8:00	-	PST	1996
+			-8:00	Mexico	P%sT
+Zone	America/Grenada	-4:07:00 -	LMT	1911 Jul # St George's
+			-4:00	-	AST
+Zone America/Guadeloupe	-4:06:08 -	LMT	1911 Jun  8 # Pointe-à-Pitre
+			-4:00	 -	AST
+Rule	Mont	1917	only	-	Mar	25	2:00	1:00	D
+Rule	Mont	1917	only	-	Apr	24	0:00	0	S
+Rule	Mont	1919	only	-	Mar	31	2:30	1:00	D
+Rule	Mont	1919	only	-	Oct	25	2:30	0	S
+Rule	Mont	1920	only	-	May	 2	2:30	1:00	D
+Rule	Mont	1920	1922	-	Oct	Sun>=1	2:30	0	S
+Rule	Mont	1921	only	-	May	 1	2:00	1:00	D
+Rule	Mont	1922	only	-	Apr	30	2:00	1:00	D
+Rule	Mont	1924	only	-	May	17	2:00	1:00	D
+Rule	Mont	1924	1926	-	Sep	lastSun	2:30	0	S
+Rule	Mont	1925	1926	-	May	Sun>=1	2:00	1:00	D
+Rule	Mont	1927	1937	-	Apr	lastSat	24:00	1:00	D
+Rule	Mont	1927	1937	-	Sep	lastSat	24:00	0	S
+Rule	Mont	1938	1940	-	Apr	lastSun	0:00	1:00	D
+Rule	Mont	1938	1939	-	Sep	lastSun	0:00	0	S
+Rule	Mont	1946	1973	-	Apr	lastSun	2:00	1:00	D
+Rule	Mont	1945	1948	-	Sep	lastSun	2:00	0	S
+Rule	Mont	1949	1950	-	Oct	lastSun	2:00	0	S
+Rule	Mont	1951	1956	-	Sep	lastSun	2:00	0	S
+Rule	Mont	1957	1973	-	Oct	lastSun	2:00	0	S
+Zone America/Montreal	-4:54:16 -	LMT	1884
+			-5:00	Mont	E%sT	1918
+			-5:00	Canada	E%sT	1919
+			-5:00	Mont	E%sT	1942 Feb  9  2:00s
+			-5:00	Canada	E%sT	1946
+			-5:00	Mont	E%sT	1974
+			-5:00	Canada	E%sT
+Zone America/Montserrat	-4:08:52 -	LMT	1911 Jul  1  0:01 # Cork Hill
+			-4:00	-	AST
+Zone America/Rosario	-4:02:40 -	LMT	1894 Nov
+			-4:16:44 -	CMT	1920 May
+			-4:00	-	ART	1930 Dec
+			-4:00	Arg	AR%sT	1969 Oct  5
+			-3:00	Arg	AR%sT	1991 Jul
+			-3:00	-	ART	1999 Oct  3  0:00
+			-4:00	Arg	AR%sT	2000 Mar  3  0:00
+			-3:00	-	ART
+Zone America/St_Kitts	-4:10:52 -	LMT	1912 Mar  2 # Basseterre
+			-4:00	-	AST
+Zone America/St_Lucia	-4:04:00 -	LMT	1890 # Castries
+			-4:04:00 -	CMT	1912 # Castries Mean Time
+			-4:00	-	AST
+Zone America/St_Thomas	-4:19:44 -	LMT	1911 Jul # Charlotte Amalie
+			-4:00	-	AST
+Zone America/St_Vincent	-4:04:56 -	LMT	1890 # Kingstown
+			-4:04:56 -	KMT	1912 # Kingstown Mean Time
+			-4:00	-	AST
+Zone America/Tortola	-4:18:28 -	LMT	1911 Jul # Road Town
+			-4:00	-	AST
+Zone Antarctica/McMurdo	0	-	zzz	1956
+			12:00	NZ	NZ%sT
+Link Antarctica/McMurdo Antarctica/South_Pole
+Zone	Asia/Aden	2:59:54	-	LMT	1950
+			3:00	-	AST
+Zone	Asia/Bahrain	3:22:20 -	LMT	1920     # Manamah
+			4:00	-	GST	1972 Jun
+			3:00	-	AST
+Zone	Asia/Chongqing	7:06:20	-	LMT	1928     # or Chungking
+			7:00	-	LONT	1980 May # Long-shu Time
+			8:00	PRC	C%sT
+Link Asia/Chongqing Asia/Chungking
+Zone	Asia/Hanoi	7:03:24 -	LMT	1906 Jul  1
+			7:06:30	-	PLMT	1911 May  1
+			7:00	-	ICT	1942 Dec 31 23:00
+			8:00	-	IDT	1945 Mar 14 23:00
+			9:00	-	JST	1945 Sep  2
+			7:00	-	ICT	1947 Apr  1
+			8:00	-	IDT	1954 Oct
+			7:00	-	ICT
+Zone	Asia/Harbin	8:26:44	-	LMT	1928     # or Haerbin
+			8:30	-	CHAT	1932 Mar # Changbai Time
+			8:00	-	CST	1940
+			9:00	-	CHAT	1966 May
+			8:30	-	CHAT	1980 May
+			8:00	PRC	C%sT
+Zone	Asia/Kashgar	5:03:56	-	LMT	1928     # or Kashi or Kaxgar
+			5:30	-	KAST	1940     # Kashgar Time
+			5:00	-	KAST	1980 May
+			8:00	PRC	C%sT
+Zone	Asia/Kuwait	3:11:56 -	LMT	1950
+			3:00	-	AST
+Zone	Asia/Muscat	3:54:24 -	LMT	1920
+			4:00	-	GST
+Zone	Asia/Phnom_Penh	6:59:40 -	LMT	1906 Jul  1
+			7:06:30	-	PLMT	1911 May  1
+			7:00	-	ICT	1942 Dec 31 23:00
+			8:00	-	IDT	1945 Mar 14 23:00
+			9:00	-	JST	1945 Sep  2
+			7:00	-	ICT	1947 Apr  1
+			8:00	-	IDT	1953 Nov  9
+			7:00	-	ICT
+Zone	Asia/Tel_Aviv	2:19:04 -	LMT	1880
+			2:21	-	JMT	1918
+			2:00	Zion	I%sT
+Zone	Asia/Vientiane	6:50:24 -	LMT	1906 Jul  1
+			7:06:30	-	PLMT	1911 May  1
+			7:00	-	ICT	1942 Dec 31 23:00
+			8:00	-	IDT	1945 Mar 14 23:00
+			9:00	-	JST	1945 Sep  2
+			7:00	-	ICT	1947 Apr  1
+			8:00	-	IDT	1955 Apr 15
+			7:00	-	ICT
+Zone Atlantic/Jan_Mayen	-1:00	-	EGT
+Zone Atlantic/St_Helena	-0:22:48 -	LMT	1890 # Jamestown
+			-0:22:48 -	JMT	1951 # Jamestown Mean Time
+			 0:00	-	GMT
+Zone	Europe/Belfast	-0:23:40 -	LMT	1880 Aug  2
+			-0:25:21 -	DMT	1916 May 21  2:00
+						# DMT = Dublin/Dunsink MT
+			-0:25:21 1:00	IST	1916 Oct  1  2:00s
+						# IST = Irish Summer Time
+			 0:00	GB-Eire	%s	1968 Oct 27
+			 1:00	-	BST	1971 Oct 31  2:00u
+			 0:00	GB-Eire	%s	1996
+			 0:00	EU	GMT/BST
+Zone	Europe/Guernsey	-0:09:19 -	LMT	1913 Jun 18
+			 0:00	GB-Eire	%s	1940 Jul  2
+			 1:00	C-Eur	CE%sT	1945 May  8
+			 0:00	GB-Eire	%s	1968 Oct 27
+			 1:00	-	BST	1971 Oct 31  2:00u
+			 0:00	GB-Eire	%s	1996
+			 0:00	EU	GMT/BST
+Zone Europe/Isle_of_Man	-0:17:55 -	LMT	1883 Mar 30  0:00s
+			 0:00	GB-Eire	%s	1968 Oct 27
+			 1:00	-	BST	1971 Oct 31  2:00u
+			 0:00	GB-Eire	%s	1996
+			 0:00	EU	GMT/BST
+Zone	Europe/Jersey	-0:08:25 -	LMT	1898 Jun 11 16:00u
+			 0:00	GB-Eire	%s	1940 Jul  2
+			 1:00	C-Eur	CE%sT	1945 May  8
+			 0:00	GB-Eire	%s	1968 Oct 27
+			 1:00	-	BST	1971 Oct 31  2:00u
+			 0:00	GB-Eire	%s	1996
+			 0:00	EU	GMT/BST
+Zone Europe/Ljubljana	0:58:04	-	LMT	1884
+			1:00	-	CET	1941 Apr 18 23:00
+			1:00	C-Eur	CE%sT	1945 May  8  2:00s
+			1:00	1:00	CEST	1945 Sep 16  2:00s
+			1:00	-	CET	1982 Nov 27
+			1:00	EU	CE%sT
+Zone	Europe/Sarajevo	1:13:40	-	LMT	1884
+			1:00	-	CET	1941 Apr 18 23:00
+			1:00	C-Eur	CE%sT	1945 May  8  2:00s
+			1:00	1:00	CEST	1945 Sep 16  2:00s
+			1:00	-	CET	1982 Nov 27
+			1:00	EU	CE%sT
+Zone	Europe/Skopje	1:25:44	-	LMT	1884
+			1:00	-	CET	1941 Apr 18 23:00
+			1:00	C-Eur	CE%sT	1945 May  8  2:00s
+			1:00	1:00	CEST	1945 Sep 16  2:00s
+			1:00	-	CET	1982 Nov 27
+			1:00	EU	CE%sT
+Zone	Europe/Tiraspol	1:58:32	-	LMT	1880
+			1:55	-	CMT	1918 Feb 15 # Chisinau MT
+			1:44:24	-	BMT	1931 Jul 24 # Bucharest MT
+			2:00	Romania	EE%sT	1940 Aug 15
+			2:00	1:00	EEST	1941 Jul 17
+			1:00	C-Eur	CE%sT	1944 Aug 24
+			3:00	Russia	MSK/MSD	1991 Mar 31  2:00
+			2:00	Russia	EE%sT	1992 Jan 19  2:00
+			3:00	Russia	MSK/MSD
+Zone	Europe/Vaduz	0:38:04 -	LMT	1894 Jun
+			1:00	-	CET	1981
+			1:00	EU	CE%sT
+Zone	Europe/Zagreb	1:03:52	-	LMT	1884
+			1:00	-	CET	1941 Apr 18 23:00
+			1:00	C-Eur	CE%sT	1945 May  8  2:00s
+			1:00	1:00	CEST	1945 Sep 16  2:00s
+			1:00	-	CET	1982 Nov 27
+			1:00	EU	CE%sT
+Zone Indian/Antananarivo 3:10:04 -	LMT	1911 Jul
+			3:00	-	EAT	1954 Feb 27 23:00s
+			3:00	1:00	EAST	1954 May 29 23:00s
+			3:00	-	EAT
+Zone	Indian/Comoro	2:53:04 -	LMT	1911 Jul # Moroni, Gran Comoro
+			3:00	-	EAT
+Zone	Indian/Mayotte	3:00:56 -	LMT	1911 Jul # Mamoutzou
+			3:00	-	EAT
+Zone Pacific/Johnston	-10:00	-	HST
+Zone Pacific/Midway	-11:49:28 -	LMT	1901
+			-11:00	-	NST	1956 Jun  3
+			-11:00	1:00	NDT	1956 Sep  2
+			-11:00	-	NST	1967 Apr    # N=Nome
+			-11:00	-	BST	1983 Nov 30 # B=Bering
+			-11:00	-	SST	            # S=Samoa
+Zone Pacific/Saipan	-14:17:00 -	LMT	1844 Dec 31
+			 9:43:00 -	LMT	1901
+			 9:00	-	MPT	1969 Oct    # N Mariana Is Time
+			10:00	-	MPT	2000 Dec 23
+			10:00	-	ChST	# Chamorro Standard Time
