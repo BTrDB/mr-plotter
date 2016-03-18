@@ -31,6 +31,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -110,6 +111,7 @@ type Config struct {
 	SessionPurgeIntervalSeconds int64
 	CsvMaxPointsPerStream int64
 	OutstandingRequestLogInterval int64
+	NumGoroutinesLogInterval int64
 	DbDataTimeoutSeconds int64
 	DbBracketTimeoutSeconds int64
 }
@@ -137,6 +139,7 @@ var configRequiredKeys = map[string]bool{
 	"session_purge_interval_seconds": true,
 	"csv_max_points_per_stream": true,
 	"outstanding_request_log_interval": true,
+	"num_goroutines_log_interval": true,
 	"db_data_timeout_seconds": true,
 	"db_bracket_timeout_seconds": true,
 }
@@ -200,6 +203,8 @@ func main() {
 	
 	go logWaitingRequests(os.Stdout, time.Duration(config.OutstandingRequestLogInterval) * time.Second)
 	
+	go logNumGoroutines(os.Stdout, time.Duration(config.NumGoroutinesLogInterval) * time.Second)
+	
 	token64len = base64.StdEncoding.EncodedLen(TOKEN_BYTE_LEN)
 	token64dlen = base64.StdEncoding.DecodedLen(token64len)
 	permalinklen = base64.URLEncoding.EncodedLen(MONGO_ID_LEN)
@@ -252,6 +257,13 @@ func logWaitingRequests(output io.Writer, period time.Duration) {
 	for {
 		time.Sleep(period)
 		output.Write([]byte(fmt.Sprintf("Waiting data requests: %v; Waiting bracket requests: %v\n", dr.totalWaiting, br.totalWaiting)))
+	}
+}
+
+func logNumGoroutines(output io.Writer, period time.Duration) {
+	for {
+		time.Sleep(period)
+		output.Write([]byte(fmt.Sprintf("Number of goroutines: %v\n", runtime.NumGoroutine())))
 	}
 }
 

@@ -116,6 +116,8 @@ func tagHasPermission(tag string, uuidBytes uuid.UUID, uuidString string) bool {
 	/* If the response is [] we lack permission; if it's longer we have permission. */
 	buf := make([]byte, 3)
 	n, err := io.ReadFull(resp.Body, buf)
+	resp.Body.Close()
+	
 	if n == 3 && buf[0] == '[' {
 		hasPerm = true
 	} else if n == 2 && err == io.ErrUnexpectedEOF && buf[0] == '[' && buf[1] == ']' {
@@ -135,6 +137,7 @@ func tagHasPermission(tag string, uuidBytes uuid.UUID, uuidString string) bool {
 			totalCached += 1
 			if totalCached > MAX_CACHED {
 				// Make this access return quickly, so start pruning in a new goroutine
+				fmt.Println("Pruning cache")
 				go pruneCache()
 			}
 		}

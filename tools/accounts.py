@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import bcrypt
 import bson.binary
 import pymongo

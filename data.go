@@ -193,7 +193,7 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 	
 	var mp QueryMessagePart = queryPool.Get().(QueryMessagePart)
 	
-	var timeoutchan <-chan time.Time
+	var timeout *time.Timer
 	
 	segment := mp.segment
 	request := mp.request
@@ -232,7 +232,7 @@ func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, e
 	}
 	
 	firstSeg = true
-	timeoutchan = time.After(dr.timeout)
+	timeout = time.NewTimer(dr.timeout)
 	
 readloop:
 	for {
@@ -272,11 +272,18 @@ readloop:
 		
 			firstSeg = false
 			
-		case <-timeoutchan:
+		case <-timeout.C:
 			fmt.Printf("WARNING: request %v (UUID = %s, start = %v, end = %v, pw = %v) timed out\n", id, uuidBytes.String(), startTime, endTime, pw)
 			w.Write([]byte("Timed out"))
-			break readloop
+			goto finish
 		}
+	}
+	
+	/* If I reached this case, it means that we finished processing the data and the timeout didn't expire.
+	   So we need to free the timer resource. */
+	if !timeout.Stop() {
+		// If timeout.Stop() returned false, it means that the timeout fired during the last iteration.
+		<-timeout.C
 	}
 	
 finish:
@@ -324,7 +331,7 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 	var cid uint32
 	var sendErr error
 	
-	var timeoutchan <-chan time.Time
+	var timeout *time.Timer
 	
 	var boundarySlice []int64 = make([]int64, numResponses)
 	
@@ -400,7 +407,7 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 	
 	bracketPool.Put(mp)
 	
-	timeoutchan = time.After(dr.timeout)
+	timeout = time.NewTimer(dr.timeout)
 	w = writ.GetWriter()
 	for j = 0; j < numResponses; j++ {
 		select {
@@ -418,11 +425,18 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 			} else {
 				boundarySlice[id - startID] = records.At(0).Time()
 			}
-		case <-timeoutchan:
+		case <-timeout.C:
 			fmt.Printf("WARNING: bracket request in [%v, %v) timed out\n", startID, startNext)
 			w.Write([]byte("Timed out"))
 			goto exit
 		}
+	}
+	
+	/* If I reached this case, it means that we finished processing the data and the timeout didn't expire.
+	   So we need to free the timer resource. */
+	if !timeout.Stop() {
+		// If timeout.Stop() returned false, it means that the timeout fired during the last iteration.
+		<-timeout.C
 	}
 	
 finish:
@@ -496,8 +510,8 @@ func (dr *DataRequester) handleResponses(connection net.Conn) {
 		if respchan == nil {
 			fmt.Printf("Dropping extraneous response for request %v\n", id)
 		} else {
-    		respchan <- responseSeg
-    	}
+			respchan <- responseSeg
+		}
 	}
 }
 
