@@ -62,7 +62,8 @@
                          * extra parameters are undefined in the callee if
                          * not provided by the caller).
                          */
-                        var overriden_cb2 = function (inst) {
+                        var overriden_cb2 = undefined;
+                        overriden_cb2 = function (inst) {
                                 if (window.location.search.length > 0) {
                                     s3ui.exec_permalink(inst, window.location.search.slice(1));
                                 } else {
