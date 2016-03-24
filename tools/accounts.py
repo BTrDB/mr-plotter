@@ -109,10 +109,11 @@ def exec_statement(string):
     
     exec_func(tokens)
     
-while True:
-    try:
-        statement = raw_input("Mr. Plotter> ")
-    except EOFError:
-        print
-        raise SystemExit
-    exec_statement(statement)
+if __name__ == "__main__":
+    while True:
+        try:
+            statement = raw_input("Mr. Plotter> ")
+        except EOFError:
+            print
+            raise SystemExit
+        exec_statement(statement)
