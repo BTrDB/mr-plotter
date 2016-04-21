@@ -43,10 +43,10 @@ var MAX_TOKEN_BYTES = []byte{ 1,
 							  0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 }
 
 type LoginSession struct {
+	lastUsed int64
 	user string
 	token [TOKEN_BYTE_LEN]byte
 	tags []string
-	lastUsed int64
 }
 
 // Monotonically increasing identifier
@@ -132,10 +132,10 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 		}
 		
 		loginsession = &LoginSession{
+			lastUsed: time.Now().Unix(),
 			user: user,
 			token: tokenarr,
 			tags: taglist,
-			lastUsed: time.Now().Unix(),
 		}
 		
 		sessionsbyid[tokenarr] = loginsession

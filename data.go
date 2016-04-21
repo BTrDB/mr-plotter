@@ -116,14 +116,14 @@ func (cw *ConnWrapper) GetWriter() io.Writer {
 /** DataRequester encapsulates a series of connections used for obtaining data
 	from QUASAR. */
 type DataRequester struct {
-	connections []net.Conn
-	sendLocks []*sync.Mutex
-	timeout time.Duration
-	currID uint64
-	connID uint32
 	totalWaiting uint64
+	currID uint64
+	timeout time.Duration
+	connID uint32
 	pending uint32
 	maxPending uint32
+	connections []net.Conn
+	sendLocks []*sync.Mutex
 	pendingLock *sync.Mutex
 	pendingCondVar *sync.Cond
 	synchronizers map[uint64]chan cpint.Response
@@ -153,14 +153,14 @@ func NewDataRequester(dbAddr string, numConnections int, maxPending uint32, time
 	
 	pendingLock := &sync.Mutex{}
 	var dr *DataRequester = &DataRequester{
-		connections: connections,
-		sendLocks: locks,
-		timeout: timeout,
-		currID: 0,
-		connID: 0,
 		totalWaiting: 0,
+		currID: 0,
+		timeout: timeout,
+		connID: 0,
 		pending: 0,
 		maxPending: maxPending,
+		connections: connections,
+		sendLocks: locks,
 		pendingLock: pendingLock,
 		pendingCondVar: sync.NewCond(pendingLock),
 		synchronizers: make(map[uint64]chan cpint.Response),

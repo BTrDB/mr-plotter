@@ -56,13 +56,13 @@ const (
 )
 
 type CSVRequest struct {
-	UUIDs []string `json:"UUIDS"`
-	Labels []string
 	StartTime int64
 	EndTime int64
+	UUIDs []string `json:"UUIDS"`
+	Labels []string
 	UnitofTime string
-	PointWidth uint8
 	Token string `json:"_token,omitempty"`
+	PointWidth uint8
 }
 
 var upgrader = ws.Upgrader{}
@@ -88,6 +88,10 @@ var permalinklen int
 var permalinkdlen int
 var csvMaxPoints int64
 
+/* I don't order these elements from largest to smallest, so the int64s at the
+   bottom may not be 8-byte aligned. That's OK, because I don't anticipate
+   doing any atomic operations on these, and regular operations don't have to
+   be particularly fast (I'm just parsing a config file, after all). */
 type Config struct {
 	HttpPort uint16
 	HttpsPort uint16
