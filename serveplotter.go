@@ -512,18 +512,13 @@ func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-			var canview bool = true
+			var viewable []uuid.UUID = uuids[:0]
 			for _, uuid := range uuids {
-				if !hasPermission(loginsession, uuid) {
-					canview = false
-					break
+				if hasPermission(loginsession, uuid) {
+					viewable = append(viewable, uuid)
 				}
 			}
-			if canview {
-				br.MakeBracketRequest(uuids, &cw)
-			} else {
-				br.MakeBracketRequest([]uuid.UUID{}, &cw)
-			}
+			br.MakeBracketRequest(uuids, &cw)
 		}
 		if cw.CurrWriter != nil {
 			cw.CurrWriter.Close()
