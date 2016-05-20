@@ -367,7 +367,7 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 	
 		cid = atomic.AddUint32(&dr.connID, 1) % uint32(len(dr.connections))
 		
-		fmt.Printf("Issuing bracket request %v\n", id)
+		fmt.Printf("Issuing bracket request %v: %v, forwards\n", id, uuids[i].String())
 		dr.sendLocks[cid].Lock()
 		_, sendErr = segment.WriteTo(dr.connections[cid])
 		dr.sendLocks[cid].Unlock()
@@ -390,7 +390,7 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 	
 		cid = atomic.AddUint32(&dr.connID, 1) % uint32(len(dr.connections))
 		
-		fmt.Printf("Issuing bracket request %v\n", id)
+		fmt.Printf("Issuing bracket request %v: %v, backwards\n", id, uuids[i].String())
 		dr.sendLocks[cid].Lock()
 		_, sendErr = segment.WriteTo(dr.connections[cid])
 		dr.sendLocks[cid].Unlock()
