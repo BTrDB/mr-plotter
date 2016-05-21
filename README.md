@@ -301,4 +301,4 @@ new user is still authorized to see those streams.
 
 License
 -------
-Mr-plotter is under GPL v3
+Mr. Plotter is licensed under the GNU Affero General Public License.

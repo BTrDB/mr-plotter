@@ -1,3 +1,23 @@
+/*
+ * Copyright (C) 2016 Sam Kumar, Michael Andersen, and the University
+ * of California, Berkeley.
+ *
+ * This file is part of Mr. Plotter (the Multi-Resolution Plotter).
+ *
+ * Mr. Plotter is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Mr. Plotter is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with Mr. Plotter.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 s3ui = {instances: [], instanceid: -1}; // stores functions used in multiple files
 
 function MrPlotter(container, storagekey, backend, options, cb1, cb2) {
@@ -20,25 +40,6 @@ MrPlotter.prototype.find = function (expr) {
 MrPlotter.prototype.$ = function (expr) {
         return $(this.domelem.querySelectorAll(expr));
     };
-/*
- * Copyright (C) 2016 Sam Kumar, Michael Andersen, and the University
- * of California, Berkeley.
- *
- * This file is part of Mr. Plotter (the Multi-Resolution Plotter).
- *
- * Mr. Plotter is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Mr. Plotter is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Mr. Plotter.  If not, see <http://www.gnu.org/licenses/>.
- */
  
 /** Instantiates Mr. Plotter as a child of the provided DOM element.
     BACKEND is the hostname/port of the backend (ex. localhost:8080).
