@@ -2,8 +2,25 @@
 import bcrypt
 import bson.binary
 import pymongo
+import sys
 
-client = pymongo.MongoClient()
+mongohost = "localhost"
+mongoport = 27017
+
+error = False
+if len(sys.argv) == 2:
+    mongohost = sys.argv[1]
+if len(sys.argv) == 3:
+    try:
+        mongoport = int(sys.argv[2])
+    except ValueError:
+        error = True
+
+if error or len(sys.argv) > 3:
+    print "Usage: {0} [mongo_hostname] [mongoport]".format(sys.argv[0])
+    sys.exit()
+
+client = pymongo.MongoClient(mongohost, mongoport)
 accounts = client.mr_plotter.accounts
 
 def disp_help(tokens):
@@ -12,7 +29,7 @@ def disp_help(tokens):
 
 def create_funcs():
     help = disp_help
-    
+
     def adduser(tokens):
         if len(tokens) < 3:
             print "Usage: adduser username password [tag1] [tag2] ..."
@@ -25,7 +42,7 @@ def create_funcs():
         tags = set(tokens[3:])
         tags.add("public")
         accounts.update({"user": username}, {"$set": {"password": pbin, "tags": tuple(tags)}}, upsert = True)
-        
+
     def setpassword(tokens):
         if len(tokens) != 3:
             print "Usage: setpassword username password"
@@ -35,19 +52,19 @@ def create_funcs():
         phash = bcrypt.hashpw(password, bcrypt.gensalt())
         pbin = bson.binary.Binary(phash, bson.binary.USER_DEFINED_SUBTYPE)
         accounts.update({"user": username}, {"$set": {"password": pbin}})
-            
+
     def rmuser(tokens):
         if len(tokens) != 2:
             print "Usage: rmuser username"
             return
         accounts.delete_one({"user": tokens[1]})
-            
+
     def addtags(tokens):
         if len(tokens) < 3:
             print "Usage: addtags username tag1 [tag2] [tag3] ..."
             return
         accounts.update({"user": tokens[1]}, {"$addToSet": {"tags": {"$each": tokens[2:]}}})
-            
+
     def rmtags(tokens):
         if len(tokens) < 3:
             print "Usage: rmtags username tag1 [tag2] [tag3] ..."
@@ -57,58 +74,58 @@ def create_funcs():
         if "public" in tags:
             tags.remove("public")
         accounts.update({"user": tokens[1]}, {"$pullAll": {"tags": tuple(tags)}})
-            
+
     def lstags(tokens):
         if len(tokens) != 2:
             print "Usage: lstags username"
             return
         account = accounts.find_one({"user": tokens[1]})
         print " ".join(account["tags"])
-            
+
     def lsusers(tokens):
         if len(tokens) != 1:
             print "Usage: lsusers"
             return
         for account in accounts.find():
             print account["user"]
-            
+
     def ls(tokens):
         if len(tokens) != 1:
             print "Usage: ls"
             return
         for account in accounts.find():
             print "{0}: {1}".format(account["user"], " ".join(account["tags"]))
-        
+
     def exit(tokens):
         if len(tokens) != 1:
             print "Usage: exit"
             return
         raise SystemExit
-        
+
     def close(tokens):
         if len(tokens) != 1:
             print "Usage: close"
             return
         raise SystemExit
-        
+
     return locals()
-    
+
 funcs = create_funcs()
 
 def exec_statement(string):
     tokens = string.split()
     if len(tokens) == 0:
         return
-    
+
     command = tokens[0]
     if command not in funcs:
         exec_func = disp_help
         print "'{0}' is not a valid command".format(command)
     else:
         exec_func = funcs[command]
-    
+
     exec_func(tokens)
-    
+
 if __name__ == "__main__":
     while True:
         try:
