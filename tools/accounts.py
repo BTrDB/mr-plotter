@@ -9,7 +9,10 @@ mongoport = 27017
 
 error = False
 if len(sys.argv) == 2:
-    mongohost = sys.argv[1]
+    if sys.argv[1] == "-h":
+        error = True
+    else:
+        mongohost = sys.argv[1]
 if len(sys.argv) == 3:
     try:
         mongoport = int(sys.argv[2])
