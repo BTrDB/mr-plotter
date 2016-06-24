@@ -91,21 +91,21 @@ func validatePermalinkJSON(jsonPermalink map[string]interface{}) error {
 	var axisscale []interface{}
 	var windowtype string
 	var additionalproperties []string
-	
+
 	var axisscaleOK bool
-	
+
 	// validate the schema
 	err = permalinkCheckExtraFields(jsonPermalink, PERMALINK_SCHEMA)
 	if err != nil {
 		return err
 	}
-	
+
 	// check that required fields are present
 	err = permalinkCheckRequiredFields(jsonPermalink, PERMALINK_REQUIRED)
 	if err != nil {
 		return err
 	}
-	
+
 	// check that streams are valid
 	streams, ok = jsonPermalink["streams"].([]interface{})
 	if !ok {
@@ -137,7 +137,7 @@ func validatePermalinkJSON(jsonPermalink map[string]interface{}) error {
 			}
 		}
 	}
-	
+
 	// check that axes are valid
 	_, ok = jsonPermalink["axes"]
 	if ok {
@@ -161,7 +161,7 @@ func validatePermalinkJSON(jsonPermalink map[string]interface{}) error {
 			if err != nil {
 				return err
 			}
-			
+
 			if rightside, ok = axis["rightside"]; ok {
 				if rightside != nil {
 					if _, ok = rightside.(bool); !ok {
@@ -169,13 +169,13 @@ func validatePermalinkJSON(jsonPermalink map[string]interface{}) error {
 					}
 				}
 			}
-			
+
 			for j, axisstream = range axis["streams"].([]interface{}) {
 				if _, ok = axisstream.(string); !ok {
 					return fmt.Errorf("Error: element at index %d of 'streams' field of element at index %d of 'axes' field is not a string", j, i)
 				}
 			}
-			
+
 			/* We don't need to check if the assertion was correct, because
 			   we already checked that this is a slice. */
 			axisscale = axis["scale"].([]interface{})
@@ -192,13 +192,13 @@ func validatePermalinkJSON(jsonPermalink map[string]interface{}) error {
 			}
 		}
 	}
-	
+
 	// check that conditional fields are present
 	windowtype, ok = jsonPermalink["window_type"].(string)
 	if !ok {
 		windowtype = "fixed"
 	}
-	
+
 	additionalproperties, ok = PERMALINK_WINDOW_CONDITIONAL[windowtype]
 	if !ok {
 		return fmt.Errorf("Error: %s is not a valid value for the 'window_type' field", windowtype)
@@ -207,7 +207,7 @@ func validatePermalinkJSON(jsonPermalink map[string]interface{}) error {
 	if err != nil {
 		return fmt.Errorf("%s; it is required because the 'window_type' is \"%s\"", err.Error(), windowtype)
 	}
-	
+
 	return nil;
 }
 

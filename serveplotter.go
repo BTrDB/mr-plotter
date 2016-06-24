@@ -36,12 +36,12 @@ import (
 	"strings"
 	"sync"
 	"time"
-	
+
 	"gopkg.in/ini.v1"
-	
+
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	
+
 	httpHandlers "github.com/gorilla/handlers"
 	uuid "github.com/pborman/uuid"
 	ws "github.com/gorilla/websocket"
@@ -51,7 +51,7 @@ const (
 	FORWARD_CHUNKSIZE int = (4 << 10) // 4 KiB
 	MAX_REQSIZE int64 = (16 << 10) // 16 KiB
 	ERROR_INVALID_TOKEN string = "Invalid token"
-	
+
 	MONGO_ID_LEN int = 12
 )
 
@@ -101,7 +101,7 @@ type Config struct {
 	PlotterDir string
 	CertFile string
 	KeyFile string
-	
+
 	DbAddr string
 	NumDataConn uint16
 	NumBracketConn uint16
@@ -110,7 +110,7 @@ type Config struct {
 	MetadataServer string
 	MongoServer string
 	CsvUrl string
-	
+
 	SessionExpirySeconds int64
 	SessionPurgeIntervalSeconds int64
 	CsvMaxPointsPerStream int64
@@ -129,7 +129,7 @@ var configRequiredKeys = map[string]bool{
 	"plotter_dir": true,
 	"cert_file": true,
 	"key_file": true,
-	
+
 	"db_addr": true,
 	"num_data_conn": true,
 	"num_bracket_conn": true,
@@ -138,7 +138,7 @@ var configRequiredKeys = map[string]bool{
 	"metadata_server": true,
 	"mongo_server": true,
 	"csv_url": true,
-	
+
 	"session_expiry_seconds": true,
 	"session_purge_interval_seconds": true,
 	"csv_max_points_per_stream": true,
@@ -151,19 +151,19 @@ var configRequiredKeys = map[string]bool{
 func main() {
 	var config Config
 	var filename string
-	
+
 	if len(os.Args) < 2 {
 		filename = "plotter.ini"
 	} else {
 		filename = os.Args[1]
 	}
-	
+
 	rawConfig, err := ini.Load(filename)
 	if err != nil {
 		fmt.Printf("Could not parse %s: %v\n", filename, err)
 		return
 	}
-	
+
 	/* Validate the configuration file. */
 	defaultSect := rawConfig.Section("")
 	for requiredKey, _ := range configRequiredKeys {
@@ -172,7 +172,7 @@ func main() {
 			return
 		}
 	}
-	
+
 	rawConfig.NameMapper = ini.TitleUnderscore
 	err = rawConfig.MapTo(&config)
 	if err != nil {
@@ -183,17 +183,17 @@ func main() {
 	mdServer = config.MetadataServer
 	csvURL = config.CsvUrl
 	csvMaxPoints = config.CsvMaxPointsPerStream
-	
+
 	mongoConn, err := mgo.Dial(config.MongoServer)
 	if err != nil {
 		fmt.Printf("Could not connect to MongoDB Server at address %s\n", config.MongoServer)
 		os.Exit(1)
 	}
-	
+
 	plotterDBConn := mongoConn.DB("mr_plotter")
 	permalinkConn = plotterDBConn.C("permalinks")
 	accountConn = plotterDBConn.C("accounts")
-	
+
 	dr = NewDataRequester(config.DbAddr, int(config.NumDataConn), config.MaxDataRequests, time.Duration(config.DbDataTimeoutSeconds) * time.Second, false)
 	if dr == nil {
 		os.Exit(1)
@@ -202,18 +202,18 @@ func main() {
 	if br == nil {
 		os.Exit(1)
 	}
-	
+
 	go purgeSessionsPeriodically(config.SessionExpirySeconds, config.SessionPurgeIntervalSeconds)
-	
+
 	go logWaitingRequests(os.Stdout, time.Duration(config.OutstandingRequestLogInterval) * time.Second)
-	
+
 	go logNumGoroutines(os.Stdout, time.Duration(config.NumGoroutinesLogInterval) * time.Second)
-	
+
 	token64len = base64.StdEncoding.EncodedLen(TOKEN_BYTE_LEN)
 	token64dlen = base64.StdEncoding.DecodedLen(token64len)
 	permalinklen = base64.URLEncoding.EncodedLen(MONGO_ID_LEN)
 	permalinkdlen = base64.URLEncoding.DecodedLen(permalinklen)
-	
+
 	http.Handle("/", http.FileServer(http.Dir(config.PlotterDir)))
 	http.HandleFunc("/dataws", datawsHandler)
 	http.HandleFunc("/data", dataHandler)
@@ -226,9 +226,9 @@ func main() {
 	http.HandleFunc("/logoff", logoffHandler)
 	http.HandleFunc("/changepw", changepwHandler)
 	http.HandleFunc("/checktoken", checktokenHandler)
-	
+
 	var loggedHandler http.Handler = httpHandlers.CompressHandler(httpHandlers.CombinedLoggingHandler(os.Stdout, http.DefaultServeMux))
-	
+
 	var portStrHTTP string = fmt.Sprintf(":%d", config.HttpPort)
 	var portStrHTTPS string = fmt.Sprintf(":%d", config.HttpsPort)
 	if config.UseHttp && config.UseHttps {
@@ -236,7 +236,7 @@ func main() {
 				log.Fatal(http.ListenAndServeTLS(portStrHTTPS, config.CertFile, config.KeyFile, loggedHandler))
 				os.Exit(1)
 			}()
-			
+
 		if config.HttpsRedirect {
 			var redirect http.Handler = http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
 					var url *url.URL = r.URL
@@ -274,7 +274,7 @@ func logNumGoroutines(output io.Writer, period time.Duration) {
 func parseDataRequest(request string, writ Writable) (uuidBytes uuid.UUID, startTime int64, endTime int64, pw uint8, extra1 string, extra2 string, success bool) {
 	var args []string = strings.Split(string(request), ",")
 	var err error
-	
+
 	success = false
 	var w io.Writer
 
@@ -283,7 +283,7 @@ func parseDataRequest(request string, writ Writable) (uuidBytes uuid.UUID, start
 		w.Write([]byte(fmt.Sprintf("Four, five, or six arguments are required; got %v", len(args))))
 		return
 	}
-	
+
 	if len(args) == 6 {
 		extra1 = args[4]
 		extra2 = args[5]
@@ -322,41 +322,41 @@ func parseDataRequest(request string, writ Writable) (uuidBytes uuid.UUID, start
 	}
 
 	pw = uint8(pwTemp)
-	
+
 	startTime = ((startTime >> pw) << pw)
 	endTime = (((endTime >> pw) + 1) << pw) // we add one pointwidth to the endtime to simulate an inclusive endpoint
-	
+
 	success = true
-	
+
 	return
 }
 
 func parseBracketRequest(request string, writ Writable, expectExtra bool) (uuids []uuid.UUID, token string, extra string, success bool) {
 	var args []string = strings.Split(string(request), ",")
-	
+
 	success = false
 	var w io.Writer
 
 	var numUUIDs int
-	
+
 	if expectExtra {
 		numUUIDs = len(args) - 2
 	} else {
 		numUUIDs = len(args) - 1
 	}
-	
+
 	if numUUIDs < 1 {
 		w = writ.GetWriter()
 		w.Write([]byte(fmt.Sprintf("Got only %v arguments", len(args))))
 		return
 	}
-	
+
 	if expectExtra {
 		extra = args[numUUIDs + 1]
 	}
-	
+
 	uuids = make([]uuid.UUID, numUUIDs)
-	
+
 	for i := 0; i < numUUIDs; i++ {
 		uuids[i] = uuid.Parse(args[i])
 		if uuids[i] == nil {
@@ -365,11 +365,11 @@ func parseBracketRequest(request string, writ Writable, expectExtra bool) (uuids
 			return
 		}
 	}
-	
+
 	token = args[numUUIDs]
-	
+
 	success = true
-	
+
 	return
 }
 
@@ -389,23 +389,23 @@ func datawsHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("Could not upgrade HTTP connection to WebSocket: %v\n", upgradeerr)))
 		return
 	}
-	
+
 	cw := ConnWrapper{
 		Writing: &sync.Mutex{},
 		Conn: websocket,
 	}
-	
+
 	websocket.SetReadLimit(MAX_REQSIZE)
-	
+
 	for {
 		_, payload, err := websocket.ReadMessage()
-		
+
 		if err != nil {
 			return // Most likely the connection was closed or the message was too big
 		}
-		
+
 		uuidBytes, startTime, endTime, pw, token, echoTag, success := parseDataRequest(string(payload), &cw)
-	
+
 		if success {
 			var loginsession *LoginSession
 			if token != "" {
@@ -424,12 +424,12 @@ func datawsHandler(w http.ResponseWriter, r *http.Request) {
 		if cw.CurrWriter != nil {
 			cw.CurrWriter.Close()
 		}
-		
+
 		writer, err := websocket.NextWriter(ws.TextMessage)
 		if err != nil {
 			fmt.Println("Could not echo tag to client")
 		}
-		
+
 		if cw.CurrWriter != nil {
 			_, err = writer.Write([]byte(echoTag))
 			if err != nil {
@@ -437,7 +437,7 @@ func datawsHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			writer.Close()
 		}
-		
+
 		cw.Writing.Unlock()
 	}
 }
@@ -449,18 +449,18 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("You must send a POST request to get data."))
 		return
 	}
-	
+
 	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	payload, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.Write([]byte(fmt.Sprintf("Could not read received POST payload: %v", err)))
 		return
 	}
-	
+
 	var wrapper RespWrapper = RespWrapper{w}
-	
+
 	uuidBytes, startTime, endTime, pw, token, _, success := parseDataRequest(string(payload), wrapper)
-		
+
 	if success {
 		var loginsession *LoginSession
 		if token != "" {
@@ -486,23 +486,23 @@ func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("Could not upgrade HTTP connection to WebSocket: %v\n", upgradeerr)))
 		return
 	}
-	
+
 	cw := ConnWrapper{
 		Writing: &sync.Mutex{},
 		Conn: websocket,
 	}
-	
+
 	websocket.SetReadLimit(MAX_REQSIZE)
-	
+
 	for {
 		_, payload, err := websocket.ReadMessage()
-		
+
 		if err != nil {
 			return // Most likely the connection was closed or the message was too big
 		}
-		
+
 		uuids, token, echoTag, success := parseBracketRequest(string(payload), &cw, true)
-		
+
 		if success {
 			var loginsession *LoginSession
 			if token != "" {
@@ -523,12 +523,12 @@ func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
 		if cw.CurrWriter != nil {
 			cw.CurrWriter.Close()
 		}
-		
+
 		writer, err := websocket.NextWriter(ws.TextMessage)
 		if err != nil {
 			fmt.Println("Could not echo tag to client")
 		}
-		
+
 		if cw.CurrWriter != nil {
 			_, err = writer.Write([]byte(echoTag))
 			if err != nil {
@@ -536,7 +536,7 @@ func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			writer.Close()
 		}
-		
+
 		cw.Writing.Unlock()
 	}
 }
@@ -548,17 +548,17 @@ func bracketHandler (w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("You must send a POST request to get data."))
 		return
 	}
-	
+
 	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	payload, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.Write([]byte(fmt.Sprintf("Could not read received POST payload: %v", err)))
 	}
-	
+
 	wrapper := RespWrapper{w}
-	
+
 	uuids, token, _, success := parseBracketRequest(string(payload), wrapper, false)
-	
+
 	if success {
 		var loginsession *LoginSession
 		if token != "" {
@@ -591,22 +591,22 @@ func metadataHandler (w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("You must send a POST request to get data."))
 		return
 	}
-	
+
 	var n int
-	
+
 	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	request, err := ioutil.ReadAll(r.Body) // should probably limit the size of this
 	if err != nil {
 		w.Write([]byte("Could not read request."))
 		return
 	}
-	
+
 	var tags string = "public"
 	semicolonindex := bytes.IndexByte(request, ';')
 	if semicolonindex != -1 {
 		tokenencoded := request[semicolonindex + 1:]
 		request = request[:semicolonindex + 1]
-		
+
 		if len(tokenencoded) == token64len {
 			tokenslice := make([]byte, token64dlen, token64dlen)
 			n, err = base64.StdEncoding.Decode(tokenslice, tokenencoded)
@@ -618,26 +618,26 @@ func metadataHandler (w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	
+
 	mdReq, err := http.NewRequest("POST", fmt.Sprintf("%s?tags=%s", mdServer, tags), strings.NewReader(string(request)))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("Could not perform HTTP request to metadata server: %v", err)))
 		return
 	}
-	
+
 	mdReq.Header.Set("Content-Type", "text")
 	mdReq.Header.Set("Content-Length", fmt.Sprintf("%v", len(request)))
 	resp, err := http.DefaultClient.Do(mdReq)
-	
+
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(fmt.Sprintf("Could not forward request to metadata server: %v", err)))
 		return
 	}
-	
+
 	var buffer []byte = make([]byte, FORWARD_CHUNKSIZE) // forward the response
-	
+
 	var bytesRead int
 	var readErr error = nil
 	for readErr == nil {
@@ -656,11 +656,11 @@ func permalinkHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(PERMALINK_HELP))
 		return
 	}
-	
+
 	var err error
 	var jsonPermalink map[string]interface{}
 	var id bson.ObjectId
-	
+
 	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	if r.Method == "GET" {
 		r.ParseForm()
@@ -669,72 +669,72 @@ func permalinkHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(PERMALINK_HELP))
 			return
 		}
-		
+
 		/* For backwards-compatibility with permalinks from the Meteor plotter, only look at the first 16 bytes. */
 		var idslice []byte = make([]byte, permalinkdlen)
 		_, err = base64.URLEncoding.Decode(idslice, []byte(id64str)[:permalinklen])
-		
+
 		if err != nil {
 			w.Write([]byte(PERMALINK_HELP))
 			return
 		}
-		
+
 		id = bson.ObjectId(idslice)
-		
+
 		if !id.Valid() {
 			w.Write([]byte(PERMALINK_BAD_ID))
 			return
 		}
-		
+
 		var query *mgo.Query = permalinkConn.FindId(id)
-		
+
 		err = query.One(&jsonPermalink)
 		if err != nil {
 			w.Write([]byte(PERMALINK_BAD_ID))
 			return
 		}
-		
+
 		// I could do this asynchronously, but I think this is good enough
 		err = permalinkConn.UpdateId(id, map[string]interface{}{
 			"$set": map[string]interface{}{
 				"lastAccessed": bson.Now(),
 			},
 		})
-		
+
 		if err != nil {
 			// In the future I could try something like restarting the connection
 			fmt.Printf("Could not update permalink record: %v\n", err)
 		}
-		
+
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		
+
 		var permalinkEncoder *json.Encoder = json.NewEncoder(w)
 		err = permalinkEncoder.Encode(jsonPermalink)
-		
+
 		if err != nil {
 			fmt.Printf("Could not encode permlink data: %v\n", err)
 		}
 	} else {
 		var permalinkDecoder *json.Decoder = json.NewDecoder(r.Body)
-	
+
 		err = permalinkDecoder.Decode(&jsonPermalink)
 		if err != nil {
 			w.Write([]byte(fmt.Sprintf("Error: received invalid JSON: %v", err)))
 			return
 		}
-	
+
 		err = validatePermalinkJSON(jsonPermalink)
 		if err != nil {
 			w.Write([]byte(err.Error()))
 			return
 		}
-	
+
 		id = bson.NewObjectId()
 		jsonPermalink["_id"] = id
 		jsonPermalink["lastAccessed"] = bson.Now()
-	
+
 		err = permalinkConn.Insert(jsonPermalink)
-	
+
 		if err == nil {
 			id64len := base64.URLEncoding.EncodedLen(len(id))
 			id64buf := make([]byte, id64len, id64len)
@@ -754,9 +754,9 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("To get a CSV file, send the required data as a JSON document via a POST request."))
 		return
 	}
-	
+
 	var err error
-	
+
 	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	_, err = io.ReadFull(r.Body, make([]byte, 5)) // Remove the "json="
 	if err != nil {
@@ -764,7 +764,7 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Bad request"))
 		return
 	}
-	
+
 	var jsonCSVReq CSVRequest
 	var jsonCSVReqDecoder *json.Decoder = json.NewDecoder(r.Body)
 	err = jsonCSVReqDecoder.Decode(&jsonCSVReq)
@@ -773,16 +773,16 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Malformed request"))
 		return
 	}
-	
+
 	if jsonCSVReq.PointWidth > 62 {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(fmt.Sprintf("Invalid point width: %d", jsonCSVReq.PointWidth)))
 		return
 	}
-	
+
 	/* Check the number of points per stream to see if this request is reasonable. */
 	var deltaT int64 = jsonCSVReq.EndTime - jsonCSVReq.StartTime
-	
+
 	/* Taken from the BTrDB HTTP interface bindings, to make sure I handle the units in the same way. */
 	switch jsonCSVReq.UnitofTime {
 	case "":
@@ -799,7 +799,7 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("Invalid unit of time: must be 'ns', 'ms', 'us' or 's' (got '%s')", jsonCSVReq.UnitofTime)))
 		return
 	}
-	
+
 	var pps int64 = deltaT >> jsonCSVReq.PointWidth
 	if deltaT & ((1 << jsonCSVReq.PointWidth) - 1) != 0 {
 		pps += 1
@@ -809,7 +809,7 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("CSV file too big: estimated %d points", pps)))
 		return
 	}
-	
+
 	var loginsession *LoginSession
 	if jsonCSVReq.Token != "" {
 		loginsession = validateToken(jsonCSVReq.Token)
@@ -820,7 +820,7 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	
+
 	for _, uuidstr := range jsonCSVReq.UUIDs {
 		uuidobj := uuid.Parse(uuidstr)
 		if uuidobj == nil {
@@ -834,14 +834,14 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	
+
 	// Don't send the token to BTrDB
 	jsonCSVReq.Token = ""
-	
+
 	w.Header().Set("Content-Disposition", "attachment; filename=data.csv")
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Transfer-Encoding", "chunked")
-	
+
 	var csvJSON []byte
 	csvJSON, err = json.Marshal(&jsonCSVReq)
 	if err != nil {
@@ -849,7 +849,7 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("Could not forward request: %v", err)))
 		return
 	}
-	
+
 	var csvReq *http.Request
 	csvReq, err = http.NewRequest("POST", csvURL, bytes.NewReader(csvJSON))
 	if err != nil {
@@ -857,26 +857,26 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("Could not perform HTTP request to database: %v", err)))
 		return
 	}
-	
+
 	csvReq.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(csvReq)
-	
+
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(fmt.Sprintf("Could not forward request to database: %v", err)))
 		resp.Body.Close()
 		return
 	}
-	
+
 	var buffer []byte = make([]byte, FORWARD_CHUNKSIZE) // forward the response in 4 KiB chunks
-	
+
 	var bytesRead int
 	var readErr error = nil
 	for readErr == nil {
 		bytesRead, readErr = resp.Body.Read(buffer)
 		w.Write(buffer[:bytesRead])
 	}
-	
+
 	resp.Body.Close()
 }
 
@@ -887,7 +887,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("To log in, make a POST request with JSON containing a username and password."))
 		return
 	}
-	
+
 	var err error
 	var jsonLogin map[string]interface{}
 	var usernameint interface{}
@@ -895,7 +895,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	var passwordint interface{}
 	var password string
 	var ok bool
-	
+
 	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	var loginDecoder *json.Decoder = json.NewDecoder(r.Body)
 
@@ -910,25 +910,25 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("Error: JSON must contain field 'username'")))
 		return
 	}
-	
+
 	passwordint, ok = jsonLogin["password"]
 	if !ok {
 		w.Write([]byte(fmt.Sprintf("Error: JSON must contain field 'password'")))
 		return
 	}
-	
+
 	username, ok = usernameint.(string)
 	if !ok {
 		w.Write([]byte(fmt.Sprintf("Error: field 'username' must be a string")))
 		return
 	}
-	
+
 	password, ok = passwordint.(string)
 	if !ok {
 		w.Write([]byte(fmt.Sprintf("Error: field 'password' must be a string")))
 		return
 	}
-	
+
 	tokenarr := userlogin(accountConn, username, []byte(password))
 	if tokenarr != nil {
 		token64buf := make([]byte, token64len)
@@ -940,7 +940,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 func parseToken(reader io.Reader) []byte {
 	tokenencoded := make([]byte, token64len, token64len)
 	tokenslice := make([]byte, token64dlen, token64dlen)
-	
+
 	n, err := io.ReadFull(reader, tokenencoded)
 	if err == nil && n == token64len {
 		n, err = base64.StdEncoding.Decode(tokenslice, tokenencoded)
@@ -948,7 +948,7 @@ func parseToken(reader io.Reader) []byte {
 			return tokenslice
 		}
 	}
-	
+
 	return nil
 }
 
@@ -959,10 +959,10 @@ func logoffHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("To log off, make a POST request with the session token."))
 		return
 	}
-	
+
 	// parseToken doesn't buffer the whole request in memory, so we don't need to use http.MaxBytesReader
 	tokenslice := parseToken(r.Body)
-	
+
 	if tokenslice != nil && userlogoff(tokenslice) {
 		w.Write([]byte("Logoff successful."))
 	} else {
@@ -977,7 +977,7 @@ func changepwHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("To change password, make a POST request with the appropriate JSON document."))
 		return
 	}
-	
+
 	var err error
 	var jsonChangePassword map[string]interface{}
 	var tokenint interface{}
@@ -988,7 +988,7 @@ func changepwHandler(w http.ResponseWriter, r *http.Request) {
 	var newpassword string
 	var ok bool
 	var tokenslice []byte
-	
+
 	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	var pwDecoder *json.Decoder = json.NewDecoder(r.Body)
 
@@ -1003,48 +1003,48 @@ func changepwHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Error: JSON must contain field 'token'"))
 		return
 	}
-	
+
 	oldpasswordint, ok = jsonChangePassword["oldpassword"]
 	if !ok {
 		w.Write([]byte("Error: JSON must contain field 'oldpassword'"))
 		return
 	}
-	
+
 	newpasswordint, ok = jsonChangePassword["newpassword"]
 	if !ok {
 		w.Write([]byte("Error: JSON must contain field 'newpassword'"))
 		return
 	}
-	
+
 	token, ok = tokenint.(string)
 	if !ok {
 		w.Write([]byte("Error: field 'token' must be a string"))
 		return
 	}
-	
+
 	oldpassword, ok = oldpasswordint.(string)
 	if !ok {
 		w.Write([]byte("Error: field 'oldpassword' must be a string"))
 		return
 	}
-	
+
 	newpassword, ok = newpasswordint.(string)
 	if !ok {
 		w.Write([]byte("Error: field 'newpassword' must be a string"))
 		return
 	}
-	
+
 	if len(token) != token64len {
 		w.Write([]byte(ERROR_INVALID_TOKEN))
 		return
 	}
-	
+
 	tokenslice, err = base64.StdEncoding.DecodeString(token)
 	if err != nil || len(tokenslice) != TOKEN_BYTE_LEN {
 		w.Write([]byte(ERROR_INVALID_TOKEN))
 		return
 	}
-	
+
 	success := userchangepassword(accountConn, tokenslice, []byte(oldpassword), []byte(newpassword))
 	w.Write([]byte(success))
 }
@@ -1056,9 +1056,9 @@ func checktokenHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("To check a token, make a POST request with the token in the request body."))
 		return
 	}
-	
+
 	tokenslice := parseToken(r.Body)
-	
+
 	if tokenslice != nil && getloginsession(tokenslice) != nil {
 		w.Write([]byte("ok"))
 	} else {

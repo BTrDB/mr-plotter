@@ -28,7 +28,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	
+
 	capnp "github.com/glycerine/go-capnproto"
 	cpint "github.com/SoftwareDefinedBuildings/mr-plotter/btrdb-cpint"
 	uuid "github.com/pborman/uuid"
@@ -150,7 +150,7 @@ func NewDataRequester(dbAddr string, numConnections int, maxPending uint32, time
 		}
 		locks[i] = &sync.Mutex{}
 	}
-	
+
 	pendingLock := &sync.Mutex{}
 	var dr *DataRequester = &DataRequester{
 		totalWaiting: 0,
@@ -167,11 +167,11 @@ func NewDataRequester(dbAddr string, numConnections int, maxPending uint32, time
 		stateLock: &sync.RWMutex{},
 		alive: true,
 	}
-	
+
 	for i = 0; i < numConnections; i++ {
 		go dr.handleResponses(connections[i])
 	}
-	
+
 	return dr
 }
 
@@ -179,61 +179,61 @@ func NewDataRequester(dbAddr string, numConnections int, maxPending uint32, time
 func (dr *DataRequester) MakeDataRequest(uuidBytes uuid.UUID, startTime int64, endTime int64, pw uint8, writ Writable) {
 	atomic.AddUint64(&dr.totalWaiting, 1)
 	defer atomic.AddUint64(&dr.totalWaiting, 0xFFFFFFFFFFFFFFFF)
-	
+
 	dr.pendingLock.Lock()
 	for dr.pending == dr.maxPending {
 		dr.pendingCondVar.Wait()
 	}
 	dr.pending += 1
 	dr.pendingLock.Unlock()
-	
+
 	var respchan = make(chan cpint.Response, 10)
-	
+
 	var firstSeg bool
-	
+
 	var mp QueryMessagePart = queryPool.Get().(QueryMessagePart)
-	
+
 	var timeout *time.Timer
-	
+
 	segment := mp.segment
 	request := mp.request
 	query := mp.query
-	
+
 	query.SetUuid([]byte(uuidBytes))
 	query.SetStartTime(startTime)
 	query.SetEndTime(endTime)
 	query.SetPointWidth(pw)
-	
+
 	id := atomic.AddUint64(&dr.currID, 1)
-	
+
 	request.SetEchoTag(id)
-	
+
 	request.SetQueryStatisticalValues(*query)
-	
+
 	cid := atomic.AddUint32(&dr.connID, 1) % uint32(len(dr.connections))
-	
+
 	dr.stateLock.Lock()
 	dr.synchronizers[id] = respchan
 	dr.stateLock.Unlock()
-	
+
 	fmt.Printf("Issuing data request %v (UUID = %s, start = %v, end = %v, pw = %v)\n", id, uuidBytes.String(), startTime, endTime, pw)
 	dr.sendLocks[cid].Lock()
 	_, sendErr := segment.WriteTo(dr.connections[cid])
 	dr.sendLocks[cid].Unlock()
-	
+
 	queryPool.Put(mp)
-	
+
 	w := writ.GetWriter()
 	if sendErr != nil {
 		fmt.Printf("Data request %v FAILS: %v\n", id, sendErr)
-		
+
 		w.Write([]byte(fmt.Sprintf("Could not send query to database: %v", sendErr)))
 		goto finish
 	}
-	
+
 	firstSeg = true
 	timeout = time.NewTimer(dr.timeout)
-	
+
 readloop:
 	for {
 		select {
@@ -241,17 +241,17 @@ readloop:
 			status := responseSeg.StatusCode()
 			records := responseSeg.StatisticalRecords().Values()
 			final := responseSeg.Final()
-		
+
 			fmt.Printf("Got data response for request %v: FirstSeg = %v, FinalSeg = %v\n", id, firstSeg, final)
-		
+
 			if status != cpint.STATUSCODE_OK {
 				fmt.Printf("Bad status code: %v\n", status)
 				w.Write([]byte(fmt.Sprintf("Database returns status code %v", status)))
 				break readloop
 			}
-		
+
 			length := records.Len()
-		
+
 			if firstSeg {
 				w.Write([]byte("["))
 			}
@@ -264,33 +264,33 @@ readloop:
 					w.Write([]byte(fmt.Sprintf(",[%v,%v,%v,%v,%v,%v]", millis, nanos, record.Min(), record.Mean(), record.Max(), record.Count())))
 				}
 			}
-		
+
 			if final {
 				w.Write([]byte("]"))
 				break readloop
 			}
-		
+
 			firstSeg = false
-			
+
 		case <-timeout.C:
 			fmt.Printf("WARNING: request %v (UUID = %s, start = %v, end = %v, pw = %v) timed out\n", id, uuidBytes.String(), startTime, endTime, pw)
 			w.Write([]byte("Timed out"))
 			goto finish
 		}
 	}
-	
+
 	/* If I reached this case, it means that we finished processing the data and the timeout didn't expire.
 	   So we need to free the timer resource. */
 	if !timeout.Stop() {
 		// If timeout.Stop() returned false, it means that the timeout fired during the last iteration.
 		<-timeout.C
 	}
-	
+
 finish:
 	dr.stateLock.Lock()
 	delete(dr.synchronizers, id)
 	dr.stateLock.Unlock()
-	
+
 	dr.pendingLock.Lock()
 	if dr.pending == dr.maxPending {
 		dr.pending -= 1
@@ -304,37 +304,37 @@ finish:
 func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 	atomic.AddUint64(&dr.totalWaiting, 1)
 	defer atomic.AddUint64(&dr.totalWaiting, 0xFFFFFFFFFFFFFFFF)
-	
+
 	dr.pendingLock.Lock()
 	for dr.pending == dr.maxPending {
 		dr.pendingCondVar.Wait()
 	}
 	dr.pending += 1
 	dr.pendingLock.Unlock()
-	
+
 	var mp BracketMessagePart = bracketPool.Get().(BracketMessagePart)
-	
+
 	segment := mp.segment
 	request := mp.request
 	bquery := mp.bquery
-	
+
 	var numResponses uint64 = uint64(len(uuids)) << 1
 	var responseChan chan cpint.Response = make(chan cpint.Response, numResponses)
-	
+
 	/* Get a contiguous block of IDs. */
 	var startNext uint64 = atomic.AddUint64(&dr.currID, numResponses) + 1
 	var startID uint64 = startNext - numResponses
-	
+
 	var i int
 	var j uint64
 	var id uint64 = startID
 	var cid uint32
 	var sendErr error
-	
+
 	var timeout *time.Timer
-	
+
 	var boundarySlice []int64 = make([]int64, numResponses)
-	
+
 	// For final processing once all responses are received
 	var (
 		boundary int64
@@ -347,66 +347,66 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 		trailchar rune = ','
 		w io.Writer
 	)
-	
+
 	dr.stateLock.Lock()
 	for id = startID; id != startNext; id++ {
 		dr.synchronizers[id] = responseChan
 	}
 	dr.stateLock.Unlock()
-	
+
 	id = startID
-	
+
 	for i = 0; i < len(uuids); i++ {
 		bquery.SetUuid([]byte(uuids[i]))
 		bquery.SetTime(QUASAR_LOW)
 		bquery.SetBackward(false)
-	
+
 		request.SetEchoTag(id)
-	
+
 		request.SetQueryNearestValue(*bquery)
-	
+
 		cid = atomic.AddUint32(&dr.connID, 1) % uint32(len(dr.connections))
-		
+
 		fmt.Printf("Issuing bracket request %v\n", id)
 		dr.sendLocks[cid].Lock()
 		_, sendErr = segment.WriteTo(dr.connections[cid])
 		dr.sendLocks[cid].Unlock()
-		
+
 		if sendErr != nil {
 			w := writ.GetWriter()
 			w.Write([]byte(fmt.Sprintf("Could not send query to database: %v", sendErr)))
 			bracketPool.Put(mp)
 			goto finish
 		}
-		
+
 		id += 1
-		
+
 		bquery.SetTime(QUASAR_HIGH)
 		bquery.SetBackward(true)
-	
+
 		request.SetEchoTag(id)
-	
+
 		request.SetQueryNearestValue(*bquery)
-	
+
 		cid = atomic.AddUint32(&dr.connID, 1) % uint32(len(dr.connections))
-		
+
 		fmt.Printf("Issuing bracket request %v\n", id)
 		dr.sendLocks[cid].Lock()
 		_, sendErr = segment.WriteTo(dr.connections[cid])
 		dr.sendLocks[cid].Unlock()
-		
+
 		if sendErr != nil {
 			w := writ.GetWriter()
 			w.Write([]byte(fmt.Sprintf("Could not send query to database: %v", sendErr)))
 			bracketPool.Put(mp)
 			goto finish
 		}
-		
+
 		id += 1
 	}
-	
+
 	bracketPool.Put(mp)
-	
+
 	timeout = time.NewTimer(dr.timeout)
 	w = writ.GetWriter()
 	for j = 0; j < numResponses; j++ {
@@ -415,9 +415,9 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 			id := responseSeg.EchoTag()
 			status := responseSeg.StatusCode()
 			records := responseSeg.Records().Values()
-		
+
 			fmt.Printf("Got bracket response for request %v\n", id)
-		
+
 			if status != cpint.STATUSCODE_OK || records.Len() == 0 {
 				fmt.Printf("Error in bracket call request %v: database returns status code %v\n", id, status)
 				boundarySlice[id - startID] = INVALID_TIME
@@ -431,14 +431,14 @@ func (dr *DataRequester) MakeBracketRequest(uuids []uuid.UUID, writ Writable) {
 			goto exit
 		}
 	}
-	
+
 	/* If I reached this case, it means that we finished processing the data and the timeout didn't expire.
 	   So we need to free the timer resource. */
 	if !timeout.Stop() {
 		// If timeout.Stop() returned false, it means that the timeout fired during the last iteration.
 		<-timeout.C
 	}
-	
+
 finish:
 	dr.stateLock.Lock()
 	for id = startID; id != startNext; id++ {
@@ -446,7 +446,7 @@ finish:
 	}
 	dr.stateLock.Unlock()
 	w.Write([]byte("{\"Brackets\": ["))
-	
+
 	for i = 0; i < len(uuids); i++ {
 		boundary = boundarySlice[i << 1]
 		if boundary != INVALID_TIME && boundary < lowest {
@@ -469,7 +469,7 @@ finish:
 	lMillis, lNanos = splitTime(lowest)
 	rMillis, rNanos = splitTime(highest)
 	w.Write([]byte(fmt.Sprintf(",\"Merged\":[[%v,%v],[%v,%v]]}", lMillis, lNanos, rMillis, rNanos)))
-	
+
 exit:
 	dr.pendingLock.Lock()
 	if dr.pending == dr.maxPending {
@@ -482,31 +482,31 @@ exit:
 }
 
 
-/** A function designed to handle QUASAR's response over Cap'n Proto.
+/** A function designed to handle BTrDB's response over Cap'n Proto.
 	You shouldn't ever have to invoke this function. It is used internally by
 	the constructor function. */
 func (dr *DataRequester) handleResponses(connection net.Conn) {
 	for dr.alive {
 		// Only one goroutine will be reading at a time, so a lock isn't needed
 		responseSegment, respErr := capnp.ReadFromStream(connection, nil)
-		
+
 		if respErr != nil {
 			if !dr.alive {
 				break
 			}
-			fmt.Printf("Error in receiving response: %v\n", respErr)
+			fmt.Printf("Error in receiving response to data or bracket request: %v\n", respErr)
 			os.Exit(1)
 		}
-		
+
 		responseSeg := cpint.ReadRootResponse(responseSegment)
 		id := responseSeg.EchoTag()
-		
+
 		fmt.Printf("Got response to request %v\n", id)
-		
+
 		dr.stateLock.RLock()
 		respchan := dr.synchronizers[id]
 		dr.stateLock.RUnlock()
-		
+
 		if respchan == nil {
 			fmt.Printf("Dropping extraneous response for request %v\n", id)
 		} else {

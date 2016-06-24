@@ -29,9 +29,9 @@ import (
 	"math/big"
 	"sync"
 	"time"
-	
+
 	"golang.org/x/crypto/bcrypt"
-	
+
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -70,7 +70,7 @@ func checkpassword(passwordConn *mgo.Collection, user string, password []byte) (
 	}
 	hashedpasswordbinary := userdoc["password"].(bson.Binary)
 	hashedpassword := hashedpasswordbinary.Data
-	
+
 	err = bcrypt.CompareHashAndPassword(hashedpassword, password)
 	return
 }
@@ -81,18 +81,18 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 	var userdoc map[string]interface{}
 	var loginsession *LoginSession
 	var err error
-	
+
 	userdoc, err = checkpassword(passwordConn, user, password)
 	if err != nil {
 		return nil
 	}
-	
+
 	tagintlist, ok := userdoc["tags"].([]interface{})
 	if !ok {
 		fmt.Println("Corrupt Mongo document: required key \"tags\" does not refer to an object")
 		return nil
 	}
-	
+
 	taglist := make([]string, len(tagintlist))
 	for i := 0; i < len(taglist); i++ {
 		taglist[i], ok = tagintlist[i].(string)
@@ -101,7 +101,7 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 			return nil
 		}
 	}
-	
+
 	// Check if we already have a session for this user
 	sessionsbyuserlock.RLock()
 	loginsession = sessionsbyuser[user]
@@ -120,9 +120,9 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 				return nil
 			}
 			tokenbytes := token.Bytes()
-		
+
 			copy(tokenarr[TOKEN_BYTE_LEN - len(tokenbytes):], tokenbytes)
-			
+
 			sessionsbyidlock.Lock()
 			if sessionsbyid[tokenarr] == nil {
 				break
@@ -130,21 +130,21 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 				sessionsbyidlock.Unlock()
 			}
 		}
-		
+
 		loginsession = &LoginSession{
 			lastUsed: time.Now().Unix(),
 			user: user,
 			token: tokenarr,
 			tags: taglist,
 		}
-		
+
 		sessionsbyid[tokenarr] = loginsession
 		sessionsbyidlock.Unlock()
-		
+
 		sessionsbyuserlock.Lock()
 		sessionsbyuser[user] = loginsession
 		sessionsbyuserlock.Unlock()
-		
+
 		return tokenarr[:]
 	} else {
 		return loginsession.token[:]
@@ -154,7 +154,7 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 func getloginsession(token []byte) *LoginSession {
 	var tokenarr [TOKEN_BYTE_LEN]byte
 	copy(tokenarr[:], token)
-	
+
 	var loginsession *LoginSession
 	var now int64 = time.Now().Unix()
 	sessionsbyidlock.Lock()
@@ -171,7 +171,7 @@ func userlogoff(token []byte) bool {
 	if loginsession == nil {
 		return false
 	}
-	
+
 	sessionsbyidlock.Lock()
 	delete(sessionsbyid, loginsession.token)
 	sessionsbyidlock.Unlock()
@@ -186,8 +186,8 @@ func usertags(token []byte) []string {
 	if loginsession == nil {
 		return nil
 	}
-	
-	return loginsession.tags	
+
+	return loginsession.tags
 }
 
 func userchangepassword(passwordConn *mgo.Collection, token []byte, oldpw []byte, newpw []byte) string {
@@ -195,24 +195,24 @@ func userchangepassword(passwordConn *mgo.Collection, token []byte, oldpw []byte
 	if loginsession == nil {
 		return ERROR_INVALID_TOKEN
 	}
-	
+
 	var hash []byte
 	var err error
-	
+
 	user := loginsession.user
 	_, err = checkpassword(passwordConn, user, oldpw)
 	if err != nil {
 		return "Bad password"
 	}
-	
+
 	hash, err = bcrypt.GenerateFromPassword(newpw, bcrypt.DefaultCost)
 	if err != nil {
 		return "Server error"
 	}
-	
+
 	updatepasssel := bson.M{ "user": user }
 	updatepasscom := bson.M{ "$set": bson.M{ "password": bson.Binary{ Kind: 0x80, Data: hash } } }
-	
+
 	err = passwordConn.Update(updatepasssel, updatepasscom)
 	if err == nil {
 		return "Success"
@@ -236,9 +236,9 @@ func purgeSessions(maxAge int64) {
 	sessionsbyuserlock.Lock()
 	defer sessionsbyidlock.Unlock()
 	defer sessionsbyuserlock.Unlock()
-	
+
 	var now int64 = time.Now().Unix()
-	
+
 	for _, session := range sessionsbyid {
 		if now - session.lastUsed > maxAge {
 			delete(sessionsbyid, session.token)
