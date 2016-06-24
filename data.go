@@ -29,8 +29,8 @@ import (
 	"sync/atomic"
 	"time"
 	
-	cpint "github.com/SoftwareDefinedBuildings/btrdb/cpinterface"
 	capnp "github.com/glycerine/go-capnproto"
+	cpint "github.com/SoftwareDefinedBuildings/mr-plotter/btrdb-cpint"
 	uuid "github.com/pborman/uuid"
 	ws "github.com/gorilla/websocket"
 )
