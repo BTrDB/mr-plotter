@@ -10,21 +10,12 @@ import string
 import sys
 import urllib
 
-mongohost = "localhost"
-mongoport = 27017
+if len(sys.argv) != 4:
+	print "usage metadata mongohost mongoport tagconfig"
+	sys.exit(1)
 
-error = False
-if len(sys.argv) >= 2:
-        mongohost = sys.argv[1]
-if len(sys.argv) == 3:
-    try:
-        mongoport = int(sys.argv[2])
-    except ValueError:
-        error = True
-
-if error or len(sys.argv) > 3:
-    print "Usage: {0} [mongo_hostname] [mongoport]".format(sys.argv[0])
-    sys.exit()
+mongohost = sys.argv[1]
+mongoport = int(sys.argv[2])
 
 client = pymongo.MongoClient(mongohost, mongoport)
 
