@@ -10,13 +10,30 @@ import string
 import sys
 import urllib
 
+mongohost = "localhost"
+mongoport = 27017
+
+error = False
+if len(sys.argv) >= 2:
+        mongohost = sys.argv[1]
+if len(sys.argv) == 3:
+    try:
+        mongoport = int(sys.argv[2])
+    except ValueError:
+        error = True
+
+if error or len(sys.argv) > 3:
+    print "Usage: {0} [mongo_hostname] [mongoport]".format(sys.argv[0])
+    sys.exit()
+
+client = pymongo.MongoClient(mongohost, mongoport)
+
 def doc_matches_path(stream_doc, pathstarts):
     for start in pathstarts:
         if stream_doc['Path'].startswith(start):
             return True
     return False
 
-client = pymongo.MongoClient()
 mongo_collection = client.qdf.metadata
 try:
     configfile = open(sys.argv[-1], 'r')
