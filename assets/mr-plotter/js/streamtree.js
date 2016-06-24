@@ -48,7 +48,7 @@ function updateStreamList(self) {
     self.idata.loadingRootNodes = {};
     self.idata.numLeaves = 0;
     self.idata.mayHaveSelectedLeaves = [];
-    
+
     if (self.idata.streamTree != undefined) {
         // Remove everything from legend before destroying tree
         var roots = self.idata.streamTree.get_node("#").children;
@@ -59,10 +59,10 @@ function updateStreamList(self) {
         self.idata.streamTree.destroy(true);
         s3ui.applySettings(self, false);
     }
-    
+
     var streamTreeDiv = $(self.find("div.streamTree"));
     self.idata.$streamTreeDiv = streamTreeDiv;
-    
+
     streamTreeDiv.on("loaded.jstree", function (event, data) {
             for (var i = self.idata.mayHaveSelectedLeaves.length - 1; i >= 0; i--) {
                 streamTree.load_node(self.idata.mayHaveSelectedLeaves[i]);
@@ -80,7 +80,7 @@ function updateStreamList(self) {
             selectNode(self, streamTree, false, data.node);
             s3ui.applySettings(self, false);
         });
-        
+
     streamTreeDiv.on("click", ".jstree-checkbox", function (event) {
             var id = event.target.parentNode.parentNode.getAttribute("id");
             var node = streamTree.get_node(id);
@@ -91,7 +91,7 @@ function updateStreamList(self) {
             }
             return false;
         });
-    
+
     streamTreeDiv.jstree({
             core: {
                 data: function (obj, callback) {
@@ -140,13 +140,13 @@ function updateStreamList(self) {
         });
     var streamTree = $.jstree.reference(streamTreeDiv);
     self.idata.streamTree = streamTree;
-    
+
     /* I'm using a hack to intercept a "select_node.jstree" event
        before it occurs, in the case where the user cancels it before
        it is complete. */
     streamTree.old_select_node = streamTree.select_node;
     streamTree.select_node = makeSelectHandler(self, streamTree, false);
-    
+
     streamTree.checkbox_select_node = makeSelectHandler(self, streamTree, true); // select all children when checkbox is clicked, but just expand if text is clicked
 }
 
@@ -206,7 +206,7 @@ function makeSelectHandler(self, streamTree, selectAllChildren) {
 function pathsToTree(self, sourceName, streamList) {
     var rootNodes = []; // An array of root nodes
     var rootCache = {}; // A map of names of sources to the corresponding object
-    
+
     var path;
     var hierarchy;
     var currNodes;
@@ -259,7 +259,7 @@ function pathsToTree(self, sourceName, streamList) {
             }
         }
     }
-    
+
     return rootNodes;
 }
 

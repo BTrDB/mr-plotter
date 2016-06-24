@@ -395,7 +395,7 @@ function executePermalink(self, args, set_streams_only) {
             noRequest = false;
         }
     }
-    
+
     if (noRequest) {
         setTimeout(function () { finishExecutingPermalink(self, streamObjs, colors, args, set_streams_only); }, 50);
     } else {
@@ -541,7 +541,7 @@ function setTimeZoom(self, start, end, resetStart, resetEnd, tz, dst) {
     }
     self.idata.inittrans = (resetStart - start) / (end - start) * self.idata.WIDTH;
     self.idata.initzoom = (resetEnd - resetStart) / (end - start);
-    
+
     var naiveStart = new Date(resetStart);
     var naiveEnd = new Date(resetEnd);
     var offset;

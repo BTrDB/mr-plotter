@@ -31,11 +31,11 @@ function init_data(self) {
     self.idata.lastTimes = {}; // maps a stream's uuid to the time of the last pint where there is valid data, obtained from the server
     self.idata.pollingBrackets = false; // whether or not we are periodically checking if the brackets have changed
     self.idata.bracketInterval = 5000;
-    
+
     self.idata.queryLow = 0;//-1152921504606; // in milliseconds
     self.idata.queryHigh = 3458764513820; // in milliseconds
     self.idata.pweHigh = 61;
-    
+
     // The following fields are for rate control
     self.idata.currPWE = undefined;
     self.idata.secondaryPWE = undefined;
@@ -243,7 +243,7 @@ function ensureData(self, uuid, pointwidthexp, startTime, endTime, callback, cac
         cache = [];
         dataCache[uuid][pointwidthexp] = cache;
     }
-    
+
     var indices = getIndices(cache, startTime, endTime);
     var i = indices[0];
     var j = indices[1];
@@ -251,8 +251,8 @@ function ensureData(self, uuid, pointwidthexp, startTime, endTime, callback, cac
     var endsAfter = indices[3];
     var queryStart = startsBefore ? startTime : cache[i].end_time;
     var queryEnd = endsAfter ? endTime : cache[j].start_time;
-    
-    var numRequests = j - i + startsBefore + endsAfter;    
+
+    var numRequests = j - i + startsBefore + endsAfter;
     if (numRequests == 0) {
         callback(cache[i].cached_data, cache[i].start_time, cache[i].end_time);
     } else {
@@ -276,7 +276,7 @@ function ensureData(self, uuid, pointwidthexp, startTime, endTime, callback, cac
                     insertData(self, uuid, cache, streamdata, start, end, callbackToUse);
                 }
             };
-        
+
         if (numRequests == 1) {
             makeDataRequest(self, uuid, queryStart, queryEnd, pointwidthexp, halfPWnanos, urlCallback, caching);
         } else {
@@ -446,7 +446,7 @@ function insertData(self, uuid, cache, data, dataStart, dataEnd, callback) {
 function getIndices(cache, startTime, endTime) {
     var startsBefore; // false if startTime starts during the cacheEntry at index i, true if it starts before
     var endsAfter; // false if endTime ends during the cacheEntry at index j, true if it ends after
-    
+
     // Figure out whether the necessary data is in the cache
     var i, j;
     if (cache.length > 0) {
@@ -467,7 +467,7 @@ function getIndices(cache, startTime, endTime) {
             startsBefore = true;
             i++; // so we don't delete the entry at index i
         }
-        
+
         j = s3ui.binSearch(cache, endTime, function (entry) { return entry.end_time; }); // endTime is either in entry at index j, or between j - 1 and j, or between j and j + 1
         if (endTime > cache[j].end_time) {
             j++;
@@ -488,7 +488,7 @@ function getIndices(cache, startTime, endTime) {
         // Set variables so the first entry is created
         startsBefore = true;
         i = 0;
-        
+
         endsAfter = true;
         j = -1;
     }
@@ -549,7 +549,7 @@ function limitMemory(self, streams, startTime, endTime, threshold, target) {
     var loadedStreams = self.idata.loadedStreams;
     var currPWE = getPWExponent((endTime - startTime) / self.idata.WIDTH); // PWE stands for point width exponent
     var i, j, k;
-    
+
     // Delete extra streams
     var uuid;
     var used;
@@ -575,7 +575,7 @@ function limitMemory(self, streams, startTime, endTime, threshold, target) {
     if (self.idata.loadedData <= target) {
         return true;
     }
-    
+
     // Delete extra point width caches, if deleting streams wasn't enough
     var cache;
     var pointwidth, pointwidths;
@@ -622,7 +622,7 @@ function limitMemory(self, streams, startTime, endTime, threshold, target) {
             return true;
         }
     }
-    
+
     // Delete extra cache entries in the current pointwidth, if deleting streams and pointwidths was not enough
     for (i = 0; i < streams.length; i++) {
         pwdata = dataCache[streams[i].uuid][currPWE];
@@ -640,7 +640,7 @@ function limitMemory(self, streams, startTime, endTime, threshold, target) {
             return true;
         }
     }
-    
+
     // Delete all but displayed data, if deleting streams, pointwidths, and cache entries was not enough
     for (i = 0; i < streams.length; i++) {
         pwdata = dataCache[streams[i].uuid][currPWE][0].cached_data;
@@ -658,7 +658,7 @@ function limitMemory(self, streams, startTime, endTime, threshold, target) {
         loadedStreams[streams[i].uuid] += (k - j);
         self.idata.loadedData += (k - j);
     }
-    
+
     // If target is still less than loadedData, it means that target isn't big enough to accomodate the data that needs to be displayed on the screen
     return true;
 }

@@ -93,7 +93,7 @@ function addYAxis(self) {
         .attr("class", "axisstreams");
     row.append("td")
         .attr("class", "axisunits");
-        
+
     // Create the DOM element for selecting the range
     var rangeRow = document.createElement("tr");
     var selectElem = d3.select(rangeRow).append("td")
@@ -177,7 +177,7 @@ function addYAxis(self) {
             };
     div.append("span")
         .attr("class", "glyphicon glyphicon-arrow-right");
-            
+
     var rangeElem = settingsElem.append("tr")
       .append("div")
         .attr("class", "btn btn-info autoscalebutton")
@@ -191,7 +191,7 @@ function addYAxis(self) {
     var thisRow = rangeElem.parentNode.parentNode;
     thisRow.parentNode.appendChild(rangeRow, thisRow.nextSibling);
     axisObj.rangeRow = rangeRow;
-        
+
     d3.selectAll(self.$("select.axis-select"))
       .append("option")
         .attr("class", "option-" + axisObj.axisid)
@@ -254,7 +254,7 @@ function updateYAxis (self, axisid) {
 /* Given a stream, heuristically determines which axis (of those currently
    present) is ideal for it. Returns the index of the chosen axis in yAxes, or
    undefined if none of the current y-axes are suitable.
-   
+
    The function attempts to find an axis with the same units as the stream.
    If this is not possible, it searches for an axis with no streams assigned
    to it.

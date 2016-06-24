@@ -87,11 +87,11 @@ Requester.prototype.setToken = function (token) {
             this.token = token;
         }
     };
-    
+
 Requester.prototype.getToken = function (token) {
         return this.token;
     };
-    
+
 Requester.prototype.checkErrorInvalidToken = function (errorText) {
         if (errorText == s3ui.ERROR_INVALID_TOKEN) {
             s3ui.sessionExpired(this.plotter);
@@ -109,7 +109,7 @@ Requester.prototype.makeLoginRequest = function (username, password, success_cal
             error: error_callback = undefined ? function () {} : error_callback
         });
     };
-    
+
 Requester.prototype.makeLogoffRequest = function (success_callback, error_callback) {
         return $.ajax({
             type: "POST",
@@ -120,7 +120,7 @@ Requester.prototype.makeLogoffRequest = function (success_callback, error_callba
             error: error_callback = undefined ? function () {} : error_callback
         });
     };
-    
+
 Requester.prototype.makeCheckTokenRequest = function (token, success_callback, error_callback) {
         return $.ajax({
             type: "POST",
@@ -131,7 +131,7 @@ Requester.prototype.makeCheckTokenRequest = function (token, success_callback, e
             error: error_callback = undefined ? function () {} : error_callback
         });
     };
-    
+
 Requester.prototype.makeChangePasswordRequest = function (old_password, new_password, success_callback, error_callback) {
         var changepwjsonstr = JSON.stringify({"token": this.token, "oldpassword": old_password, "newpassword": new_password});
         return $.ajax({
@@ -154,7 +154,7 @@ Requester.prototype.makeMetadataRequest = function (query, success_callback, err
                 error: error_callback == undefined ? function () {} : error_callback
             });
     };
-    
+
 Requester.prototype.makePermalinkInsertRequest = function (permalinkObj, success_callback, error_callback) {
         var permalinkjsonstr = JSON.stringify(permalinkObj)
         return $.ajax({
@@ -166,7 +166,7 @@ Requester.prototype.makePermalinkInsertRequest = function (permalinkObj, success
                 error: error_callback = undefined ? function () {} : error_callback
             });
     };
-    
+
 Requester.prototype.makePermalinkRetrievalRequest = function (permalinkStr, success_callback, error_callback) {
         return $.ajax({
                 type: "GET",
@@ -177,10 +177,10 @@ Requester.prototype.makePermalinkRetrievalRequest = function (permalinkStr, succ
                 error: error_callback = undefined ? function () {} : error_callback
             });
     };
-    
+
 Requester.prototype.makeDataRequest = function (request, callback) {
         var request_str = request.join(',') + "," + this.token;
-        
+
         var lst = this.reqs[request_str];
         if (lst === undefined) {
             this.reqs[request_str] = [callback];
@@ -188,7 +188,7 @@ Requester.prototype.makeDataRequest = function (request, callback) {
             lst.push(callback);
             return;
         }
-        
+
         var self = this;
         if (s3ui.USE_WEBSOCKETS) {
             if (!this.dconnections[this.currDConnection].ready) {
@@ -224,7 +224,7 @@ Requester.prototype.makeDataRequest = function (request, callback) {
                 });
         }
     };
-    
+
 /** REQUEST should be an array of UUIDs whose brackets we want. */
 Requester.prototype.makeBracketRequest = function (request, callback) {
         var request_str = request.join(',') + "," + this.token;
