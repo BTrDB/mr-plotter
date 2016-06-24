@@ -22,7 +22,7 @@
 
 function init_plot(self) {
     self.idata.initialized = false;
-    
+
     // For the permalink
     self.idata.initzoom = 1;
     self.idata.inittrans = 0;
@@ -31,10 +31,10 @@ function init_plot(self) {
     self.idata.normalbmargin = 70;
     self.idata.cursorbmargin = 180;
     self.idata.margin = {left: 100, right: 100, top: 70, bottom: self.idata.normalbmargin};
-    
+
     // Height of the chart area (constant)
     self.idata.HEIGHT = 300;
-    
+
     // Width of the chart and chart area (WIDTH is set automatically by updateSize)
     self.idata.TARGETWIDTH = undefined;
     self.idata.WIDTH = undefined;
@@ -56,7 +56,7 @@ function init_plot(self) {
     self.idata.oldAxisData = undefined;
     self.idata.offset = undefined;
     self.idata.oldDomain = undefined;
-    
+
     self.idata.scriptsize = "0.75em";
 
     // Keeps track of whether the graph is drawn on the screen
@@ -74,7 +74,7 @@ function init_plot(self) {
     self.idata.xTitle = undefined;
     self.idata.xStart = undefined;
     self.idata.xEnd = undefined;
-    
+
     self.idata.zoom = d3.behavior.zoom()
         .on("zoomstart", function () { repaintZoomNewData(self, function () {}, true); })
         .on("zoom", function () {
@@ -83,9 +83,9 @@ function init_plot(self) {
             })
         .on("zoomend", function () { repaintZoomNewData(self); })
         .size([self.idata.WIDTH, self.idata.HEIGHT]);
-        
+
     self.idata.testElem = undefined;
-    
+
     self.idata.cursorDataElems = {};
     self.idata.cursorDataElems.x1 = undefined;
     self.idata.cursorDataElems.x2 = undefined;
@@ -96,10 +96,10 @@ function init_plot(self) {
     self.idata.cursorDataElems.y1 = undefined;
     self.idata.cursorDataElems.y2 = undefined;
     self.idata.cursorDataElems.deltay = undefined;
-    
+
     self.idata.$background = undefined;
     self.idata.cursorgroup = undefined;
-    
+
     // The minimum width that an axis takes up is 100 pixels
 }
 
@@ -273,7 +273,7 @@ function initPlot(self) {
         .html(" = ");
     cursors.x1 = [x1.node(), x1.append("tspan").node()];
     s3ui.hideEntry(cursors.x1);
-    
+
     var x2 = xaxiscover.append("text")
         .attr("text-anchor", "end")
         .attr("class", "cursorlabel cursor-right-align")
@@ -290,7 +290,7 @@ function initPlot(self) {
         .html(" = ");
     cursors.x2 = [x2.node(), x2.append("tspan").node()];
     s3ui.hideEntry(cursors.x2);
-    
+
     var deltax = xaxiscover.append("text")
         .attr("text-anchor", "start")
         .attr("class", "cursorlabel")
@@ -316,7 +316,7 @@ function initPlot(self) {
     deltax.append("tspan")
         .html(" ns");
     s3ui.hideEntry(cursors.deltax);
-    
+
     var freqx = xaxiscover.append("text")
         .attr("text-anchor", "end")
         .attr("class", "cursorlabel cursor-right-align")
@@ -349,7 +349,7 @@ function initPlot(self) {
     freqx.append("tspan")
         .html(" Hz");
     s3ui.hideEntry(cursors.freqx);
-    
+
     var fx1 = xaxiscover.append("g");
     var fx11 = fx1.append("text")
         .attr("text-anchor", "start")
@@ -377,7 +377,7 @@ function initPlot(self) {
         .html(")");
     cursors.fx1 = [fx1.node(), fx1top, fx1exp, fx1bottom];
     s3ui.hideEntry(cursors.fx1);
-    
+
     var fx2 = xaxiscover.append("g");
     var fx21 = fx2.append("text")
         .attr("text-anchor", "end")
@@ -402,7 +402,7 @@ function initPlot(self) {
         .html(")");
     cursors.fx2 = [fx2.node(), fx2top, fx2exp, fx2bottom];
     s3ui.hideEntry(cursors.fx2);
-    
+
     var y1 = xaxiscover.append("text")
         .attr("text-anchor", "start")
         .attr("class", "cursorlabel")
@@ -419,7 +419,7 @@ function initPlot(self) {
         .html(" = ");
     cursors.y1 = [y1.node(), y1.append("tspan").node()];
     s3ui.hideEntry(cursors.y1);
-    
+
     var y2 = xaxiscover.append("text")
         .attr("text-anchor", "end")
         .attr("class", "cursorlabel cursor-right-align")
@@ -436,7 +436,7 @@ function initPlot(self) {
         .html(" = ");
     cursors.y2 = [y2.node(), y2.append("tspan").node()];
     s3ui.hideEntry(cursors.y2);
-        
+
     var deltay = xaxiscover.append("text")
         .attr("text-anchor", "middle")
         .attr("class", "cursorlabel")
@@ -462,7 +462,7 @@ function initPlot(self) {
         .html(" = ");
     cursors.deltay = [deltay.node(), deltay.append("tspan").node()];
     s3ui.hideEntry(cursors.deltay);
-        
+
     var datadensitycover = chart.append("g")
         .attr("class", "data-density-cover")
         .attr("transform", "translate(" + self.idata.margin.left + ", 0)");
@@ -543,7 +543,7 @@ function initPlot(self) {
 function updateSize(self, redraw) {
     var oldwidth = self.idata.WIDTH;
     var margin = self.idata.margin;
-    
+
     self.idata.WIDTH = Math.max(self.idata.widthmin, self.idata.TARGETWIDTH - margin.left - margin.right);
     var WIDTH = self.idata.WIDTH;
     var HEIGHT = self.idata.HEIGHT;
@@ -676,7 +676,7 @@ function drawPlot(self) {
     selectedTimezone = selectedTimezone[0];
     self.idata.oldTimezone = selectedTimezone;
     self.idata.oldDST = dst;
-    
+
     var naiveStartDateObj = self.idata.dateConverter.parse(startText);
     var naiveEndDateObj = self.idata.dateConverter.parse(endText);
     try {
@@ -699,10 +699,10 @@ function drawPlot(self) {
         $loadingElem.html("Error: Selected date range is invalid.");
         return;
     }
-    
+
     /* Used for optimization; GET request is not sent if same time range and streams are used. */
     var sameTimeRange = ((startDate == self.idata.oldStartDate) && (endDate == self.idata.oldEndDate));
-    
+
     // Verify that streams have been selected
     $loadingElem.html("Verifying stream selection...");
     var numstreams = self.idata.selectedStreams.length;
@@ -710,7 +710,7 @@ function drawPlot(self) {
         $loadingElem.html("Error: No streams are selected.");
         return;
     }
-    
+
     self.idata.oldDomain = [startDate + self.idata.offset, endDate + self.idata.offset];
     // Create the xScale and axis if we need to
     var xScale, xAxis;
@@ -728,14 +728,14 @@ function drawPlot(self) {
         xScale = self.idata.oldXScale;
         xAxis = self.idata.oldXAxis;
     }
-    
+
     $loadingElem.html("Fetching data...");
-    
+
     self.idata.zoom.x(xScale);
     self.idata.zoom.scale(self.idata.initzoom).translate([self.idata.inittrans, 0]);
     self.idata.initzoom = 1;
     self.idata.inittrans = 0;
-    
+
     var leftCount = -1;
     var rightCount = -1;
     for (var i = 0; i < self.idata.yAxes.length; i++) {
@@ -749,7 +749,7 @@ function drawPlot(self) {
     rightCount = Math.max(0, rightCount);
     var estimatedWidthAfterAxes = Math.max(self.idata.widthmin, self.idata.WIDTH - 100 * (leftCount + rightCount));
     // an upper bound on the width we'll have after adding axes, so our estimated point width exponent is less likely to be too high
-    
+
     // Get the data for the streams
     repaintZoomNewData(self, function () {
             if (!sameTimeRange) {
@@ -764,10 +764,10 @@ function drawPlot(self) {
 
 function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xScale, $loadingElem) {
     otherChange = false;
-    
+
     var yAxes = self.idata.yAxes;
     var i, j, k;
-        
+
     // Find the minimum and maximum value in each stream to properly scale the axes
     var axisData = {}; // Maps axis ID to a 2-element array containing the minimum and maximum; later on a third element is added containing the y-Axis scale
     var toDraw = [];
@@ -831,7 +831,7 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
             axisData[axis.axisid] = [-1, 1, undefined, false];
         }
     }
-    
+
     // Generate names for new axes if not overridden
     var axisnameelem;
     for (i = 0; i < toDraw.length; i++) {
@@ -841,11 +841,11 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
             axisnameelem.onchange();
         }
     }
-    
-    self.idata.oldAxisData = axisData;    
-    
+
+    self.idata.oldAxisData = axisData;
+
     numstreams = streams.length;
-    
+
     var yScales = $.map(toDraw, function (elem) {
             var scale;
             if (isNaN(axisData[elem.axisid][0])) { // manual scale
@@ -875,11 +875,11 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
             axisData[elem.axisid][2] = scale;
             return scale;
         });
-        
+
     self.idata.oldYScales = yScales;
-    
+
     var yAxisArray = $.map(yScales, function (yScale) { return d3.svg.axis().scale(yScale).ticks(5); });
-    
+
     var leftYAxes = [];
     var leftYObjs = [];
     var rightYAxes = [];
@@ -895,7 +895,7 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
             leftYObjs.push(toDraw[i]);
         }
     }
-    
+
     self.idata.oldYAxisArray = yAxisArray;
     var leftMargins = leftYAxes.map(function (axis) { var scale = axis.scale(); return 65 + Math.max(35, Math.max.apply(this, scale.ticks().map(function (d) { self.idata.testElem.innerHTML = scale.tickFormat()(d); return self.idata.testElem.getComputedTextLength(); }))); });
     var rightMargins = rightYAxes.map(function (axis) { var scale = axis.scale(); return 65 + Math.max(35, Math.max.apply(this, scale.ticks().map(function (d) { self.idata.testElem.innerHTML = scale.tickFormat()(d); return self.idata.testElem.getComputedTextLength(); }))); });
@@ -910,7 +910,7 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
     self.idata.margin.left = Math.max(100, leftMargins[leftMargins.length - 1]);
     self.idata.margin.right = Math.max(100, rightMargins[rightMargins.length - 1]);
     updateSize(self, false);
-    
+
     // Draw the y-axes
     var update;
     update = d3.select(self.find("svg.chart g.y-axes"))
@@ -923,7 +923,7 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
         .attr("class", function (d, i) { return "y-axis-left axis drawnAxis-" + leftYObjs[i].axisid; })
         .each(function (yAxis) { d3.select(this).call(yAxis.orient("left")); });
     update.exit().remove();
-    
+
     update = d3.select(self.find("svg.chart g.y-axes-right"))
       .selectAll("g.y-axis-right")
       .data(rightYAxes);
@@ -934,7 +934,7 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
         .attr("class", function (d, i) { return "y-axis-right axis drawnAxis-" + rightYObjs[i].axisid; })
         .each(function (yAxis) { d3.select(this).call(yAxis.orient("right")); });
     update.exit().remove();
-    
+
     // Draw the y-axis titles
     update = d3.select(self.find("svg.chart g.y-axes-left"))
       .selectAll("text.ytitle")
@@ -968,13 +968,13 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
              })())
         .html(function (d) { return d.axisname; });
     update.exit().remove();
-    
+
     s3ui.updateHorizCursorStats(self);
-    
+
     for (var i = 0; i < toDraw.length; i++) {
         s3ui.applyDisplayColor(self, toDraw[i], streamSettings);
     }
-    
+
     self.find(".permalink").innerHTML = "";
     drawStreams(self, data, streams, streamSettings, xScale, yScales, yAxisArray, axisData, $loadingElem, false);
 }
@@ -987,7 +987,8 @@ function drawStreams (self, data, streams, streamSettings, xScale, yScales, yAxi
         if (streams.length == 0) {
             $loadingElem.html("Error: No streams are selected.");
         } else {
-            $loadingElem.html("Error: All selected streams have no data.");
+            /* This should be unreachable. */
+            $loadingElem.html("Error: No axes have assigned streams.");
         }
         self.$("g.chartarea > g").remove();
         return;
@@ -1085,58 +1086,58 @@ function drawStreams (self, data, streams, streamSettings, xScale, yScales, yAxi
     update = d3.select(self.find("g.chartarea"))
       .selectAll("g.streamGroup")
       .data(dataArray);
-        
+
     var enter = update.enter()
       .append("g")
       .attr("class", "streamGroup");
-        
+
     setAppearance(self, drawFast ? enter : update);
-        
+
     update.exit()
         .remove();
-        
+
     var oldUpdate = update;
-        
+
     update = update.selectAll("g")
       .data(function (d, i) { return dataArray[i].linechunks; });
-      
+
     update.enter()
       .append("g");
-      
+
     update.exit()
       .remove();
-    
+
     update.selectAll("polyline").remove();
-    
+
     update
       .append("polyline")
         .attr("class", "streamRange")
         .attr("points", function (d) { return d[0]; });
-        
+
     update
       .append("polyline")
         .attr("class", "streamMean")
         .attr("points", function (d) { return d[1]; });
-        
+
     update = oldUpdate
       .selectAll("circle.streamPoint")
       .data(function (d, i) { return dataArray[i].points; });
-      
+
     update.enter()
       .append("circle")
       .attr("class", "streamPoint");
-      
+
     update
         .attr("cx", function (d) { return d[0]; })
         .attr("cy", function (d) { return d[1]; })
         .attr("r", 1);
-    
+
     update.exit().remove();
-    
+
     if (!drawFast) {
         s3ui.updatePlotMessage(self);
     }
-    
+
     if (self.idata.showingDensity != undefined && self.idata.oldData.hasOwnProperty(self.idata.showingDensity)) {
         s3ui.setStreamMessage(self, self.idata.showingDensity, "Interval width: " + s3ui.nanosToUnit(Math.pow(2, self.idata.oldData[self.idata.showingDensity][2])), 4);
         var ddplot = $(self.find("svg.chart g.data-density-plot"));
@@ -1213,7 +1214,7 @@ function showDataDensity(self, uuid) {
     var startIndex;
     var prevpt;
     var oldXScale = self.idata.oldXScale;
-    if (streamdata.length > 0) {    
+    if (streamdata.length > 0) {
         var i;
         startIndex = s3ui.binSearchCmp(streamdata, [startTime, 0], s3ui.cmpTimes);
         if (startIndex < streamdata.length && s3ui.cmpTimes(streamdata[startIndex], [startTime, 0]) < 0) {
@@ -1281,7 +1282,7 @@ function showDataDensity(self, uuid) {
     if (totalmax == 0) {
         totalmax = 1;
     }
-    
+
     yScale = d3.scale.linear().domain([0, totalmax]).range([45, 0]);
     for (j = 0; j < toDraw.length; j++) {
         if (toDraw[j][0] == 0 && j > 0) {
@@ -1307,9 +1308,9 @@ function showDataDensity(self, uuid) {
             .attr("fill", "none")
             .attr("stroke", self.idata.streamSettings[uuid].color);
     }
-        
+
     var formatter = d3.format("f");
-    
+
     ddplot.select("g.data-density-axis")
         .call(d3.svg.axis().scale(yScale).orient("left").tickValues([0, Math.round(totalmax / 2), totalmax]).tickFormat(formatter));
 }

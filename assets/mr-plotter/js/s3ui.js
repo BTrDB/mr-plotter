@@ -24,11 +24,11 @@ function MrPlotter(container, storagekey, backend, options, cb1, cb2) {
     this.domelem = container;
     this.cookiekey = storagekey;
     this.backend = backend;
-    
+
     /* In Meteor, this is where the constructor argument would go. I'm doing
        the same thing since the code assumes it would be like this. */
     this.data = [options, cb1, cb2];
-    
+
     this.requester = new Requester(this, backend);
 }
 
@@ -40,7 +40,7 @@ MrPlotter.prototype.find = function (expr) {
 MrPlotter.prototype.$ = function (expr) {
         return $(this.domelem.querySelectorAll(expr));
     };
- 
+
 /** Instantiates Mr. Plotter as a child of the provided DOM element.
     BACKEND is the hostname/port of the backend (ex. localhost:8080).
     COOKIEKEY is the key to use for the cookie storing login data.
@@ -63,9 +63,9 @@ function mr_plotter(parent, storagekey, options, cb1, cb2, backend) {
     }
     parent.appendChild(container);
     var instance = new MrPlotter(container, storagekey, backend, options, cb1, cb2);
-    
+
     var initialize = function () { s3ui.__init__(instance); };
-    
+
     // Wait until after timezoneJS has initialized before initializing the plot.
     if (timezoneJS.isInitialized()) {
         initialize();
@@ -87,7 +87,7 @@ s3ui.default_cb1 = function (inst) {
                     onResize: inst.imethods.updateGraphSize
                 });
     };
-    
+
 s3ui.default_cb2 = function (inst) {
         if (window.location.search.length > 0) {
             s3ui.exec_permalink(inst, window.location.search.slice(1));
@@ -112,21 +112,21 @@ s3ui.exec_permalink = function (self, link_id) {
                 s3ui.executePermalink(self, permalinkJSON);
             });
     };
-    
+
 s3ui.__init__ = function (self) {
         s3ui.instances.push(self);
-        
+
         self.idata = {}; // an object to store instance data
         self.imethods = {}; // an object to store instance methods
-        
+
         self.idata.instanceid = ++s3ui.instanceid;
         if (s3ui.instanceid == 4503599627370496) {
             s3ui.instanceid = -4503599627370496;
         }
-        
+
         $(self.find("div.streamLegend")).removeClass("streamLegend").addClass("streamLegend-" + self.idata.instanceid);
         self.idata.dynamicStyles = self.find("style.dynamicStyles");
-        
+
         s3ui.init_axis(self);
         s3ui.init_plot(self);
         s3ui.init_data(self);
@@ -134,9 +134,9 @@ s3ui.__init__ = function (self) {
         s3ui.init_streamtree(self);
         s3ui.init_control(self);
         s3ui.init_cursors(self);
-        
+
         var c1, c2;
-        
+
         if (typeof self.data[0] === "object") {
             init_visuals(self, self.data[0]);
             if (self.data[0].width != undefined) {
@@ -168,22 +168,22 @@ s3ui.__init__ = function (self) {
                     init_visuals(self, options);
                 };
         }
-        
+
         if (typeof self.data[1] === "function") {
             c1 = self.data[1];
         } else {
             c1 = s3ui.default_cb1;
         }
-        
+
         if (typeof self.data[2] === "function") {
             c2 = self.data[2];
         } else {
             c2 = s3ui.default_cb2;
         }
-        
+
         init_graph(self, c1, c2);
     };
-    
+
 function init_visuals(self, options) {
     setVisibility(self, options, "div.permalinkGenerate", "hide_permalink");
     setVisibility(self, options, "div.graphExport", "hide_graph_export");
@@ -199,7 +199,7 @@ function init_visuals(self, options) {
     setVisibility(self, options, "div.login", "hide_login");
     setVisibility(self, options, "g.plotDirections", "hide_plot_directions");
     setVisibility(self, options, "div.streamTreeOptions", "hide_streamtree_options");
-    
+
     setCSSRule(self, options, "tr.streamLegend-" + self.idata.instanceid + " select.axis-select { display: none; }", "hide_axis_selection");
     setCSSRule(self, options, "tr.streamLegend-" + self.idata.instanceid + " span.simplecolorpicker { pointer-events: none; }", "disable_color_selection");
 }
@@ -224,23 +224,23 @@ function setCSSRule(self, options, rule, attr) {
         }
     }
 }
-    
+
 function init_graph(self, c1, c2) {
     // Finish building the graph components
     s3ui.addYAxis(self);
-    
+
     // first callback
     c1(self);
-    
+
     // Make the window resize dynamically
     self.imethods.updateGraphSize();
     $(window).resize(self.imethods.updateGraphSize);
-    
+
     // For some reason, Any+Time requires the text elements to have IDs.
     // So, I'm going to give them IDs that are unique across all instances
     self.find(".startdate").id = "start" + self.idata.instanceid;
     self.find(".enddate").id = "end" + self.idata.instanceid;
-    
+
     // Event handlers are added programmatically
     self.find(".getPermalink").onclick = function () {
             setTimeout(function () {
@@ -281,7 +281,7 @@ function init_graph(self, c1, c2) {
                 var uuids = self.idata.selectedStreamsBuffer.map(function (s) { return s.uuid; });
                 self.requester.makeBracketRequest(uuids, function (range) {
                         if (typeof(range) === "string") {
-                            console.log("Autozoom error: " + range);
+                            console.log(" error: " + range);
                             return;
                         }
                         if (range == undefined || range.Merged == undefined || range.Brackets == undefined) {
@@ -295,6 +295,10 @@ function init_graph(self, c1, c2) {
                             var offset = 60000 * ((new Date()).getTimezoneOffset() - s3ui.getTimezoneOffsetMinutes(tz[0], tz[1]));
                             var naiveStart = new Date(range[0][0]);
                             var naiveEnd = new Date(range[1][0] + (range[1][1] > 0 ? 1 : 0));
+                            if (naiveEnd <= naiveStart) {
+                                self.find(".plotLoading").innerHTML = "Error: All selected streams have no data.";
+                                return;
+                            }
                             self.imethods.setStartTime(new Date(naiveStart.getTime() + 60000 * (naiveStart.getTimezoneOffset() - s3ui.getTimezoneOffsetMinutes(tz[0], tz[1]))));
                             self.imethods.setEndTime(new Date(naiveEnd.getTime() + 60000 * (naiveEnd.getTimezoneOffset() - s3ui.getTimezoneOffsetMinutes(tz[0], tz[1]))));
                             self.imethods.applyAllSettings();
@@ -353,7 +357,7 @@ function init_graph(self, c1, c2) {
     self.find(".deselectStreamTree").onclick = function () {
             s3ui.updateStreamList(self);
         };
-    
+
     self.$(".datefield").AnyTime_picker({format: self.idata.dateFormat});
     if (self.find(".automaticAxisSetting").checked) { // Some browsers may fill in this value automatically after refresh
         self.idata.automaticAxisUpdate = true;
@@ -367,12 +371,12 @@ function init_graph(self, c1, c2) {
     self.idata.changedTimes = false;
     self.idata.otherChange = false;
     s3ui.updatePlotMessage(self);
-    
+
     // Make the login menu invisible, to start with
     self.$(".loginstate-start").hide()
     self.$(".loginstate-loggedin").hide();
     self.$(".loginstate-changepw").hide();
-    
+
     // Buttons in login menu that perform actions
     self.find(".loginButton").onclick = function () {
             s3ui.login(self);
@@ -383,13 +387,13 @@ function init_graph(self, c1, c2) {
     self.find(".changepwButton").onclick = function (event) {
             s3ui.changepw(self, event);
         };
-        
+
     // Button to show the change password menu
     self.find(".changepwMenu").onclick = function (event) {
             s3ui.showChangepwMenu(self);
             event.stopPropagation(); // Prevents dropdown menu from disappearing
         };
-        
+
     var $login = $(self.find(".login"));
     $login.on("hide.bs.dropdown", function () {
             if (self.idata.changingpw) {
@@ -399,7 +403,7 @@ function init_graph(self, c1, c2) {
     $login.on("hidden.bs.dropdown", function () {
             self.find(".loginmessage").innerHTML = "";
         });
-        
+
     s3ui.setLoginText(self, "Loading...");
     s3ui.checkCookie(self, function (username, token) {
             if (username === null) {
@@ -409,9 +413,9 @@ function init_graph(self, c1, c2) {
                 s3ui.loggedin(self, username, token);
                 self.$(".loginstate-loggedin").show();
             }
-            
+
             s3ui.updateStreamTree(self)
-            
+
             // Second callback
             if (typeof c2 == "function") {
                 c2(self);
