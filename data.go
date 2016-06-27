@@ -292,12 +292,8 @@ finish:
 	dr.stateLock.Unlock()
 
 	dr.pendingLock.Lock()
-	if dr.pending == dr.maxPending {
-		dr.pending -= 1
-		dr.pendingCondVar.Signal()
-	} else {
-		dr.pending -= 1
-	}
+	dr.pending -= 1
+	dr.pendingCondVar.Signal()
 	dr.pendingLock.Unlock()
 }
 
@@ -472,12 +468,8 @@ finish:
 
 exit:
 	dr.pendingLock.Lock()
-	if dr.pending == dr.maxPending {
-		dr.pending -= 1
-		dr.pendingCondVar.Signal()
-	} else {
-		dr.pending -= 1
-	}
+	dr.pending -= 1
+	dr.pendingCondVar.Signal()
 	dr.pendingLock.Unlock()
 }
 
