@@ -68,7 +68,7 @@ var AXIS_SCHEMA = map[string]map[reflect.Kind]string{
 	"axisname": { reflect.String: "String", },
 	"streams": { reflect.Slice: "Array", },
 	"scale": { reflect.Slice: "Array", },
-	"rightside": { reflect.Map: "Object", reflect.Bool: "Boolean" },
+	"rightside": { reflect.Invalid: "Null", reflect.Bool: "Boolean" },
 }
 
 var AXIS_REQUIRED = []string{ "axisname", "streams", "scale", "rightside" }
@@ -216,7 +216,7 @@ func permalinkCheckExtraFields(object map[string]interface{}, schema map[string]
 		validtypes, ok := schema[property]
 		if !ok {
 			return fmt.Errorf("Error: '%s' is not a valid field", property)
-		} else if _, valid := validtypes[reflect.TypeOf(value).Kind()]; !valid {
+		} else if _, valid := validtypes[reflect.ValueOf(value).Kind()]; !valid {
 			validtypeslice := make([]string, len(validtypes), len(validtypes))
 			i := 0
 			for _, validtype := range validtypes {

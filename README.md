@@ -99,7 +99,7 @@ components you do not need (see above).
 
 As a rule of thumb, any element in the "s3plot" template that has a class not
 provided by Bootstrap contributes to the functioning of the graph in some way
-and should be kept even if the layout is rearranged. The 
+and should be kept even if the layout is rearranged. The
 
 Programmatically Changing the Graph
 -----------------------------------
@@ -146,10 +146,9 @@ Permalink" button on the graph UI.
 
 If you would prefer to generate a permalink programmatically by specifying the
 settings of the graph rather than by creating the graph by hand, you should
-instead send a POST request to {domain}/s3ui\_permalink. The payload of the
-POST request should be of the form
-<pre><code>permalink_data={JSON}</code></pre>
-where data specifying the settings of the graph are specified in {JSON}.
+instead send a POST request to {domain}/permalink. The payload of the
+POST request should be a JSON object specifying the settings of the graph. The
+schema of the JSON document is described below.
 
 The permalink API allows three methods for specifying a permalink. A permalink
 may be specified as "fixed", meaning that the start and end times are specified
@@ -198,7 +197,7 @@ Below is an example of permalink data that uses a fixed window:
 	"autoupdate" : true,
 	"axes" : [
 		{
-			"axisname" : "y1", 
+			"axisname" : "y1",
 			"streams" : [
 				"49129d4a-335e-4c81-a8a4-27f5d8c45646"
 			],
@@ -242,7 +241,7 @@ Below is an example of permalink data that uses a window of type "now" (a window
 	"autoupdate" : true,
 	"axes" : [
 		{
-			"axisname" : "y1", 
+			"axisname" : "y1",
 			"streams" : [
 				"49129d4a-335e-4c81-a8a4-27f5d8c45646"
 			],
