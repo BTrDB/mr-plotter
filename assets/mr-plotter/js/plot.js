@@ -313,8 +313,8 @@ function initPlot(self) {
         .attr("dy", "-" + subscriptoffset)
         .html(" = ");
     cursors.deltax = [deltax.node(), deltax.append("tspan").node()];
-    deltax.append("tspan")
-        .html(" ns");
+    //deltax.append("tspan")
+        //.html(" ns");
     s3ui.hideEntry(cursors.deltax);
     
     var freqx = xaxiscover.append("text")
