@@ -2,51 +2,130 @@
 <html>
     <head>
         <meta charset="utf-8">
-        <title>Mr. Plotter</title>
+        <title>PSL uPMU Plotting Application</title>
+        
+        <link rel="stylesheet" type="text/css" href="anytime/css/anytime.5.0.3.css"></link>
+        <link rel="stylesheet" type="text/css" href="jquery-simplecolorpicker/css/jquery.simplecolorpicker.css"></link>
+        <link rel="stylesheet" type="text/css" href="vakata-jstree/themes/default/style.min.css"></link>
+        <link rel="stylesheet" type="text/css" href="bootstrap-3.3.6/css/bootstrap.css"></link>
+        <link rel="stylesheet" type="text/css" href="mr-plotter/css/s3ui.css"></link>
     </head>
     
-    <link rel="stylesheet" type="text/css" href="anytime/css/anytime.5.0.3.css"></link>
-    <link rel="stylesheet" type="text/css" href="jquery-simplecolorpicker/css/jquery.simplecolorpicker.css"></link>
-    <link rel="stylesheet" type="text/css" href="vakata-jstree/themes/default/style.min.css"></link>
-    <link rel="stylesheet" type="text/css" href="bootstrap-3.3.6/css/bootstrap.min.css"></link>
-    <link rel="stylesheet" type="text/css" href="mr-plotter/css/s3ui.css"></link>
-    
-    <script src="jquery/js/jquery-1.12.0.min.js"></script>
-    <script src="jquery-migrate/js/jquery-migrate-1.3.0.js"></script>
-    <script src="anytime/js/anytime.5.0.3.js"></script>
-    <script src="d3/js/d3.js"></script>
-    <script src="jquery-simplecolorpicker/js/jquery.simplecolorpicker.js"></script>
-    <script src="timezone-js/js/date.js"></script>
-    <script src="timezone-js/js/init.js"></script>
-    <script src="vakata-jstree/js/jstree.min.js"></script>
-    <script src="col-resizable/js/colResizable-1.3.med.js"></script>
-    <script src="col-resizable/js/colResizable-1.3.source.js"></script>
-    <script src="bootstrap-3.3.6/js/bootstrap.min.js"></script>
-    <script src="mr-plotter/js/s3ui.js"></script>
-    <script src="mr-plotter/js/axis.js"></script>
-    <script src="mr-plotter/js/data.js"></script>
-    <script src="mr-plotter/js/utils.js"></script>
-    <script src="mr-plotter/js/plot.js"></script>
-    <script src="mr-plotter/js/frontend.js"></script>
-    <script src="mr-plotter/js/streamtree.js"></script>
-    <script src="mr-plotter/js/control.js"></script>
-    <script src="mr-plotter/js/cursors.js"></script>
-    <script src="mr-plotter/js/requester.js"></script>
-    <script>
-        $(function () {
-                mr_plotter(document.getElementById("plotter"), "mrplotter");
-            });
-    </script>
     <body>
         <div class="navbar navbar-default" role="navigation">
-            <div class="navbar-header">
-                <a class="navbar-brand" href="/">Mr. Plotter</a>
-            </div>
-            <div class="navbar-collapse collapse">
-            </div>
-        </div>
+    <div class="navbar-header">
+      <a class="navbar-brand" href="/"><img src="http://www.powersensorsltd.com/images/psl_20px.png" width="auto" height="20px" style="float: left; margin-right: 5px;"> uPMU Plotting Application</a>
+    </div>
+    <div class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li class=""><a href="/">Home</a></li>
+      </ul>
+      <ul class="nav navbar-nav">
+        <li class=""><a href="">Status</a></li>
+      </ul>
+      
+      <ul class="nav navbar-nav">
+          <li>
+            <a href="http://www.powersensorsltd.com/Download/Introduction%20to%20PSL%20MicroPMU%20Plotter.mp4" target="_blank">Help</a>
+          </li>
+      </ul>
+      <ul class="nav navbar-nav">
+          <li>
+                <!-- <select dir="rtl"> //-->
+                <select style='margin: 15px;'>
+                    <option>English</option>
+                    <option>Français</option>
+                    <option>Deutsch</option>
+                    <option>한국어</option>
+                    <option>日本語</option>
+                    <option>中文</option>
+                    <option>Português</option>
+                </select>
+          </li>
+      </ul>
+      
+      <div style="float: right;">
+      <ul class="nav navbar-nav">
+          <li>
+            <a href="" onclick="return false;"><i>BTrDB and uPMU Plotter developed by U.C. Berkeley &nbsp; <img src="http://www.powersensorsltd.com/images/berkeley_logo_50px.png" width="20px" height="20px"><br></i></a>
+          </li>
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+        
+        <script type="text/javascript">
+        <!--
+            function toggle_visibility(id) {
+               var e = document.getElementById(id);
+               if(e.style.display == 'block') {
+                  $("#toggler").html( "&rarr; Show" );
+                  e.style.display = 'none';
+                  $("#toggle_column").animate({"width" : "0%"}, 500);
+                  $("#chartDiv").animate({"width" : "100%"}, 500); 
+                } else {
+                  $("#toggler").html( "&larr; Hide" );
+                  e.style.display = 'block';
+                  $("#toggle_column").animate({"width" : "100%"}, 500);
+                  $("#container-fluid").animate({"width" : "100%"}, 500);
+                }
+            }
+            
+            $( document ).ready(function() {
+                $( "div#all_scale" ).click(function() {
+                    
+                    $('div[class^="autoscalebutton"]').click()
+                    // $( ".autoscalebutton" ).click();
+                    console.log("autoscale!");
+                  
+                });
+            });
+            
+            $('div[id^="all_scale"]').click(function() {
+              alert('111');
+            });
+            
+            
+        //-->
+        </script>
         
         <div id="plotter">
+            <div class="well">
+                <h4>Loading...</h4>
+            </div>
+            <script src="jquery/js/jquery-1.12.0.min.js"></script>
+            <script src="jquery-migrate/js/jquery-migrate-1.3.0.js"></script>
+            <script src="anytime/js/anytime.5.0.3.js"></script>
+            <script src="d3/js/d3.js"></script>
+            <script src="jquery-simplecolorpicker/js/jquery.simplecolorpicker.js"></script>
+            <script src="timezone-js/js/date.js"></script>
+            <script src="timezone-js/js/init.js"></script>
+            <script src="vakata-jstree/js/jstree.min.js"></script>
+            
+            <!-- <script src="col-resizable/js/colResizable-1.3.med.js"></script>  //-->
+            <script src="col-resizable/js/colResizable-1.3.source.js"></script>
+            
+            <script src="bootstrap-3.3.6/js/bootstrap.min.js"></script>
+            <script src="mr-plotter/js/s3ui.js"></script>
+            <script src="mr-plotter/js/axis.js"></script>
+            <script src="mr-plotter/js/data.js"></script>
+            <script src="mr-plotter/js/utils.js"></script>
+            <script src="mr-plotter/js/plot.js"></script>
+            <script src="mr-plotter/js/frontend.js"></script>
+            <script src="mr-plotter/js/streamtree.js"></script>
+            <script src="mr-plotter/js/control.js"></script>
+            <script src="mr-plotter/js/cursors.js"></script>
+            <script src="mr-plotter/js/requester.js"></script>
+            <script>
+                $(function () {
+                        var plotterelem = document.getElementById("plotter");
+                        plotterelem.innerHTML = ""; // Remove "Loading..." text
+                        
+                       
+                        mr_plotter(document.getElementById("plotter"), "mrplotter", undefined, undefined);
+                    });
+            </script>
         </div>
         
         <footer>
@@ -113,16 +192,24 @@
     </style>
     <style class="dynamicStyles">
     </style>
-    <table class="dispTable" width="99%">
-        <tr valign="top">
-            <td width="20%">
-                <div class="leftColumn">
-                    <div class="login">
-                        <div class="logindiv btn-group" style="width: 100%;">
+    
+    
+    
+    <div class="login">
+                        <div id="toggler" class="btn btn-success" style='float: left; margin-left: 10px; margin-right: 10px;' onclick="toggle_visibility('toggle_column');">&larr; Hide</div>
+                        
+                        <!-- <div id="all_scale" class="btn btn-success" style='float: right; margin-left: 10px; margin-right: 10px;' onclick='$( ".autoscalebutton" ).click();'>Scale All</div> //-->
+                        
+                        <div id="all_scale" class="btn btn-success" style='float: right; margin-right: 25px;' onclick='$( ".autoscalebutton" ).click();'>Scale All</div>
+                            
+                        <div class="showAll btn btn-success" style='float: right; margin-right: 10px;'>Plot all Data</div>
+                        
+                        
+                        <div class="logindiv btn-group" style="width: 100px; float: left; margin-right: 10px;">
                             <div class="loginMenu btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <span class="loginButtonText"></span><span class="caret"></span>
                             </div>
-                            <ul class="dropdown-menu loginList" style="width: 100%;">
+                            <ul class="dropdown-menu loginList" style="width: 257px;">
                                 <li><input type="text" class="loginstate-start loginbox form-control username" placeholder="Username"></input></li>
                                 <li><input type="password" class="loginstate-start loginbox form-control password" placeholder="Password"></input></li>
                                 <li><input type="password" class="loginstate-changepw loginbox form-control oldpassword" placeholder="Current Password"></input></li>
@@ -144,13 +231,34 @@
                                 <li><div class="loginstate-changepw changepwButton btn btn-success" style="width: 100%;">Confirm Change</div></li>
                             </ul>
                         </div>
+                        <div style='clear: both;'></div>
                         <hr>
+    </div>
+    
+    
+    <table class="dispTable" width="99%">
+        <tr valign="top">
+            <td width="18%" id='toggle_column' style='width: 100%; display: block;'>
+                <div class="leftColumn" id="leftColumn">
+                
+                    <!-- STREAM SELECTION MENU -->
+                        <h3>Select Streams
+                        <div style='float: right; margin-top: -2px; margin-bottom: 10px;' class="streamTreeOptions btn-group">
+                                <div class="refreshStreamTree btn btn-default">Refresh</div>
+                                <div onClick="window.location.reload();" class="btn btn-default">Deselect All</div>
+                                <div style='display: none;' class="deselectStreamTree btn btn-default">Deselect All</div>
+                                <!-- <div class="deselectStreamTree btn btn-default">Deselect All</div> //-->
+                            </div></h3>    
+                            
+                    
+                    <div class="streamSelection">
+                            
+                        <div class="well" style="background: white;">
+                            <div class="streamTree"></div>
+                        </div>
                     </div>
-                    <div class="btn-group-vertical" style="width: 100%;">
-                        <div class="plotButton btn btn-primary">Apply and Plot</div>
-                        <div class="resetZoom btn btn-default">Reset Zoom</div>
-                        <div class="showAll btn btn-success">Plot all Data</div>
-                    </div>
+                    
+                    
                     <div class="infoBar">
                         <div class="plotLoading" style="width: 100%; margin-top: 20px; font-size: 1.25em;"></div> <!-- Displays details about how the plot is loading -->
                         <hr>
@@ -191,25 +299,20 @@
                                 </div>
                             </div>
                         </form>
-                    </div>
-                    <!-- STREAM SELECTION MENU -->
-                    <div class="streamSelection">
-                        <h3>Select Streams</h3>
-                        <div class="well" style="background: white;">
-                            <div class="streamTreeOptions btn-group">
-                                <div class="refreshStreamTree btn btn-default">Refresh Tree</div>
-                                <div class="deselectStreamTree btn btn-default">Deselect All</div>
-                            </div>
-                            <div class="streamTree"></div>
+                        
+                        <div class="row">
+                            <div class="plotButton btn btn-primary">Apply and Plot</div>
+                            <div class="resetZoom btn btn-default">Reset Zoom</div>
                         </div>
                     </div>
+                    
                 </div>
             </td>
             <td width="80%">
                 <div class="container-fluid">
                     <div class="row">
-                        <div class="col-md-12">
-                            <div class="well chartContainer">
+                        <div class="col-md-12" id='chartDiv' style=''>
+                            <div class="well chartContainer" id="chart_interface">
                                 <!-- THE ACTUAL CHART -->
                                 <svg class="chart" width="800" height="430" background="white">
                                     <rect width="800" height="430" class="background-rect" fill="white"></rect>  <!-- The background is white, not transparent. -->
@@ -251,27 +354,41 @@
                     </div>
                     <div class="well">
                         <div class="row">
-                            <div class="col-md-5">
+                            <div class="col-md-12">
                                 <!-- STREAM LEGEND -->
                                 <div class="streamLegend">
-                                    <h3>Legend</h3>
-                                    <table>
-                                        <tbody class="legend"></tbody>
-                                    </table>
-                                </div>
+                                <h3 style='margin-top: 0px;'>Legend</h3>
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Color</th>
+                                            <th>Stream</th>
+                                            <th>Axis Name</th>
+                                            <th>Progress</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="legend"></tbody>
+                                </table>
                             </div>
-                            <div class="col-md-7">
+                            </div>
+                        </div>
+                    </div>
+                        <div class="well">
+                            <div class="row">
                                 <!-- AXIS LEGEND -->
+                            <div class="col-md-12">
                                 <div class="axisLegend">
-                                    <h3>Axes</h3>
-                                    <div class="addAxis btn btn-success">Add a Y-Axis</div>
+                                    <h3 style='margin-top: 0px;'>Axes<div class="addAxis btn btn-success" style='float: right; margin-top: -2px; margin-bottom: 10px;'>Add a Y-Axis</div></h3>
                                     <table class="table table-striped">
                                         <thead>
                                             <tr>
-                                                <th>Name</th>
-                                                <th>Streams</th>
+                                                <th>Axis Name</th>
+                                                <th>Stream</th>
                                                 <th>Units</th>
-                                                <th>Settings</th>
+                                                <th>&nbsp;Axis Position</th>
+                                                <th>&nbsp;Axis Scale</th>
+                                                <th></th>
+                                                <th>Remove</th>
                                             </tr>
                                         </thead>
                                         <tbody class="axes"></tbody>
@@ -291,13 +408,20 @@
                             </div>
                         </div>
                     </div>
+                    
                     <div class="well">
                         <div class="row">
-                            <div class="col-md-4 metadataDisplay"></div>
-                            <div class="col-md-3">
-                                <!-- EXPORT TO CSV -->
+                        
+                            <div class="col-md-12">
+                                <h3 style='margin-top: 0px;'>Export</h3>
+                                <table width='100%'>
+                                    <tr>
+                                    <td width='50%'>
+                                    
+                                    <!-- EXPORT TO CSV -->
+                                    <!-- EXPORT TO CSV -->
                                 <div class="graphExport">
-                                    <div class="btn-group-vertical">
+                                    <div class="btn-group-horizontal">
                                         <div class="makecsv btn btn-default">Export Graph to CSV File</div>
                                         <div class="makeGraph btn btn-default">Export Graph to SVG Image</div>
                                     </div>
@@ -310,12 +434,14 @@
                                                     <div class="csv-settings">
                                                         <h4>1. Select the streams to include in the CSV file.</h4>
                                                         <div class="csv-streams"></div>
+                                                        
                                                         <h4>2. Select the resolution at which to get the data.</h4>
                                                         <div class="csv-pointwidth">
                                                             <input type="range" class="pointwidth-selector" min="0" max="62" />
                                                             <div class="selected-pointwidth"></div>
                                                             <div class="selected-pw-desc"></div>
                                                         </div>
+                                                        
                                                         <h4>3. Click the "Create CSV File" button to generate the CSV file.</h4>
                                                         
                                                         <!-- This form is not visible to the user, but is used to make the POST request for the CSV file. -->
@@ -332,16 +458,23 @@
                                         </div>
                                     </div>
                                 </div>
+                                    
+                                    </td>
+                                    <td width='50%'>
+                                    
+                                     <!-- PERMALINK -->
+                                    <div class="permalinkGenerate" style='float: right;'>
+                                        <div class="getPermalink btn btn-default">Generate Permalink</div>
+                                        <input type="checkbox" class="includeMetadata" />
+                                        <span>Embed Stream Metadata</span>
+                                        <div class="permalink"></div>
+                                    </div>
+                                    
+                                    </td>
+                                    </tr>
+                                </table>
                             </div>
-                            <div class="col-md-5">
-                                <!-- PERMALINK -->
-                                <div class="permalinkGenerate">
-                                    <div class="getPermalink btn btn-default">Generate Permalink</div>
-                                    <input type="checkbox" class="includeMetadata" />
-                                    <span>Embed Stream Metadata</span>
-                                    <div class="permalink"></div>
-                                </div>
-                            </div>
+                        
                         </div>
                     </div>
                 </div>
