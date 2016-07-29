@@ -197,7 +197,8 @@ function updateVertCursorStats(self) {
                 millidiff--;
             }
             nanodiff = s3ui.timeToStr([millidiff, nanodiff]);
-            showEntry(cursors.deltax);
+            nanodiff = nanodiff + " ns -- " +  (nanodiff / 1000000000).toFixed(2) + " secs -- " +  (nanodiff / 1000000000 / 60).toFixed(2) + " mins"
+			showEntry(cursors.deltax);
             cursors.deltax[1].innerHTML = nanodiff;
             showEntry(cursors.freqx);
             cursors.freqx[1].innerHTML = (1000 / (x2millis - x1millis + ((x2nanos - x1nanos) / 1000000)));
