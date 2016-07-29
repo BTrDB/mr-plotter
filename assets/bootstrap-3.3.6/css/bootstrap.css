@@ -4674,6 +4674,16 @@ fieldset[disabled] .navbar-default .btn-link:focus {
     background-color: transparent;
   }
 }
+
+.loginList {
+  padding: 10px;
+}
+
+.loginList li {
+  margin: 5px;
+  margin-bottom: 10px;
+}
+
 .navbar-inverse .navbar-link {
   color: #9d9d9d;
 }
@@ -6757,4 +6767,51 @@ button.close {
     display: none !important;
   }
 }
+
+#login-buttons input[type=text],
+.accounts-dialog input[type=text],
+#login-buttons input[type=email],
+.accounts-dialog input[type=email],
+#login-buttons input[type=password],
+.accounts-dialog input[type=password] {
+  padding: 4px;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+body {
+  font-size: 12px;
+}
+
+.form-control {
+  font-size: 12px;
+  height: 20px;
+  padding: 0px 12px;
+}
+
+.username, .password {    
+  padding: 4px;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  line-height: 1;
+  width: 224px;
+  height: 28px;
+}
+
+.input-group-addon {
+  padding: 3px 12px;
+}
+
+.btn,
+.btn-danger {
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
+h3 {
+  font-size: 15px;
+  font-weight: bold;
+}
+
 /*# sourceMappingURL=bootstrap.css.map */
