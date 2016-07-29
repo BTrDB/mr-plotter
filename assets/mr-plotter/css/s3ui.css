@@ -95,20 +95,9 @@ div.streamTree {
 }
 div.leftColumn {
     margin-left: 10px;
+    min-width: 240px;
 }
 div.timeSelection {
     margin-left: 15px;
     margin-right: 15px;
-}
-ul.loginList {
-    padding: 5px;
-}
-div.loginmessage {
-    color: red;
-}
-.streamTreeOptions {
-    width: 100%;
-}
-.streamTreeOptions > div {
-    width: 50%;
 }
