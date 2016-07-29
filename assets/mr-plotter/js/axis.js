@@ -78,6 +78,7 @@ function addYAxis(self) {
       .append("tr")
         .attr("class", "axissetting axis-" + id);
     row.append("td")
+      .attr("style","width: 100px;")
       .append("input")
         .attr("type", "text")
         .attr("class", "axisname form-control thin-margin-text")
@@ -90,53 +91,87 @@ function addYAxis(self) {
                 self.$("text.axistitle-" + axisObj.axisid).html(newname);
             };
     row.append("td")
-        .attr("class", "axisstreams");
+        .attr("class", "axisstreams")
+        .attr("style", "width: 200px; height: 15px; line-height: 15px; overflow: hidden;");
     row.append("td")
+        .attr("style","width: 50px;")
         .attr("class", "axisunits");
         
     // Create the DOM element for selecting the range
-    var rangeRow = document.createElement("tr");
-    var selectElem = d3.select(rangeRow).append("td")
+    
+    
+    
+    
+    // div4 = sideElem.append("div")
+        // .attr("style", "width: 100px;");
+    
+    // var rangeElem = div4.append("div")
+        // .attr("class", "btn btn-info autoscalebutton")
+        // .html("Autoscale")
+        // .node();
+
+    
+    // var rangeboxElem = row.append("td");
+    
+    // AUTOSCALE RANGE
+    var rangeRow = document.createElement("td");
+    
+    // rangeRow.attr("style","float: right;");
+    
+    var selectElem = d3.select(rangeRow).append("div")
         .attr("class", "axisrangeselect form-inline");
+    
     selectElem.append("span")
-        .text("Scale: ");
+        .html("<div style='line-height: 2px; margin-left: 10px;'>&nbsp;</div>");
+        
     var leftBox = selectElem.append("input")
         .attr("type", "text")
         .attr("class", "axisrange form-control thin-margin-text")
-        .attr("style", "width: 50px;")
+        .attr("style", "margin-left: 0; width: 44px; text-align: center;")
         .node();
     leftBox.onchange = function () {
                 axisObj.manualscale[0] = parseFloat(this.value.trim());
                 s3ui.applySettings(self, false);
             };
     axisObj.leftBox = leftBox;
+    
     selectElem.append("span")
         .text(" to ");
+        
     var rightBox = selectElem.append("input")
         .attr("type", "text")
         .attr("class", "axisrange form-control thin-margin-text")
-        .attr("style", "width: 50px;")
+        .attr("style", "width: 44px; text-align: center;")
         .node();
     rightBox.onchange = function () {
                 axisObj.manualscale[1] = parseFloat(this.value.trim());
                 s3ui.applySettings(self, false);
             };
     axisObj.rightBox = rightBox;
-    var settingsElem = row.append("td").append("table").attr("class", "axissettingtable").attr("style", "width: 175px");
-    settingsElem.append("tr")
-      .append("div")
-        .html("Remove")
-        .attr("class", "removebutton btn btn-danger")
-        .node().onclick = function () {
-                removeYAxis(self, axisObj);
-            };
+    
+    
+    
+    
+    
+    var settingsElem = row.append("td")
+        .attr("style", "width: 50px;")
+        .append("table")
+        .attr("class", "axissettingtable");
+
     var sideElem = settingsElem.append("tr")
+      .append("td")
+      .attr("class", "settings-control")
       .append("div")
         .attr("class", "btn-group axisside")
+        .attr("style", "width: 100px; display: block;")
         .attr("data-toggle", "buttons");
+        
+        
+        // GLYPHS AND BUTTONS
     var div = sideElem.append("label")
         .attr("class", "btn btn-info active")
-        .attr("style", "width: 34%;");
+        .attr("style", "width: 26px; border-radius: 4px; margin-left: 4px;");
+            
     div.append("input")
         .attr("type", "radio")
         .attr("name", "side-" + id + "i" + self.idata.instanceid)
@@ -146,12 +181,15 @@ function addYAxis(self) {
                     axisObj.right = false;
                     s3ui.applySettings(self, false);
                 }
-            };
+            };    
     div.append("span")
         .attr("class", "glyphicon glyphicon-arrow-left");
+        
+        
+        
     div = sideElem.append("label")
         .attr("class", "btn btn-info")
-        .attr("style", "width: 33%;");
+        .attr("style", "width: 26px; border-radius: 4px; margin-left: 4px;");
     div.append("input")
         .attr("type", "radio")
         .attr("name", "side-" + id + "i" + self.idata.instanceid)
@@ -160,12 +198,14 @@ function addYAxis(self) {
                     axisObj.right = null;
                     s3ui.applySettings(self, false);
                 }
-            };
+            };    
     div.append("span")
         .attr("class", "glyphicon glyphicon-eye-close");
+        
+        
     div = sideElem.append("label")
         .attr("class", "btn btn-info")
-        .attr("style", "width: 34%;");
+        .attr("style", "width: 26px; border-radius: 4px; margin-left: 4px;");
     div.append("input")
         .attr("type", "radio")
         .attr("name", "side-" + id + "i" + self.idata.instanceid)
@@ -177,13 +217,25 @@ function addYAxis(self) {
             };
     div.append("span")
         .attr("class", "glyphicon glyphicon-arrow-right");
-            
-    var rangeElem = settingsElem.append("tr")
-      .append("div")
+        
+    
+    // AUTOSCALE BUTTON
+    
+        // var settingsElem = row.append("td")
+        // .append("table")
+        // .attr("class", "axissettingtable")
+        // .attr("style", "width: 240px");
+    
+    var scalingElem = row.append("td")
+        .attr("style", "width: 50px;");
+    
+    var div2 = scalingElem.append("div");
+    
+    var rangeElem = div2.append("div")
         .attr("class", "btn btn-info autoscalebutton")
-        .attr("style", "width: 100%;")
         .html("Autoscale")
         .node();
+        
     rangeElem.onclick = function () {
                 axisObj.autoscale = true;
                 s3ui.applySettings(self, false);
@@ -191,7 +243,18 @@ function addYAxis(self) {
     var thisRow = rangeElem.parentNode.parentNode;
     thisRow.parentNode.appendChild(rangeRow, thisRow.nextSibling);
     axisObj.rangeRow = rangeRow;
-        
+
+    
+    // REMOVE BUTTON ROW
+    var removeButton = row.append("td")
+        .html("X")
+        .attr('onclick', 'clicked()')
+        .attr("class", "removebutton btn btn-danger")
+        .attr("style", "margin-top: 6px; margin-left: 10px; padding: 3px 6px 2px 6px; font-size: 12px;")
+        .node().onclick = function () {
+                removeYAxis(self, axisObj);
+            };
+    
     d3.selectAll(self.$("select.axis-select"))
       .append("option")
         .attr("class", "option-" + axisObj.axisid)
