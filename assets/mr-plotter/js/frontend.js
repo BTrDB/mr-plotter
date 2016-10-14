@@ -43,7 +43,7 @@ function init_frontend(self) {
             var rightpadding = $parent.css("padding-right");
             return s3ui.parsePixelsToInt(width) - s3ui.parsePixelsToInt(leftpadding) - s3ui.parsePixelsToInt(rightpadding);
         }
-        
+
     self.idata.changingpw = false;
     self.idata.defaultLoginMenuText = "Log in ";
     self.idata.prevLoginMenuText = self.idata.defaultLoginMenuText;
@@ -139,7 +139,7 @@ function toggleLegend (self, show, streamdata, update) {
             .attr("class", "axis-select form-control axis-select-" + streamdata.uuid)
             .attr("style", "padding: 0px; min-width: 4em;");
         selectElem.selectAll("option")
-          .data(self.idata.yAxes)
+          .data(self.idata.yAxes.filter(s3ui.getPSLAxisFilter(streamdata))) // The filter was added at PSL's request
           .enter()
           .append("option")
             .attr("class", function (d) { return "option-" + d.axisid; })
@@ -308,10 +308,10 @@ function createPermalink(self, return_raw_document) {
     if (return_raw_document) {
         return permalink;
     }
-    
+
     var permalocation = self.find(".permalink");
     permalocation.innerHTML = 'Generating permalink...';
-    
+
     self.requester.makePermalinkInsertRequest(permalink, function (result) {
             var id = result;
             var URL = self.idata.initPermalink + id;
@@ -326,7 +326,7 @@ function createPermalink(self, return_raw_document) {
             console.log(error);
             permalocation.innerHTML = 'Permalink could not be generated.';
         });
-        
+
     return true;
 }
 
@@ -378,7 +378,7 @@ function buildCSVMenu(self) {
     } else {
         streamsettings.innerHTML = "You must plot streams in your desired time range before you can generate a CSV file.";
     }
-    
+
     var pwselector = graphExport.querySelector(".pointwidth-selector");
     var domain = self.idata.oldXScale;
     var submitButton = graphExport.querySelector("div.csv-button");
@@ -403,7 +403,7 @@ function buildCSVMenu(self) {
             };
         pwselector.value = 63 - self.idata.oldData[streams[0].uuid][2];
         pwselector.onchange();
-        
+
         submitButton.onclick = function () {
                 createCSVDownload(self, streams, settingsObj, domain, 62 - parseInt(pwselector.value), graphExport);
             };
@@ -440,10 +440,10 @@ function login(self) {
     var password = passwordfield.value;
     usernamefield.value = "";
     passwordfield.value = "";
-    
+
     var $loginButton = $(loginElem.querySelector(".loginMenu"));
     var loginmessage = loginElem.querySelector(".loginmessage");
-    
+
     setButtonEnabled($loginButton, false);
     setLoginText(self, "Logging in...");
     self.requester.makeLoginRequest(username, password, function (token) {
@@ -508,32 +508,32 @@ function changepw(self, event) {
     var loginElem = self.find(".logindiv");
     var newpasswordfield1 = loginElem.querySelector(".newpassword1");
     var newpasswordfield2 = loginElem.querySelector(".newpassword2");
-    
+
     var loginmessage = loginElem.querySelector(".loginmessage");
-    
+
     if (newpasswordfield1.value !== newpasswordfield2.value) {
         loginmessage.innerHTML = "New passwords do not match";
         event.stopPropagation(); // keep the dropdown from closing
         return;
     }
-    
+
     var oldpasswordfield = loginElem.querySelector(".oldpassword");
-    
+
     var oldpassword = oldpasswordfield.value;
     var newpassword = newpasswordfield1.value;
-    
+
     oldpasswordfield.value = "";
     newpasswordfield1.value = "";
     newpasswordfield2.value = "";
-    
+
     var $loginButton = $(loginElem.querySelector(".loginMenu"));
     var loginmessage = loginElem.querySelector(".loginmessage");
-    
+
     var errorfunc = function () {
             loginmessage.innerHTML = "A server error has occurred";
             showChangepwMenu(self);
         };
-    
+
     setButtonEnabled($loginButton, false);
     setLoginText(self, "Changing password...");
     self.requester.makeChangePasswordRequest(oldpassword, newpassword, function (response) {
