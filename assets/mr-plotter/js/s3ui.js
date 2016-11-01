@@ -358,12 +358,13 @@ function init_graph(self, c1, c2) {
             self.idata.changedTimes = true;
             // s3ui.updatePlotMessage(self);
 
-		    setTimeout(function () {
-					$( ".plotButton" ).click();
+        // AUTO CLICK PLOT BUTTON
+            setTimeout(function () {
+                    $( ".plotButton" ).click();
                 }, 200);
 
-		    setTimeout(function () {
-					$( ".autoscalebutton" ).click();
+            setTimeout(function () {
+                    $( ".autoscalebutton" ).click();
                 }, 450);
 
         };

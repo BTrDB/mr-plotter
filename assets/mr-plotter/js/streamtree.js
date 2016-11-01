@@ -89,12 +89,13 @@ function updateStreamList(self) {
                 streamTree.deselect_node(node);
             } else {
                 streamTree.checkbox_select_node(node);
-				
-				if ( self.idata.counter == 0 ) {
-					setTimeout( function() { $( ".showAll" ).click(); }, 500);
-					self.idata.counter += 1; 
-				};
-				
+                
+                // ONLY AUTOSCALE ALL CLICK IF 1ST STREAM SELECTED
+                if ( self.idata.counter == 0 ) {
+                    setTimeout( function() { $( ".showAll" ).click(); }, 500);
+                    self.idata.counter += 1; 
+                };
+                
             }
             return false;
         });
@@ -193,24 +194,24 @@ function makeSelectHandler(self, streamTree, selectAllChildren) {
                 } else {
                     if (node.children.length == 0) {
                         streamTree.old_select_node(node, suppress_event, prevent_open); // if it's a leaf, select it
-						
-						if ( self.idata.counter == 0 ) {
-							setTimeout( function() { $( ".showAll" ).click(); }, 500);
-							self.idata.counter += 1; 
-						};
-						
+                        
+                        if ( self.idata.counter == 0 ) {
+                            setTimeout( function() { $( ".showAll" ).click(); }, 500);
+                            self.idata.counter += 1; 
+                        };
+                        
                     } else {
                         streamTree.toggle_node(node);
-						// console.log( self.idata.selectedStreamsBuffer.length );
+                        // console.log( self.idata.selectedStreamsBuffer.length );
                     }
                 }
             }
         };
-		
-		$( ".streamTree" ).ready(function() {
-			if ( self.idata.selectedStreamsBuffer.length == 0 ) { setTimeout ( function() { streamTree.toggle_node("root_0"); }, 1000); };
-		});
-		
+        
+        $( ".streamTree" ).ready(function() {
+            if ( self.idata.selectedStreamsBuffer.length == 0 ) { setTimeout ( function() { streamTree.toggle_node("root_0"); }, 1000); };
+        });
+        
     return handler;
 }
 
@@ -267,12 +268,12 @@ function pathsToTree(self, sourceName, streamList) {
                         childNode.data.streamdata = initiallySelectedStreams[sourceName][path];
                         initiallySelectedStreams[sourceName].count--;
                         if (initiallySelectedStreams[sourceName].count == 0) {
-							self.idata.counter += 1;
-							// console.log(initiallySelectedStreams[sourceName][path]);
+                            self.idata.counter += 1;
+                            // console.log(initiallySelectedStreams[sourceName][path]);
                             delete initiallySelectedStreams[sourceName];
                         } else {
-							self.idata.counter += 1;
-							// console.log(initiallySelectedStreams[sourceName][path]);
+                            self.idata.counter += 1;
+                            // console.log(initiallySelectedStreams[sourceName][path]);
                             delete initiallySelectedStreams[sourceName][path];
                         }
                         childNode.data.selected = true;

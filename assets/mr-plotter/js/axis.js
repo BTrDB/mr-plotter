@@ -358,14 +358,14 @@ function guessYAxis(self, stream) {
         axisUnits = yAxes[i].units;
         if (axisUnits.hasOwnProperty(unit) && axisUnits[unit] > 0) {
             return i;
-			// yAxes[i].axisname = unit;
-			// yAxes[i].truename = unit;
+            // yAxes[i].axisname = unit;
+            // yAxes[i].truename = unit;
         } else if (backupIndex == undefined && yAxes[i].streams.length == 0) {
             backupIndex = i;
-			// yAxes[backupIndex].axisname = unit;
-			// yAxes[backupIndex].truename = unit;
-			// yAxes[i].axisname = unit;
-			// console.log(yAxes[backupIndex]);
+            // yAxes[backupIndex].axisname = unit;
+            // yAxes[backupIndex].truename = unit;
+            // yAxes[i].axisname = unit;
+            // console.log(yAxes[backupIndex]);
         }
     }
     return backupIndex;

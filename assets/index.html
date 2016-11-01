@@ -39,7 +39,7 @@
                 </select>
           </li>
       </ul> 
-	  
+      
       <div style="float: right;">
       <ul class="nav navbar-nav">
           <li style='padding: 15px;'>
@@ -69,8 +69,8 @@
             };
 
             function legend_toggler(id) {
-			   var e = document.getElementById(id);
-			   
+               var e = document.getElementById(id);
+               
                if(e.style.visibility == 'visible') {
                   $("#legend_toggler").html( "Show Legend" );
                   e.style.visibility = 'hidden';
@@ -80,103 +80,103 @@
                   }
             };
             
-			function updateInput(p){
-				// $("#resolutions").val(p);
-				document.getElementById("resolutions").value = p;
-			};
-			
-			function updateLanguage(l){
-			 	var opts = { language: l, pathPrefix: "/lang" };
-				$("[data-localize]").localize("lang", opts);
-				console.log("language changed to" + " " + l);
-			};
-			
+            function updateInput(p){
+                // $("#resolutions").val(p);
+                document.getElementById("resolutions").value = p;
+            };
+            
+            function updateLanguage(l){
+                 var opts = { language: l, pathPrefix: "/lang" };
+                $("[data-localize]").localize("lang", opts);
+                console.log("language changed to" + " " + l);
+            };
+            
             $( document ).ready(function() {
                 $( "div#all_scale" ).click(function() {
                     $('div[class^="autoscalebutton"]').click()
                     // $( ".autoscalebutton" ).click();
                     // console.log("autoscale!");
                 });
-				
+                
             $( "div#all_scale1" ).click(function() {
                     $('div[class^="autoscalebutton"]').click()
                     // $( ".autoscalebutton" ).click();
                     // console.log("autoscale!");
                 });
             
-				
+                
             }); 
-			
+            
 
-			function copyToClipboard(elementId) {
+            function copyToClipboard(elementId) {
 
-				  // Create a "hidden" input
-				  var aux = document.createElement("input");
+                  // Create a "hidden" input
+                  var aux = document.createElement("input");
 
-				  // Assign it the value of the specified element
-				  aux.setAttribute("value", document.getElementById(elementId).value);
+                  // Assign it the value of the specified element
+                  aux.setAttribute("value", document.getElementById(elementId).value);
 
-				  // Append it to the body
-				  document.body.appendChild(aux);
+                  // Append it to the body
+                  document.body.appendChild(aux);
 
-				  // Highlight its content
-				  aux.select();
+                  // Highlight its content
+                  aux.select();
 
-				  // Copy the highlighted text
-				  document.execCommand("copy");
+                  // Copy the highlighted text
+                  document.execCommand("copy");
 
-				  // Remove it from the body
-				  document.body.removeChild(aux);
+                  // Remove it from the body
+                  document.body.removeChild(aux);
 
-				}
+                }
             
         //-->
-		
+        
             
         </script>
-		
-		<style type='text/css'>
-			.1legend_item { display: inline; margin-left: 40px; }
-			
-			.1legend {
-	            padding: 5px;
-	            font: 10px sans-serif;
-	            background: yellow;
-	            box-shadow: 2px 2px 1px #888;
+        
+        <style type='text/css'>
+            .1legend_item { display: inline; margin-left: 40px; }
+            
+            .1legend {
+                padding: 5px;
+                font: 10px sans-serif;
+                background: yellow;
+                box-shadow: 2px 2px 1px #888;
             }
-						
-			
-				.progress {
-					border: 2px solid #5E96E4;
-					height: 20px;
-					width: inherit;
-			}
-			
-				/*   DISK USAGE UPDATES HERE */
+                        
+            
+                .progress {
+                    border: 2px solid #5E96E4;
+                    height: 20px;
+                    width: inherit;
+            }
+            
+                /*   DISK USAGE UPDATES HERE */
 
-				.progress .prgbar {
-						background: #A7C6FF;
-						width: 70%;
-						position: relative;
-						height: 20px;
-						z-index: 999;
-				}
-				.progress .prgtext {
-						color: #286692;
-						text-align: center;
-						font-size: 12px;
-						margin-left: 3px;
-						padding: 1px 0 0;
-						position: absolute;
-						z-index: 1000;
-				}
-				.progress .prginfo {
-						margin: 3px 0;
-				}
+                .progress .prgbar {
+                        background: #A7C6FF;
+                        width: 70%;
+                        position: relative;
+                        height: 20px;
+                        z-index: 999;
+                }
+                .progress .prgtext {
+                        color: #286692;
+                        text-align: center;
+                        font-size: 12px;
+                        margin-left: 3px;
+                        padding: 1px 0 0;
+                        position: absolute;
+                        z-index: 1000;
+                }
+                .progress .prginfo {
+                        margin: 3px 0;
+                }
 
-			
-		</style>
-		
+            
+        </style>
+        
         <div id="plotter">
             <div class="well">
                 <h4>Loading...</h4>
@@ -215,31 +215,31 @@
                         mr_plotter(document.getElementById("plotter"), "mrplotter", undefined, undefined);
                     });
 
-				$.getJSON( "disk_usage.json", function( data_usage ) {
-				  var items = [];
-				  var space_available = data_usage['diskarray'][1]['spaceavail'];
-				  var space_total = data_usage['diskarray'][1]['spacetotal'];
-				  // console.log(space_available/space_total);
-				  
-				  var space_remaining = space_available/space_total;
-				  var space_free = space_total - space_available;
-				  var space_remaining_gb = space_available/1024/1024;
-				  
-				  function bytesToSize(bytes) {
-					   var sizes = ['KB', 'MB', 'GB', 'TB'];
-					   if (bytes == 0) return '0 Byte';
-					   var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
-					   return Math.round(bytes / Math.pow(1024, i), 2) + '' + sizes[i];
-					};
-				  
-				  $(".prgbar").width( 100 - (space_remaining).toFixed(2)*100 +"%");
-				  // $(".prgbar").width( (100) +"%");
-				  $(".prgtext").html( 100 - (space_remaining).toFixed(3)*100 +"% <span data-localize='space_used'>used</span> ( " + bytesToSize(space_total - space_available) + " of " + bytesToSize(space_total) + " )" );
-				  
-				});	
-					
-			</script>
-	
+                $.getJSON( "disk_usage.json", function( data_usage ) {
+                  var items = [];
+                  var space_available = data_usage['diskarray'][1]['spaceavail'];
+                  var space_total = data_usage['diskarray'][1]['spacetotal'];
+                  // console.log(space_available/space_total);
+                  
+                  var space_remaining = space_available/space_total;
+                  var space_free = space_total - space_available;
+                  var space_remaining_gb = space_available/1024/1024;
+                  
+                  function bytesToSize(bytes) {
+                       var sizes = ['KB', 'MB', 'GB', 'TB'];
+                       if (bytes == 0) return '0 Byte';
+                       var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+                       return Math.round(bytes / Math.pow(1024, i), 2) + '' + sizes[i];
+                    };
+                  
+                  $(".prgbar").width( 100 - (space_remaining).toFixed(2)*100 +"%");
+                  // $(".prgbar").width( (100) +"%");
+                  $(".prgtext").html( 100 - (space_remaining).toFixed(3)*100 +"% <span data-localize='space_used'>used</span> ( " + bytesToSize(space_total - space_available) + " of " + bytesToSize(space_total) + " )" );
+                  
+                });    
+                    
+            </script>
+    
         </div>
         
         <footer>
@@ -263,19 +263,19 @@
     
     <div class="login">
                         <div id="toggler" class="btn btn-link" style='float: left; margin-left: 10px; margin-right: 10px;' onclick="toggle_visibility('toggle_column');">&larr; Hide</div>
-						
-						<h3 style='float: left; margin-left: 10px; margin-right: 10px; padding-top: 0px; padding-bottom: none; margin-top: 4px;'>MicroPMU Plotting Application Version X.00</h3>
                         
-						<!-- 
+                        <h3 style='float: left; margin-left: 10px; margin-right: 10px; padding-top: 0px; padding-bottom: none; margin-top: 4px;'>MicroPMU Plotting Application Version X.00</h3>
+                        
+                        <!-- 
                         <div class="btn btn btn-primary" style='float: left; margin-right: 10px;' onclick='$( ".showAll" ).click();'>Plot all Data</div>
-							//-->
-						
+                            //-->
+                        
                         <div id="all_scale" data-localize='autoscale_all' class="btn btn-info" style='float: right; margin-right: 25px;' onclick='$( ".autoscalebutton" ).click();'>&varr; Autoscale All &varr;</div>
-						
+                        
                         <!-- <div id="all_scale1" class="btn btn-success" style='float: left; margin-right: 25px;' onclick='$( ".autoscalebutton" ).click();'>Autoscale All</div>
                             //-->
-							
-							
+                            
+                            
                         <div class="showAll btn btn-primary" style='float: right; margin-right: 10px;' data-localize='zoom_all'>&harr; Zoom All &harr;</div>
                         
                         
@@ -332,26 +332,26 @@
                         </div>
                     </div>
                     
-					
+                    
                         <!-- <div class="btn btn-primary" style='float: right; margin-right: 10px;' onclick='$( ".showAll" ).click();'>Plot all Data</div> //-->
-					
-					<div class='progress'>
-							<div class='prgtext'>Disk Usage</div>
-							<div class='prgbar'></div>
-							<div class='prginfo'>
-									<span style='float: left;'></span>
-									<span style='float: right;'></span>
-									<span style='clear: both;'></span>
-							</div>
-					</div>
-					
+                    
+                    <div class='progress'>
+                            <div class='prgtext'>Disk Usage</div>
+                            <div class='prgbar'></div>
+                            <div class='prginfo'>
+                                    <span style='float: left;'></span>
+                                    <span style='float: right;'></span>
+                                    <span style='clear: both;'></span>
+                            </div>
+                    </div>
+                    
                     <div class="infoBar">
                         <div class="plotLoading" style="width: 100%; margin-top: 20px; font-size: 1.25em;"></div> <!-- Displays details about how the plot is loading -->
                     </div>
                     
-						<div style='clear: both;'></div>
-					
-					<hr>
+                        <div style='clear: both;'></div>
+                    
+                    <hr>
                     <!-- TIME SELECTION MENU -->
                     <div class="timeSelection">
                         <form role="form">
@@ -371,16 +371,16 @@
                                         <input type="text" class="form-control datefield enddate">
                                         <div class="nowButton btn input-group-addon" style="width:4em">Now</div>
                                     </div>
-						
-						<div style='clear: both;'>&nbsp;</div>
-						<div class="btn btn-primary" data-localize='manual_zoom' style='float: right; margin-right: 0px;' onclick='$( ".plotButton" ).click();'>&larr; Manual Zoom &rarr; </div>
+                        
+                        <div style='clear: both;'>&nbsp;</div>
+                        <div class="btn btn-primary" data-localize='manual_zoom' style='float: right; margin-right: 0px;' onclick='$( ".plotButton" ).click();'>&larr; Manual Zoom &rarr; </div>
                                 </div>
                             </div>
                         
-						<div style='clear: both;'>&nbsp;</div>
+                        <div style='clear: both;'>&nbsp;</div>
                         <br/>
-						
-						<div class="row">
+                        
+                        <div class="row">
                                 <div class="form-group">
                                     <p data-localize='timezone'>Timezone</p>
                                     <div class="input-group" style="width: 100%;">
@@ -418,87 +418,87 @@
                                 </svg>
 
                             <noscript>You must enable Javascript in order to use this plotting tool.</noscript>
-							
-							<style class="plotStyles">
-									polyline.streamRange {
-										fill: inherit;
-										fill-opacity: inherit;
-										stroke: none;
-									}
-									polyline.streamMean {
-										fill: none;
-										stroke: inherit;
-										stroke-opacity: 1;
-										stroke-width: inherit;
-									}
-									circle.streamPoint {
-										fill: inherit;
-										stroke: inherit;
-										fill-opacity: 1;
-										stroke-opacity: 1;
-										stroke-width: inherit;
-									}
-									rect.scrollDisabled {
-										visiblity: hidden;
-									}
-									path, line {
-										fill: none;
-										stroke: black;
-										shape-rendering: crispEdges;
-									}
-									text.title {
-										font-size: 20px;
-									}
-									text.label {
-										font-size: 12px;
-									}
-									text.cursorlabel {
-										font-size: 16px;
-									}
-									g.tick text {
-										font-size: 16px;
-									}
-									g.data-density-axis text {
-										font-size: 14px;
-									}
-									rect.clickscreen {
-										pointer-events: visibleFill;
-										fill: none;
-									}
-								</style>
-								
-								<style class="dynamicStyles">
-								</style>
-									
-									
-								<script type='text/javascript'>
-									function GetIEVersion() {
-									  var sAgent = window.navigator.userAgent;
-									  var Idx = sAgent.indexOf("MSIE");
-									  // If IE, return version number.
-									  if (Idx > 0)
-										return parseInt(sAgent.substring(Idx+ 5, sAgent.indexOf(".", Idx)));
+                            
+                            <style class="plotStyles">
+                                    polyline.streamRange {
+                                        fill: inherit;
+                                        fill-opacity: inherit;
+                                        stroke: none;
+                                    }
+                                    polyline.streamMean {
+                                        fill: none;
+                                        stroke: inherit;
+                                        stroke-opacity: 1;
+                                        stroke-width: inherit;
+                                    }
+                                    circle.streamPoint {
+                                        fill: inherit;
+                                        stroke: inherit;
+                                        fill-opacity: 1;
+                                        stroke-opacity: 1;
+                                        stroke-width: inherit;
+                                    }
+                                    rect.scrollDisabled {
+                                        visiblity: hidden;
+                                    }
+                                    path, line {
+                                        fill: none;
+                                        stroke: black;
+                                        shape-rendering: crispEdges;
+                                    }
+                                    text.title {
+                                        font-size: 20px;
+                                    }
+                                    text.label {
+                                        font-size: 12px;
+                                    }
+                                    text.cursorlabel {
+                                        font-size: 16px;
+                                    }
+                                    g.tick text {
+                                        font-size: 16px;
+                                    }
+                                    g.data-density-axis text {
+                                        font-size: 14px;
+                                    }
+                                    rect.clickscreen {
+                                        pointer-events: visibleFill;
+                                        fill: none;
+                                    }
+                                </style>
+                                
+                                <style class="dynamicStyles">
+                                </style>
+                                    
+                                    
+                                <script type='text/javascript'>
+                                    function GetIEVersion() {
+                                      var sAgent = window.navigator.userAgent;
+                                      var Idx = sAgent.indexOf("MSIE");
+                                      // If IE, return version number.
+                                      if (Idx > 0)
+                                        return parseInt(sAgent.substring(Idx+ 5, sAgent.indexOf(".", Idx)));
 
-									  // If IE 11 then look for Updated user agent string.
-									  else if (!!navigator.userAgent.match(/Trident\/7\./))
-										return 11;
+                                      // If IE 11 then look for Updated user agent string.
+                                      else if (!!navigator.userAgent.match(/Trident\/7\./))
+                                        return 11;
 
-									  else
-										return 0; //It is not IE
+                                      else
+                                        return 0; //It is not IE
 
-									}
-									if ((GetIEVersion() > 0) || (navigator.userAgent.toLowerCase().indexOf('firefox') > -1)){
-									  document.write("<style type='text/css'>#makeG { display: none; }</style>");
-									  // alert("This is IE " + GetIEVersion());
-									} else {
-									  // alert("This is not IE ");
-									}
-								</script>
-								
-						<div id="legend_toggler" class="btn btn-link" style='float: right; margin-left: 10px; margin-top: -3px; font-size: 12px;' onclick="legend_toggler('legend-container');">Hide Legend</div>
-								
+                                    }
+                                    if ((GetIEVersion() > 0) || (navigator.userAgent.toLowerCase().indexOf('firefox') > -1)){
+                                      document.write("<style type='text/css'>#makeG { display: none; }</style>");
+                                      // alert("This is IE " + GetIEVersion());
+                                    } else {
+                                      // alert("This is not IE ");
+                                    }
+                                </script>
+                                
+                        <div id="legend_toggler" class="btn btn-link" style='float: right; margin-left: 10px; margin-top: -3px; font-size: 12px;' onclick="legend_toggler('legend-container');">Hide Legend</div>
+                                
                             </div>
-						</div>
+                        </div>
                     </div>
                     <div class="well">
                         <div class="row">
@@ -583,27 +583,27 @@
                                                         <div class="csv-streams"></div>
                                                         
                                                         <h4>Export to CSV File</h4>
-														
-														<div class="csv-pointwidth">
+                                                        
+                                                        <div class="csv-pointwidth">
                                                         
                                                         Time per row in your CSV file:
-														<select class="resolutions" oninput="updateInput(this.value)" onchange="updateInput(this.value)">
-																<option value="16">about 1 Day</option>
-																<option value="20">about 1 Hour</option>
-																<option value="26">about 1 Minute</option>
-																<option value="32">about 1 Second</option>
-																<option value="38">about 1 Cycle</option>
-																<option value="39">about 1/2 Cycle</option>
-														</select>
-														
+                                                        <select class="resolutions" oninput="updateInput(this.value)" onchange="updateInput(this.value)">
+                                                                <option value="16">about 1 Day</option>
+                                                                <option value="20">about 1 Hour</option>
+                                                                <option value="26">about 1 Minute</option>
+                                                                <option value="32">about 1 Second</option>
+                                                                <option value="38">about 1 Cycle</option>
+                                                                <option value="39">about 1/2 Cycle</option>
+                                                        </select>
+                                                        
                                                         <input type="hidden" id="resolutions" min='0' max='62' class="pointwidth-selector"/>
                                                             
-															<div class="selected-pointwidth"></div>
+                                                            <div class="selected-pointwidth"></div>
                                                             <div class="selected-pw-desc"></div>
-															
-															
+                                                            
+                                                            
                                                         </div>
-														
+                                                        
                                                                                                                 
                                                         <!-- This form is not visible to the user, but is used to make the POST request for the CSV file. -->
                                                         <form class="csv-form" method="post" style="display: none;" target="_blank" enctype="text/plain">
@@ -628,7 +628,7 @@
                                         <div class="getPermalink btn btn-success" data-localize='gen_permalink'>Generate Permalink</div>
                                         <input type="checkbox" class="includeMetadata" />
                                         <span data-localize='embed_metadata'>Embed Stream Metadata</span>
-										<div class="permalink"></div>
+                                        <div class="permalink"></div>
                                         <!-- <input type='text' class="permalink" /> //-->
                                     </div>
                                     

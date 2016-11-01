@@ -230,16 +230,16 @@ function getLegendColor(axisObj, streamSettings) {
     var streams = axisObj.streams;
     if (streams.length > 0) {
         var color = streamSettings[streams[0].uuid].color;
-		console.log(streamSettings[streams[0].uuid]);
+        console.log(streamSettings[streams[0].uuid]);
         for (var k = 1; k < streams.length; k++) {
             if (streamSettings[streams[k].uuid].color != color) {
-				return color;
+                return color;
                 // return "rgb(0, 0, 0)";
             }
         }
         return color;
     }
-	return color;
+    return color;
     // return "rgb(0, 0, 0)";
 }
 

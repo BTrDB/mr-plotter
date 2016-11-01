@@ -72,7 +72,7 @@ function toggleLegend (self, show, streamdata, update) {
 
 
 
-		var row = d3.select(self.find("tbody.legend"))
+        var row = d3.select(self.find("tbody.legend"))
           .append("tr")
             .datum(streamdata)
             .attr("class", function (d) { return "legend-" + d.uuid; });
@@ -88,11 +88,11 @@ function toggleLegend (self, show, streamdata, update) {
                         "fill": newColor
                     });
 
-				var legendColor = self.$(".legendcolor-" + streamdata.uuid).attr({
+                var legendColor = self.$(".legendcolor-" + streamdata.uuid).attr({
                         "fill": newColor
                     });
 
-				// console.log(legendColor);
+                // console.log(legendColor);
 
                 s3ui.applyDisplayColor(self, self.idata.axisMap[streamSettings[streamdata.uuid].axisid], streamSettings);
                 self.$("polyline.density-" + streamdata.uuid).attr("stroke", newColor);
@@ -101,11 +101,8 @@ function toggleLegend (self, show, streamdata, update) {
                     nameCell.style("background-color", "rgba(" + color + ", 0.3)");
                 }
 
-				// console.log(".legendcolor-" + streamdata.uuid);
-				// CHANGING CHART LEGEND COLORS
-
-				// self.find(".legendcolor-" + ).style.fill = color;
-				// self.idata.streamSettings[legend_array[i].uuid].color
+                // console.log(".legendcolor-" + streamdata.uuid);
+                // CHANGING CHART LEGEND COLORS
 
             };
         streamSettings[streamdata.uuid] = { color: colorMenu[colorMenu.selectedIndex].value, axisid: "y1", active: true }; // axisid is changed
@@ -118,7 +115,7 @@ function toggleLegend (self, show, streamdata, update) {
 
 
 
-		nameElem = nameCell.node();
+        nameElem = nameCell.node();
         nameElem.onclick = function () {
                 if (self.idata.selectedLegendEntry == nameElem) {
                     self.idata.selectedLegendEntry = undefined;
@@ -282,9 +279,9 @@ function createPlotDownload(self) {
         + '<defs><style type="text/css"><![CDATA[' + graphStyle + ']]></style></defs>' + chartData + '</svg>';
     var downloadAnchor = document.createElement("a");
     downloadAnchor.innerHTML = "Download Image (created " + (new Date()).toLocaleString() + ", local time)";
-	downloadAnchor.setAttribute("href", 'data:application/octet-stream;charset=utf-8,' + encodeURIComponent(xmlData));
-	downloadAnchor.setAttribute("download", "graph.svg");
-	// var da = 'data:application/octet-stream;charset=utf-8,' + encodeURIComponent(xmlData);
+    downloadAnchor.setAttribute("href", 'data:application/octet-stream;charset=utf-8,' + encodeURIComponent(xmlData));
+    downloadAnchor.setAttribute("download", "graph.svg");
+    // var da = 'data:application/octet-stream;charset=utf-8,' + encodeURIComponent(xmlData);
     // downloadAnchor.setAttribute("onclick", "window.open('" + da + "')" );
 
     var linkLocation = self.find(".download-graph");
@@ -377,7 +374,7 @@ function buildCSVMenu(self) {
           .append("div")
             .attr("class", "input-group");
 
-		// HIDDEN STREAM SELECTION
+        // HIDDEN STREAM SELECTION
         // groups.append("span")
             // .attr("class", "input-group-btn")
           // .append("div")
@@ -400,7 +397,7 @@ function buildCSVMenu(self) {
                 // });
 
         groups.append("input")
-		// TEXT INPUTS HIDDEN
+        // TEXT INPUTS HIDDEN
             .attr("type", "hidden")
             .attr("class", "form-control")
             .property("value", function (d) { return s3ui.getFilepath(d); })
@@ -426,7 +423,7 @@ function buildCSVMenu(self) {
         domain = domain.domain();
         $(pwselector).css("display", "");
 
-		pwselector.onchange = function () {
+        pwselector.onchange = function () {
                 var pw = Math.pow(2, 62 - this.value);
                 var m1 = this.nextSibling.nextSibling;
                 //m1.innerHTML = "Point width: " + s3ui.nanosToUnit(pw) + " [exponent = " + (62 - this.value) + "]";
@@ -441,7 +438,7 @@ function buildCSVMenu(self) {
                 m1.nextSibling.nextSibling.innerHTML = statusString;
             };
 
-		pwselectbox.onchange = function () {
+        pwselectbox.onchange = function () {
                 var pw = Math.pow(2, 62 - this.value);
                 var m1 = this.nextSibling.nextSibling.nextSibling.nextSibling;
                 // m1.innerHTML = "Point width: " + s3ui.nanosToUnit(pw) + " [exponent = " + (62 - this.value) + "]";
