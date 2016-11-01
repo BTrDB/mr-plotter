@@ -20,7 +20,7 @@
 
 // Functions and state of the selection of axes
 
-function Axis (id) {
+function Axis (id, fixedaxis) {
     this.axisname = id;
     this.axisid = id;
     this.truename = id;
@@ -30,6 +30,10 @@ function Axis (id) {
     this.newaxis = true;
     this.manualscale = [-1, 1];
     this.right = false; // true if this axis is to be displayed on the right side of the graph
+
+
+    // PSL wants the plotter to start with "fixed axes" that can't be changed
+    this.fixedaxis = fixedaxis || false;
 }
 
 function init_axis(self) {
@@ -69,74 +73,117 @@ function changeAxis(self, stream, fromAxisID, toAxisID, updateGraph) {
 }
 
 /* Create a new y-axis, updating the variables and the screen as necessary. */
-function addYAxis(self) {
+function addYAxis(self, fixedaxis) {
+    fixedaxis = fixedaxis || false;
+
     var id = "y" + (++self.idata.numAxes);
-    var axisObj = new Axis(id);
+    var axisObj = new Axis(id, fixedaxis);
     self.idata.yAxes.push(axisObj);
     self.idata.axisMap[id] = axisObj;
     var row = d3.select(self.find("tbody.axes"))
       .append("tr")
         .attr("class", "axissetting axis-" + id);
-    row.append("td")
+    var axisname = row.append("td")
+      .attr("style","width: 100px;")
       .append("input")
         .attr("type", "text")
         .attr("class", "axisname form-control thin-margin-text")
         .attr("value", id)
-        .node().onchange = function () {
+        .node();
+    axisname.onchange = function () {
                 var newname = s3ui.escapeHTMLEntities(this.value); // to prevent HTML or Javascript injection
                 axisObj.axisname = newname;
                 axisObj.truename = this.value; // use this version in Permalinks so axis names aren't escaped twice
                 self.$("option.option-" + axisObj.axisid).html(newname);
                 self.$("text.axistitle-" + axisObj.axisid).html(newname);
             };
+
+    if (fixedaxis) {
+        axisname.setAttribute("readonly", "readonly");
+    }
+
     row.append("td")
-        .attr("class", "axisstreams");
+        .attr("class", "axisstreams")
+        .attr("style", "width: 200px; height: 15px; line-height: 15px; overflow: hidden;");
     row.append("td")
+        .attr("style","width: 50px;")
         .attr("class", "axisunits");
-        
+
     // Create the DOM element for selecting the range
-    var rangeRow = document.createElement("tr");
-    var selectElem = d3.select(rangeRow).append("td")
+
+
+
+
+    // div4 = sideElem.append("div")
+        // .attr("style", "width: 100px;");
+
+    // var rangeElem = div4.append("div")
+        // .attr("class", "btn btn-info autoscalebutton")
+        // .html("Autoscale")
+        // .node();
+
+
+    // var rangeboxElem = row.append("td");
+
+    // AUTOSCALE RANGE
+    var rangeRow = document.createElement("td");
+
+    // rangeRow.attr("style","float: right;");
+
+    var selectElem = d3.select(rangeRow).append("div")
         .attr("class", "axisrangeselect form-inline");
+
     selectElem.append("span")
-        .text("Scale: ");
+        .html("<div style='line-height: 2px; margin-left: 10px;'>&nbsp;</div>");
+
     var leftBox = selectElem.append("input")
         .attr("type", "text")
         .attr("class", "axisrange form-control thin-margin-text")
-        .attr("style", "width: 50px;")
+        .attr("style", "margin-left: 0; width: 44px; text-align: center;")
         .node();
     leftBox.onchange = function () {
                 axisObj.manualscale[0] = parseFloat(this.value.trim());
                 s3ui.applySettings(self, false);
             };
     axisObj.leftBox = leftBox;
+
     selectElem.append("span")
         .text(" to ");
+
     var rightBox = selectElem.append("input")
         .attr("type", "text")
         .attr("class", "axisrange form-control thin-margin-text")
-        .attr("style", "width: 50px;")
+        .attr("style", "width: 44px; text-align: center;")
         .node();
     rightBox.onchange = function () {
                 axisObj.manualscale[1] = parseFloat(this.value.trim());
                 s3ui.applySettings(self, false);
             };
     axisObj.rightBox = rightBox;
-    var settingsElem = row.append("td").append("table").attr("class", "axissettingtable").attr("style", "width: 175px");
-    settingsElem.append("tr")
-      .append("div")
-        .html("Remove")
-        .attr("class", "removebutton btn btn-danger")
-        .node().onclick = function () {
-                removeYAxis(self, axisObj);
-            };
+
+
+
+
+
+    var settingsElem = row.append("td")
+        .attr("style", "width: 50px;")
+        .append("table")
+        .attr("class", "axissettingtable");
+
     var sideElem = settingsElem.append("tr")
+      .append("td")
+      .attr("class", "settings-control")
       .append("div")
         .attr("class", "btn-group axisside")
+        .attr("style", "width: 100px; display: block;")
         .attr("data-toggle", "buttons");
+
+
+        // GLYPHS AND BUTTONS
     var div = sideElem.append("label")
         .attr("class", "btn btn-info active")
-        .attr("style", "width: 34%;");
+        .attr("style", "width: 26px; border-radius: 4px; margin-left: 4px;");
+
     div.append("input")
         .attr("type", "radio")
         .attr("name", "side-" + id + "i" + self.idata.instanceid)
@@ -149,9 +196,12 @@ function addYAxis(self) {
             };
     div.append("span")
         .attr("class", "glyphicon glyphicon-arrow-left");
+
+
+
     div = sideElem.append("label")
         .attr("class", "btn btn-info")
-        .attr("style", "width: 33%;");
+        .attr("style", "width: 26px; border-radius: 4px; margin-left: 4px;");
     div.append("input")
         .attr("type", "radio")
         .attr("name", "side-" + id + "i" + self.idata.instanceid)
@@ -162,10 +212,12 @@ function addYAxis(self) {
                 }
             };
     div.append("span")
-        .attr("class", "glyphicon glyphicon-eye-close");
+        .attr("class", "glyphicon glyphicon-remove");
+
+
     div = sideElem.append("label")
         .attr("class", "btn btn-info")
-        .attr("style", "width: 34%;");
+        .attr("style", "width: 26px; border-radius: 4px; margin-left: 4px;");
     div.append("input")
         .attr("type", "radio")
         .attr("name", "side-" + id + "i" + self.idata.instanceid)
@@ -177,13 +229,25 @@ function addYAxis(self) {
             };
     div.append("span")
         .attr("class", "glyphicon glyphicon-arrow-right");
-            
-    var rangeElem = settingsElem.append("tr")
-      .append("div")
+
+
+    // AUTOSCALE BUTTON
+
+        // var settingsElem = row.append("td")
+        // .append("table")
+        // .attr("class", "axissettingtable")
+        // .attr("style", "width: 240px");
+
+    var scalingElem = row.append("td")
+        .attr("style", "width: 50px;");
+
+    var div2 = scalingElem.append("div");
+
+    var rangeElem = div2.append("div")
         .attr("class", "btn btn-info autoscalebutton")
-        .attr("style", "width: 100%;")
-        .html("Autoscale")
+        .html("&varr; Autoscale &varr;")
         .node();
+
     rangeElem.onclick = function () {
                 axisObj.autoscale = true;
                 s3ui.applySettings(self, false);
@@ -191,7 +255,20 @@ function addYAxis(self) {
     var thisRow = rangeElem.parentNode.parentNode;
     thisRow.parentNode.appendChild(rangeRow, thisRow.nextSibling);
     axisObj.rangeRow = rangeRow;
-        
+
+
+    // REMOVE BUTTON ROW
+    if (!fixedaxis) {
+        var removeButton = row.append("td")
+            .html("X")
+            .attr('onclick', 'clicked()')
+            .attr("class", "removebutton btn btn-danger")
+            .attr("style", "margin-top: 6px; margin-left: 10px; padding: 3px 6px 2px 6px; font-size: 12px;")
+            .node().onclick = function () {
+                    removeYAxis(self, axisObj);
+                };
+    }
+
     d3.selectAll(self.$("select.axis-select"))
       .append("option")
         .attr("class", "option-" + axisObj.axisid)
@@ -254,22 +331,41 @@ function updateYAxis (self, axisid) {
 /* Given a stream, heuristically determines which axis (of those currently
    present) is ideal for it. Returns the index of the chosen axis in yAxes, or
    undefined if none of the current y-axes are suitable.
-   
+
    The function attempts to find an axis with the same units as the stream.
    If this is not possible, it searches for an axis with no streams assigned
    to it.
-   If that is not possible either, it returns undefined. */
+   If that is not possible either, it returns undefined.
+
+   Due to PSL's requirements, this first parses the stream name to see if it
+   can identify a fixed axis for it. */
 function guessYAxis(self, stream) {
+    /* Logic that PSL wants me to add. */
+    var axisname = s3ui.getPSLUnit(stream);
+    var yAxes = self.idata.yAxes.filter(s3ui.getPSLAxisFilter(stream));
+    for (var i = 0; i < yAxes.length; i++) {
+        var axis = yAxes[i];
+        if (axis.fixedaxis && axis.axisname === axisname) {
+            return i;
+        }
+    }
+
+    /* Fall back to normal logic if PSL's logic fails. */
     var axis;
     var unit = stream.Properties.UnitofMeasure;
     var backupIndex;
-    var yAxes = self.idata.yAxes;
     for (var i = 0; i < yAxes.length; i++) {
         axisUnits = yAxes[i].units;
         if (axisUnits.hasOwnProperty(unit) && axisUnits[unit] > 0) {
             return i;
+			// yAxes[i].axisname = unit;
+			// yAxes[i].truename = unit;
         } else if (backupIndex == undefined && yAxes[i].streams.length == 0) {
             backupIndex = i;
+			// yAxes[backupIndex].axisname = unit;
+			// yAxes[backupIndex].truename = unit;
+			// yAxes[i].axisname = unit;
+			// console.log(yAxes[backupIndex]);
         }
     }
     return backupIndex;

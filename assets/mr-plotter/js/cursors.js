@@ -177,7 +177,8 @@ function updateVertCursorStats(self) {
         x1millis = arr[1];
         x1nanos = arr[2];
         var x1millisextra = x1millis >= 0 ? x1millis % 1000 : ((x1millis % 1000) + 1000);
-        cursors.x1[1].innerHTML = self.idata.labelFormatter.format(x1date) + "." + (1000 + x1millisextra).toString().slice(1) + (1000000 + x1nanos).toString().slice(1);
+        cursors.x1[1].textContent = self.idata.labelFormatter.format(x1date) + "." + (1000 + x1millisextra).toString().slice(1);
+        // cursors.x1[1].textContent = self.idata.labelFormatter.format(x1date) + "." + (1000 + x1millisextra).toString().slice(1) + (1000000 + x1nanos).toString().slice(1);
         if (secondCursor == undefined) {
             hideEntry(cursors.x2);
             hideEntry(cursors.deltax);
@@ -189,7 +190,8 @@ function updateVertCursorStats(self) {
             x2nanos = arr[2];
             var x2millisextra = x2millis >= 0 ? x2millis % 1000 : ((x2millis % 1000) + 1000);
             showEntry(cursors.x2);
-            cursors.x2[1].innerHTML = self.idata.labelFormatter.format(x2date) + "." + (1000 + x2millisextra).toString().slice(1) + (1000000 + x2nanos).toString().slice(1);
+            cursors.x2[1].textContent = self.idata.labelFormatter.format(x2date) + "." + (1000 + x2millisextra).toString().slice(1);
+            // cursors.x2[1].textContent = self.idata.labelFormatter.format(x2date) + "." + (1000 + x2millisextra).toString().slice(1) + (1000000 + x2nanos).toString().slice(1);
             var millidiff = x2millis - x1millis;
             var nanodiff = x2nanos - x1nanos;
             if (nanodiff < 0) {
@@ -197,10 +199,11 @@ function updateVertCursorStats(self) {
                 millidiff--;
             }
             nanodiff = s3ui.timeToStr([millidiff, nanodiff]);
-            showEntry(cursors.deltax);
-            cursors.deltax[1].innerHTML = nanodiff;
+            nanodiff = nanodiff + " ns -- " +  (nanodiff / 1000000000).toFixed(2) + " secs -- " +  (nanodiff / 1000000000 / 60).toFixed(2) + " mins"
+			showEntry(cursors.deltax);
+            cursors.deltax[1].textContent = nanodiff;
             showEntry(cursors.freqx);
-            cursors.freqx[1].innerHTML = (1000 / (x2millis - x1millis + ((x2nanos - x1nanos) / 1000000)));
+            cursors.freqx[1].textContent = (1000 / (x2millis - x1millis + ((x2nanos - x1nanos) / 1000000))).toFixed(5);
         }
         if (self.idata.showingDensity != undefined && self.idata.oldData.hasOwnProperty(self.idata.showingDensity)) {
             x1millis -= self.idata.offset; // switch to UTC time
@@ -223,15 +226,15 @@ function updateVertCursorStats(self) {
                         timearr[1] -= 1000000;
                         timearr[0] += 1;
                     }
-                    cursors.fx1[1].innerHTML = s3ui.timeToStr(timearr) + " \xB1 2";
+                    cursors.fx1[1].textContent = s3ui.timeToStr(timearr) + " \xB1 2";
                     showExp(self, cursors.fx1[2]);
-                    cursors.fx1[2].innerHTML = pwedelta;
+                    cursors.fx1[2].textContent = pwedelta;
                 } else {
                     timearr = [leftPoint[6], leftPoint[7]];
-                    cursors.fx1[1].innerHTML = s3ui.timeToStr(timearr);
+                    cursors.fx1[1].textContent = s3ui.timeToStr(timearr);
                     hideExp(cursors.fx1[2]);
                 }
-                cursors.fx1[3].innerHTML = leftPoint[3].toPrecision(15) + " " + units;
+                cursors.fx1[3].textContent = leftPoint[3].toPrecision(15) + " " + units;
                 if (secondCursor == undefined) {
                     hideEntry(cursors.fx2);
                 } else {
@@ -245,15 +248,15 @@ function updateVertCursorStats(self) {
                             timearr[1] -= 1000000;
                             timearr[0] += 1;
                         }
-                        cursors.fx2[1].innerHTML = s3ui.timeToStr(rightPoint) + " \xB1 2";
+                        cursors.fx2[1].textContent = s3ui.timeToStr(rightPoint) + " \xB1 2";
                         showExp(self, cursors.fx2[2]);
-                        cursors.fx2[2].innerHTML = pwedelta;
+                        cursors.fx2[2].textContent = pwedelta;
                     } else {
                         timearr = [rightPoint[6], rightPoint[7]];
-                        cursors.fx2[1].innerHTML = s3ui.timeToStr(timearr);
+                        cursors.fx2[1].textContent = s3ui.timeToStr(timearr);
                         hideExp(cursors.fx2[2]);
                     }
-                    cursors.fx2[3].innerHTML = rightPoint[3].toPrecision(15) + " " + units;
+                    cursors.fx2[3].textContent = rightPoint[3].toPrecision(15) + " " + units;
                 }
             }
         } else {
@@ -266,7 +269,7 @@ function updateVertCursorStats(self) {
 function hideExp(elem) {
     elem.style["font-size"] = "1px";
     elem.style["font-color"] = "none";
-    elem.innerHTML = ",";
+    elem.textContent = ",";
 }
 
 function showExp(self, elem) {
@@ -312,14 +315,14 @@ function updateHorizCursorStats(self) {
         numDigits += 1;
         showEntry(cursors.y1);
         firstVal = firstVal.toFixed(numDigits)
-        cursors.y1[1].innerHTML = firstVal + " " + units;
+        cursors.y1[1].textContent = firstVal + " " + units;
         if (secondCursor != undefined) {
             var secondVal = scale.invert(secondCursor.coord);
             showEntry(cursors.y2);
             secondVal = secondVal.toFixed(numDigits);
-            cursors.y2[1].innerHTML = secondVal + " " + units;
+            cursors.y2[1].textContent = secondVal + " " + units;
             showEntry(cursors.deltay);
-            cursors.deltay[1].innerHTML = (secondVal - firstVal).toFixed(numDigits) + " " + units;
+            cursors.deltay[1].textContent = (secondVal - firstVal).toFixed(numDigits) + " " + units;
         } else {
             hideEntry(cursors.y2);
             hideEntry(cursors.deltay);

@@ -2,28 +2,186 @@
 <html>
     <head>
         <meta charset="utf-8">
-        <title>Mr. Plotter</title>
+        <title>PSL uPMU Plotting Application</title>
         
-        <link rel="stylesheet" type="text/css" href="anytime/css/anytime.5.0.3.css"></link>
-        <link rel="stylesheet" type="text/css" href="jquery-simplecolorpicker/css/jquery.simplecolorpicker.css"></link>
-        <link rel="stylesheet" type="text/css" href="vakata-jstree/themes/default/style.min.css"></link>
-        <link rel="stylesheet" type="text/css" href="bootstrap-3.3.6/css/bootstrap.min.css"></link>
-        <link rel="stylesheet" type="text/css" href="mr-plotter/css/s3ui.css"></link>
+        <link rel="stylesheet" type="text/css" href="anytime/css/anytime.5.0.3.css">
+        <link rel="stylesheet" type="text/css" href="jquery-simplecolorpicker/css/jquery.simplecolorpicker.css">
+        <link rel="stylesheet" type="text/css" href="vakata-jstree/themes/default/style.min.css">
+        <link rel="stylesheet" type="text/css" href="bootstrap-3.3.6/css/bootstrap.css">
+        <link rel="stylesheet" type="text/css" href="mr-plotter/css/s3ui.css">
+
     </head>
     
     <body>
         <div class="navbar navbar-default" role="navigation">
-            <div class="navbar-header">
-                <a class="navbar-brand" href="/">Mr. Plotter</a>
-            </div>
-            <div class="navbar-collapse collapse">
-            </div>
-        </div>
+    <div class="navbar-header">
+      <a class="navbar-brand" href="/"><img src="images/psl_20px.png" width="auto" height="20px" style="float: left; margin-right: 5px;"> Power Sensors Ltd.</a>
+    </div>
+    <div class="navbar-collapse collapse" style='height: 50px;'>
+     
+      <ul class="nav navbar-nav">
+          <li>
+            <a href="http://micro-pmu.com/first_steps" target="_blank" data-localize='help'>Help</a>
+          </li>
+      </ul>
+      <ul class="nav navbar-nav">
+          <li>
+                <select id='language-picker' onchange="updateLanguage(this.value)" style='margin: 15px;'>
+                    <option value='en'>English</option>
+                    <!-- <option value='es'>Español</option> //-->
+                    <option value='fr'>Français</option> <!--
+                    <option value='de'>Deutsch</option>
+                    <option value='ko'>한국어</option>
+                    <option value='ja'>日本語</option>
+                    <option value='zh'>中文</option>
+                    <option value='pt'>Português</option>
+                    <option value='vi'>Tiếng Việt</option> //-->
+                </select>
+          </li>
+      </ul> 
+	  
+      <div style="float: right;">
+      <ul class="nav navbar-nav">
+          <li style='padding: 15px;'>
+            <i>BTrDB &amp; uPMU Plotter </i><i data-localize='developed_by'>developed by</i> <i>U.C. Berkeley</i> &nbsp; <img src="http://www.powersensorsltd.com/images/berkeley_logo_50px.png" width="20px" height="20px"><br></i>
+          </li>
+      </ul>
+      </div>
+      
+    </div>
+  </div>
         
+        <script type="text/javascript">
+        <!--
+            function toggle_visibility(id) {
+               var e = document.getElementById(id);
+               if(e.style.display == 'block') {
+                  $("#toggler").html( "&rarr; Show" );
+                  e.style.display = 'none';
+                  $("#toggle_column").animate({"width" : "0%"}, 500);
+                  $("#chartDiv").animate({"width" : "100%"}, 500); 
+                } else {
+                  $("#toggler").html( "&larr; Hide" );
+                  e.style.display = 'block';
+                  $("#toggle_column").animate({"width" : "100%"}, 500);
+                  $("#container-fluid").animate({"width" : "100%"}, 500);
+                }
+            };
+
+            function legend_toggler(id) {
+			   var e = document.getElementById(id);
+			   
+               if(e.style.visibility == 'visible') {
+                  $("#legend_toggler").html( "Show Legend" );
+                  e.style.visibility = 'hidden';
+                  } else {
+                  $("#legend_toggler").html( "Hide Legend" );
+                  e.style.visibility = 'visible';
+                  }
+            };
+            
+			function updateInput(p){
+				// $("#resolutions").val(p);
+				document.getElementById("resolutions").value = p;
+			};
+			
+			function updateLanguage(l){
+			 	var opts = { language: l, pathPrefix: "/lang" };
+				$("[data-localize]").localize("lang", opts);
+				console.log("language changed to" + " " + l);
+			};
+			
+            $( document ).ready(function() {
+                $( "div#all_scale" ).click(function() {
+                    $('div[class^="autoscalebutton"]').click()
+                    // $( ".autoscalebutton" ).click();
+                    // console.log("autoscale!");
+                });
+				
+            $( "div#all_scale1" ).click(function() {
+                    $('div[class^="autoscalebutton"]').click()
+                    // $( ".autoscalebutton" ).click();
+                    // console.log("autoscale!");
+                });
+            
+				
+            }); 
+			
+
+			function copyToClipboard(elementId) {
+
+				  // Create a "hidden" input
+				  var aux = document.createElement("input");
+
+				  // Assign it the value of the specified element
+				  aux.setAttribute("value", document.getElementById(elementId).value);
+
+				  // Append it to the body
+				  document.body.appendChild(aux);
+
+				  // Highlight its content
+				  aux.select();
+
+				  // Copy the highlighted text
+				  document.execCommand("copy");
+
+				  // Remove it from the body
+				  document.body.removeChild(aux);
+
+				}
+            
+        //-->
+		
+            
+        </script>
+		
+		<style type='text/css'>
+			.1legend_item { display: inline; margin-left: 40px; }
+			
+			.1legend {
+	            padding: 5px;
+	            font: 10px sans-serif;
+	            background: yellow;
+	            box-shadow: 2px 2px 1px #888;
+            }
+						
+			
+				.progress {
+					border: 2px solid #5E96E4;
+					height: 20px;
+					width: inherit;
+			}
+			
+				/*   DISK USAGE UPDATES HERE */
+
+				.progress .prgbar {
+						background: #A7C6FF;
+						width: 70%;
+						position: relative;
+						height: 20px;
+						z-index: 999;
+				}
+				.progress .prgtext {
+						color: #286692;
+						text-align: center;
+						font-size: 12px;
+						margin-left: 3px;
+						padding: 1px 0 0;
+						position: absolute;
+						z-index: 1000;
+				}
+				.progress .prginfo {
+						margin: 3px 0;
+				}
+
+			
+		</style>
+		
         <div id="plotter">
             <div class="well">
                 <h4>Loading...</h4>
             </div>
+
             <script src="jquery/js/jquery-1.12.0.min.js"></script>
             <script src="jquery-migrate/js/jquery-migrate-1.3.0.js"></script>
             <script src="anytime/js/anytime.5.0.3.js"></script>
@@ -32,8 +190,11 @@
             <script src="timezone-js/js/date.js"></script>
             <script src="timezone-js/js/init.js"></script>
             <script src="vakata-jstree/js/jstree.min.js"></script>
-            <script src="col-resizable/js/colResizable-1.3.med.js"></script>
+            <script src="jquery-localize/jquery.localize.min.js"></script>
+            
+            <!-- <script src="col-resizable/js/colResizable-1.3.med.js"></script>  //-->
             <script src="col-resizable/js/colResizable-1.3.source.js"></script>
+            
             <script src="bootstrap-3.3.6/js/bootstrap.min.js"></script>
             <script src="mr-plotter/js/s3ui.js"></script>
             <script src="mr-plotter/js/axis.js"></script>
@@ -50,35 +211,39 @@
                         var plotterelem = document.getElementById("plotter");
                         plotterelem.innerHTML = ""; // Remove "Loading..." text
                         
-                        /*
-                         * This overrides the second callback to select the
-                         * psl_alameda/L1MAG stream as soon as the plot is
-                         * loaded.
-                         * 
-                         * If you do not wish to have a stream selected when
-                         * the plot is loaded, then just leave overriden_cb2
-                         * undefined. You can simply invoke the mr_plotter
-                         * function with two arguments (since in Javascript,
-                         * extra parameters are undefined in the callee if
-                         * not provided by the caller).
-                         */
-                        var overriden_cb2 = undefined;
-                        overriden_cb2 = function (inst) {
-                                if (window.location.search.length > 0) {
-                                    s3ui.exec_permalink(inst, window.location.search.slice(1));
-                                } else {
-                                    inst.imethods.selectStreams([{ "Path" : "/upmu/psl_alameda/L1MAG", "uuid" : "2ff1a558-7f44-11e4-82ce-002590e8ec24", "Properties" : { "UnitofTime" : "ns", "Timezone" : "UTC", "UnitofMeasure" : "V", "ReadingType" : "double" }, "Metadata" : { "SourceName" : "uPMU", "Instrument" : { "ModelName" : "PQube3", "SerialNumber" : "P3001276" } } }]);
-                                    inst.find(".showAll").click();
-                                }
-                            };
-                        
-                        mr_plotter(document.getElementById("plotter"), "mrplotter", undefined, undefined, overriden_cb2);
+                       
+                        mr_plotter(document.getElementById("plotter"), "mrplotter", undefined, undefined);
                     });
-            </script>
+
+				$.getJSON( "disk_usage.json", function( data_usage ) {
+				  var items = [];
+				  var space_available = data_usage['diskarray'][1]['spaceavail'];
+				  var space_total = data_usage['diskarray'][1]['spacetotal'];
+				  // console.log(space_available/space_total);
+				  
+				  var space_remaining = space_available/space_total;
+				  var space_free = space_total - space_available;
+				  var space_remaining_gb = space_available/1024/1024;
+				  
+				  function bytesToSize(bytes) {
+					   var sizes = ['KB', 'MB', 'GB', 'TB'];
+					   if (bytes == 0) return '0 Byte';
+					   var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+					   return Math.round(bytes / Math.pow(1024, i), 2) + '' + sizes[i];
+					};
+				  
+				  $(".prgbar").width( 100 - (space_remaining).toFixed(2)*100 +"%");
+				  // $(".prgbar").width( (100) +"%");
+				  $(".prgtext").html( 100 - (space_remaining).toFixed(3)*100 +"% <span data-localize='space_used'>used</span> ( " + bytesToSize(space_total - space_available) + " of " + bytesToSize(space_total) + " )" );
+				  
+				});	
+					
+			</script>
+	
         </div>
         
         <footer>
-            <div class="container" style="width: 100%;">
+            <div class="container" style="width: 100%; margin-top: 20px;">
                 <p class="text-muted">
                     The Multi-Resolution Plotter "Mr. Plotter"&nbsp;&nbsp;Copyright &copy; 2016 Sam Kumar, Michael Andersen, and the University of California, Berkeley.<br>
                     This program comes with ABSOLUTELY NO WARRANTY.<br>
@@ -92,65 +257,33 @@
 
 <template id="mrplotter">
     <noscript>You must enable Javascript to interact with the plotting tool.</noscript>
-    <style class="plotStyles">
-        polyline.streamRange {
-            fill: inherit;
-            fill-opacity: inherit;
-            stroke: none;
-        }
-        polyline.streamMean {
-            fill: none;
-            stroke: inherit;
-            stroke-opacity: 1;
-            stroke-width: inherit;
-        }
-        circle.streamPoint {
-            fill: inherit;
-            stroke: inherit;
-            fill-opacity: 1;
-            stroke-opacity: 1;
-            stroke-width: inherit;
-        }
-        rect.scrollDisabled {
-            visiblity: hidden;
-        }
-        path, line {
-            fill: none;
-            stroke: black;
-            shape-rendering: crispEdges;
-        }
-        text.title {
-            font-size: 20px;
-        }
-        text.label {
-            font-size: 12px;
-        }
-        text.cursorlabel {
-            font-size: 16px;
-        }
-        g.tick text {
-            font-size: 16px;
-        }
-        g.data-density-axis text {
-            font-size: 14px;
-        }
-        rect.clickscreen {
-            pointer-events: visibleFill;
-            fill: none;
-        }
-    </style>
-    <style class="dynamicStyles">
-    </style>
-    <table class="dispTable" width="99%">
-        <tr valign="top">
-            <td width="20%">
-                <div class="leftColumn">
-                    <div class="login">
-                        <div class="logindiv btn-group" style="width: 100%;">
+    
+    
+    
+    
+    <div class="login">
+                        <div id="toggler" class="btn btn-link" style='float: left; margin-left: 10px; margin-right: 10px;' onclick="toggle_visibility('toggle_column');">&larr; Hide</div>
+						
+						<h3 style='float: left; margin-left: 10px; margin-right: 10px; padding-top: 0px; padding-bottom: none; margin-top: 4px;'>MicroPMU Plotting Application Version X.00</h3>
+                        
+						<!-- 
+                        <div class="btn btn btn-primary" style='float: left; margin-right: 10px;' onclick='$( ".showAll" ).click();'>Plot all Data</div>
+							//-->
+						
+                        <div id="all_scale" data-localize='autoscale_all' class="btn btn-info" style='float: right; margin-right: 25px;' onclick='$( ".autoscalebutton" ).click();'>&varr; Autoscale All &varr;</div>
+						
+                        <!-- <div id="all_scale1" class="btn btn-success" style='float: left; margin-right: 25px;' onclick='$( ".autoscalebutton" ).click();'>Autoscale All</div>
+                            //-->
+							
+							
+                        <div class="showAll btn btn-primary" style='float: right; margin-right: 10px;' data-localize='zoom_all'>&harr; Zoom All &harr;</div>
+                        
+                        
+                        <div class="logindiv btn-group" style="width: 100px; float: left; margin-right: 10px;">
                             <div class="loginMenu btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <span class="loginButtonText"></span><span class="caret"></span>
+                                <span class="loginButtonText" data-localize='login'></span><span class="caret"></span>
                             </div>
-                            <ul class="dropdown-menu loginList" style="width: 100%;">
+                            <ul class="dropdown-menu loginList" style="width: 257px;">
                                 <li><input type="text" class="loginstate-start loginbox form-control username" placeholder="Username"></input></li>
                                 <li><input type="password" class="loginstate-start loginbox form-control password" placeholder="Password"></input></li>
                                 <li><input type="password" class="loginstate-changepw loginbox form-control oldpassword" placeholder="Current Password"></input></li>
@@ -172,23 +305,59 @@
                                 <li><div class="loginstate-changepw changepwButton btn btn-success" style="width: 100%;">Confirm Change</div></li>
                             </ul>
                         </div>
+                        <div style='clear: both;'></div>
                         <hr>
+    </div>
+    
+    
+    <table class="dispTable" width="99%">
+        <tr valign="top">
+            <td width="18%" id='toggle_column' style='width: 100%; display: block;'>
+                <div class="leftColumn" id="leftColumn">
+                
+                    <!-- STREAM SELECTION MENU -->
+                        <h3 data-localize='select_streams'>Select Streams
+                        <div style='float: right; margin-top: -2px; margin-bottom: 10px;' class="streamTreeOptions btn-group">
+                                <div style='display: none;' class="refreshStreamTree btn btn-default">Refresh</div>
+                                <div onClick="window.location.reload();" class="btn btn-default">Deselect All</div>
+                                <div style='display: none;' class="deselectStreamTree btn btn-default">Deselect All</div>
+                                <!-- <div class="deselectStreamTree btn btn-default">Deselect All</div> //-->
+                            </div></h3>
+                            
+                    
+                    <div class="streamSelection">
+                            
+                        <div class="well" style="background: white;">
+                            <div class="streamTree"></div>
+                        </div>
                     </div>
-                    <div class="btn-group-vertical" style="width: 100%;">
-                        <div class="plotButton btn btn-primary">Apply and Plot</div>
-                        <div class="resetZoom btn btn-default">Reset Zoom</div>
-                        <div class="showAll btn btn-success">Plot all Data</div>
-                    </div>
+                    
+					
+                        <!-- <div class="btn btn-primary" style='float: right; margin-right: 10px;' onclick='$( ".showAll" ).click();'>Plot all Data</div> //-->
+					
+					<div class='progress'>
+							<div class='prgtext'>Disk Usage</div>
+							<div class='prgbar'></div>
+							<div class='prginfo'>
+									<span style='float: left;'></span>
+									<span style='float: right;'></span>
+									<span style='clear: both;'></span>
+							</div>
+					</div>
+					
                     <div class="infoBar">
                         <div class="plotLoading" style="width: 100%; margin-top: 20px; font-size: 1.25em;"></div> <!-- Displays details about how the plot is loading -->
-                        <hr>
                     </div>
+                    
+						<div style='clear: both;'></div>
+					
+					<hr>
                     <!-- TIME SELECTION MENU -->
                     <div class="timeSelection">
                         <form role="form">
                             <div class="row">
                                 <div class="form-group">
-                                    <label>Start date</label>
+                                    <p data-localize='start_date'>Manual Zoom: Start Date</p>
                                     <div class="input-group" style="width: 100%;">
                                         <input type="text" class="form-control datefield startdate" />
                                         <div class="m1yButton btn input-group-addon" style="width:4em">-1Y</div>
@@ -197,16 +366,23 @@
                             </div>
                             <div class="row">
                                 <div class="form-group">
-                                    <label>End date</label>
+                                    <p data-localize='end_date'>Manual Zoom: End date</p>
                                     <div class="input-group" style="width: 100%;">
                                         <input type="text" class="form-control datefield enddate">
                                         <div class="nowButton btn input-group-addon" style="width:4em">Now</div>
                                     </div>
+						
+						<div style='clear: both;'>&nbsp;</div>
+						<div class="btn btn-primary" data-localize='manual_zoom' style='float: right; margin-right: 0px;' onclick='$( ".plotButton" ).click();'>&larr; Manual Zoom &rarr; </div>
                                 </div>
                             </div>
-                            <div class="row">
+                        
+						<div style='clear: both;'>&nbsp;</div>
+                        <br/>
+						
+						<div class="row">
                                 <div class="form-group">
-                                    <label>Timezone</label>
+                                    <p data-localize='timezone'>Timezone</p>
                                     <div class="input-group" style="width: 100%;">
                                         <select class="timezoneSelect form-control">
                                             <option value="America/Los_Angeles">America/Los_Angeles</option>
@@ -219,87 +395,148 @@
                                 </div>
                             </div>
                         </form>
-                    </div>
-                    <!-- STREAM SELECTION MENU -->
-                    <div class="streamSelection">
-                        <h3>Select Streams</h3>
-                        <div class="well" style="background: white;">
-                            <div class="streamTreeOptions btn-group">
-                                <div class="refreshStreamTree btn btn-default">Refresh Tree</div>
-                                <div class="deselectStreamTree btn btn-default">Deselect All</div>
-                            </div>
-                            <div class="streamTree"></div>
+                        
+                        <div class="row">
+                            <div class="plotButton btn btn-primary" style='visibility: hidden;'>Apply Date Range and Plot</div>
+                            <div class="resetZoom btn btn-default" style='visibility: hidden;'>Reset Zoom</div>
                         </div>
                     </div>
+                    
                 </div>
             </td>
             <td width="80%">
                 <div class="container-fluid">
                     <div class="row">
-                        <div class="col-md-12">
-                            <div class="well chartContainer">
+                        <div class="col-md-12" id='chartDiv' style=''>
+                            <div class="well chartContainer" id="chart_interface">
                                 <!-- THE ACTUAL CHART -->
                                 <svg class="chart" width="800" height="430" background="white">
                                     <rect width="800" height="430" class="background-rect" fill="white"></rect>  <!-- The background is white, not transparent. -->
                                     <g class="plotDirections" transform="translate(30, 30)">
-                                        <text transform="translate(0, 0)">1. Select streams in the tree to the left. You may need to log in to see all of the streams.</text>
-                                        <text transform="translate(0, 30)">2. If desired, change axis settings using the box below.</text>
-                                        <text transform="translate(0, 60)">
-                                                                    3. Select a time range to load data, and click "Apply and Plot Data" to see the plot. Or,
-                                            <tspan x="0" dy="1.2em">you can just click "Plot all Data" to infer the time range automatically.</tspan>
-                                        </text>
-                                        <text transform="translate(0, 110)">
-                                                                    4. Click and drag the graph to scroll, and use the mousewheel (or double-click and use the
-                                            <tspan x="0" dy="1.2em">Shift key) to scroll.</tspan>
-                                        </text>
-                                        <text transform="translate(0, 160)">
-                                                                    5. If you prefer, change the display settings. By default, all changes to settings will be
-                                            <tspan x="0" dy="1.2em">applied immediately. If you uncheck the appropriate checkbox below, you must click the</tspan>
-                                            <tspan x="0" dy="1.2em">"Apply Settings" button to apply changes.</tspan>
-                                        </text>
-                                        <text transform="translate(0, 230)">
-                                                                    6. Click below the graph to create vertical cursors and to the left or right of the graph to
-                                            <tspan x="0" dy="1.2em">create horizontal cursors. You can use cursors, in conjunction with selecting streams in the</tspan>
-                                            <tspan x="0" dy="1.2em">legend below, to gain quantitative information about the data.</tspan>
-                                        </text>
-                                        <text transform="translate(0, 300)">
-                                                                     7. You may generate a CSV file containing the data in the current plot by clicking "Export
-                                            <tspan x="0" dy="1.2em">Graph to CSV File" below. You may also create an SVG image of the current plot by clicking</tspan>
-                                            <tspan x="0" dy="1.2em">"Export Graph to SVG Image" below.</tspan>
-                                        </text>
-                                        <text transform="translate(0, 370)">
-                                                                    8. You may generate a permalink to the current plot by clicking "Generate Permalink". You
-                                            <tspan x="0" dy="1.2em">can share this link with others to share the current state of the graph.</tspan>
-                                        </text>
+                                        <image xlink:href="images/qs_start_up.jpg" x="-25" y="-30" height="100%" width="100%" />
                                     </g>
                                 </svg>
+
                             <noscript>You must enable Javascript in order to use this plotting tool.</noscript>
+							
+							<style class="plotStyles">
+									polyline.streamRange {
+										fill: inherit;
+										fill-opacity: inherit;
+										stroke: none;
+									}
+									polyline.streamMean {
+										fill: none;
+										stroke: inherit;
+										stroke-opacity: 1;
+										stroke-width: inherit;
+									}
+									circle.streamPoint {
+										fill: inherit;
+										stroke: inherit;
+										fill-opacity: 1;
+										stroke-opacity: 1;
+										stroke-width: inherit;
+									}
+									rect.scrollDisabled {
+										visiblity: hidden;
+									}
+									path, line {
+										fill: none;
+										stroke: black;
+										shape-rendering: crispEdges;
+									}
+									text.title {
+										font-size: 20px;
+									}
+									text.label {
+										font-size: 12px;
+									}
+									text.cursorlabel {
+										font-size: 16px;
+									}
+									g.tick text {
+										font-size: 16px;
+									}
+									g.data-density-axis text {
+										font-size: 14px;
+									}
+									rect.clickscreen {
+										pointer-events: visibleFill;
+										fill: none;
+									}
+								</style>
+								
+								<style class="dynamicStyles">
+								</style>
+									
+									
+								<script type='text/javascript'>
+									function GetIEVersion() {
+									  var sAgent = window.navigator.userAgent;
+									  var Idx = sAgent.indexOf("MSIE");
+									  // If IE, return version number.
+									  if (Idx > 0)
+										return parseInt(sAgent.substring(Idx+ 5, sAgent.indexOf(".", Idx)));
+
+									  // If IE 11 then look for Updated user agent string.
+									  else if (!!navigator.userAgent.match(/Trident\/7\./))
+										return 11;
+
+									  else
+										return 0; //It is not IE
+
+									}
+									if ((GetIEVersion() > 0) || (navigator.userAgent.toLowerCase().indexOf('firefox') > -1)){
+									  document.write("<style type='text/css'>#makeG { display: none; }</style>");
+									  // alert("This is IE " + GetIEVersion());
+									} else {
+									  // alert("This is not IE ");
+									}
+								</script>
+								
+						<div id="legend_toggler" class="btn btn-link" style='float: right; margin-left: 10px; margin-top: -3px; font-size: 12px;' onclick="legend_toggler('legend-container');">Hide Legend</div>
+								
                             </div>
-                        </div>
+						</div>
                     </div>
                     <div class="well">
                         <div class="row">
-                            <div class="col-md-5">
+                            <div class="col-md-12">
                                 <!-- STREAM LEGEND -->
                                 <div class="streamLegend">
-                                    <h3>Legend</h3>
-                                    <table>
-                                        <tbody class="legend"></tbody>
-                                    </table>
-                                </div>
+                                <h3 style='margin-top: 0px;' data-localize='legend'>Legend</h3>
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th data-localize='color'>Color</th>
+                                            <th data-localize='stream'>Stream</th>
+                                            <th data-localize='axis_name'>Axis Name</th>
+                                            <th data-localize='progress'>Progress</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="legend"></tbody>
+                                </table>
                             </div>
-                            <div class="col-md-7">
+                            </div>
+                        </div>
+                    </div>
+                        <div class="well">
+                            <div class="row">
                                 <!-- AXIS LEGEND -->
+                            <div class="col-md-12">
                                 <div class="axisLegend">
-                                    <h3>Axes</h3>
-                                    <div class="addAxis btn btn-success">Add a Y-Axis</div>
+                                    <h3 style='margin-top: 0px;' data-localize='axes'>Axes<div class="addAxis btn btn-success" style='float: right; margin-top: -2px; margin-bottom: 10px;' data-localize='add_y_axis'>Add a Y-Axis</div></h3>
                                     <table class="table table-striped">
                                         <thead>
                                             <tr>
-                                                <th>Name</th>
-                                                <th>Streams</th>
-                                                <th>Units</th>
-                                                <th>Settings</th>
+                                                <th data-localize='axis_name'>Axis Name</th>
+                                                <th data-localize='stream'>Stream</th>
+                                                <th data-localize='units'>Units</th>
+                                                <th data-localize='axis_position'>&nbsp;Axis Position</th>
+                                                <th data-localize='axis_scale'>&nbsp;Axis Scale</th>
+                                                <th></th>
+                                                <th data-localize='remove'>Remove</th>
                                             </tr>
                                         </thead>
                                         <tbody class="axes"></tbody>
@@ -310,7 +547,7 @@
                         <div class="row">
                             &nbsp;&nbsp;
                             <!-- AUTOMATIC UPDATE OPTION -->
-                            <span class="automaticUpdate">
+                            <span class="automaticUpdate" style='display: none;' >
                                 <input type="checkbox" class="automaticAxisSetting" checked />
                                 <span>Automatically apply changes to settings</span>
                             </span>
@@ -319,15 +556,21 @@
                             </div>
                         </div>
                     </div>
+                    
                     <div class="well">
                         <div class="row">
-                            <div class="col-md-4 metadataDisplay"></div>
-                            <div class="col-md-3">
-                                <!-- EXPORT TO CSV -->
+                        
+                            <div class="col-md-12">
+                                <h3 style='margin-top: 0px;' data-localize='export'>Export</h3>
+                                <table width='100%'>
+                                    <tr>
+                                    <td width='50%'>
+                                    
+                                    <!-- EXPORT TO CSV -->
                                 <div class="graphExport">
-                                    <div class="btn-group-vertical">
-                                        <div class="makecsv btn btn-default">Export Graph to CSV File</div>
-                                        <div class="makeGraph btn btn-default">Export Graph to SVG Image</div>
+                                    <div class="btn-group-horizontal">
+                                        <div class="makecsv btn btn-success" data-localize='export_csv'>Export Graph to CSV File</div>&nbsp;&nbsp;
+                                        <div id="makeG" class="makeGraph btn btn-success" data-localize='export_svg'>Export Graph to SVG Image</div>
                                     </div>
                                     <div class="download-graph"></div>
                                     <div class="modal fade csv-modal" role="dialog" tabindex="-1" aria-hidden="true">
@@ -336,16 +579,32 @@
                                                 <div class="modal-header">
                                                     <div class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></div>
                                                     <div class="csv-settings">
-                                                        <h4>1. Select the streams to include in the CSV file.</h4>
+                                                        <!-- <h4>1. Select the streams to include in the CSV file.</h4> //-->
                                                         <div class="csv-streams"></div>
-                                                        <h4>2. Select the resolution at which to get the data.</h4>
-                                                        <div class="csv-pointwidth">
-                                                            <input type="range" class="pointwidth-selector" min="0" max="62" />
-                                                            <div class="selected-pointwidth"></div>
-                                                            <div class="selected-pw-desc"></div>
-                                                        </div>
-                                                        <h4>3. Click the "Create CSV File" button to generate the CSV file.</h4>
                                                         
+                                                        <h4>Export to CSV File</h4>
+														
+														<div class="csv-pointwidth">
+                                                        
+                                                        Time per row in your CSV file:
+														<select class="resolutions" oninput="updateInput(this.value)" onchange="updateInput(this.value)">
+																<option value="16">about 1 Day</option>
+																<option value="20">about 1 Hour</option>
+																<option value="26">about 1 Minute</option>
+																<option value="32">about 1 Second</option>
+																<option value="38">about 1 Cycle</option>
+																<option value="39">about 1/2 Cycle</option>
+														</select>
+														
+                                                        <input type="hidden" id="resolutions" min='0' max='62' class="pointwidth-selector"/>
+                                                            
+															<div class="selected-pointwidth"></div>
+                                                            <div class="selected-pw-desc"></div>
+															
+															
+                                                        </div>
+														
+                                                                                                                
                                                         <!-- This form is not visible to the user, but is used to make the POST request for the CSV file. -->
                                                         <form class="csv-form" method="post" style="display: none;" target="_blank" enctype="text/plain">
                                                             <input class="csv-form-data" name="json" />
@@ -353,27 +612,36 @@
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">
-                                                    <div class="btn btn-default" data-dismiss="modal">Close</div>
-                                                    <div class="csv-button btn btn-primary">Create CSV File</div>
+                                                    <div class="btn btn-default" data-dismiss="modal">Cancel</div>
+                                                    <div class="csv-button btn btn-primary" data-dismiss="modal">Create CSV File</div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
+                                    
+                                    </td>
+                                    <td width='50%'>
+                                    
+                                     <!-- PERMALINK -->
+                                    <div class="permalinkGenerate" style='float: right;'>
+                                        <div class="getPermalink btn btn-success" data-localize='gen_permalink'>Generate Permalink</div>
+                                        <input type="checkbox" class="includeMetadata" />
+                                        <span data-localize='embed_metadata'>Embed Stream Metadata</span>
+										<div class="permalink"></div>
+                                        <!-- <input type='text' class="permalink" /> //-->
+                                    </div>
+                                    
+                                    </td>
+                                    </tr>
+                                </table>
                             </div>
-                            <div class="col-md-5">
-                                <!-- PERMALINK -->
-                                <div class="permalinkGenerate">
-                                    <div class="getPermalink btn btn-default">Generate Permalink</div>
-                                    <input type="checkbox" class="includeMetadata" />
-                                    <span>Embed Stream Metadata</span>
-                                    <div class="permalink"></div>
-                                </div>
-                            </div>
+                        
                         </div>
                     </div>
                 </div>
             </td>
         </tr>
     </table>
+
 </template>

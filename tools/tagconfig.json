@@ -1,4 +1,4 @@
 {
-    "public": ["/upmu/soda_a/", "/upmu/soda_b", "/upmu/culler", "/upmu/psl_alameda"],
-    "all": ["/"]
+    "public": ["/upmu"],
+    "lbnl": ["/lbnl"]
 }

@@ -1,0 +1,30 @@
+<SCRIPT>
+function passWord() {
+var testV = 1;
+var pass1 = prompt('Please Enter Your Password','');
+while (testV < 3) {
+if (!pass1) 
+history.go(-1);
+if (pass1.toLowerCase() == "micropmu") {
+// alert('You Got it Right!');
+window.location = 'plotter.html';
+break;
+} 
+testV+=1;
+var pass1 = 
+prompt('Access Denied - Your password is incorrect, please try again.','Password');
+}
+if (pass1.toLowerCase()!="password" & testV ==3) 
+history.go(-1);
+return " ";
+}
+
+passWord();
+ 
+</SCRIPT>
+<CENTER>
+<FORM>
+<br>
+<!-- <input type="button" value="PSL MicroPMU Plotter" onClick="passWord()"> //-->
+</FORM>
+</CENTER>

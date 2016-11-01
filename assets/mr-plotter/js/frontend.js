@@ -43,7 +43,7 @@ function init_frontend(self) {
             var rightpadding = $parent.css("padding-right");
             return s3ui.parsePixelsToInt(width) - s3ui.parsePixelsToInt(leftpadding) - s3ui.parsePixelsToInt(rightpadding);
         }
-        
+
     self.idata.changingpw = false;
     self.idata.defaultLoginMenuText = "Log in ";
     self.idata.prevLoginMenuText = self.idata.defaultLoginMenuText;
@@ -64,7 +64,15 @@ function toggleLegend (self, show, streamdata, update) {
             return;
         }
         self.idata.selectedStreamsBuffer.push(streamdata);
-        var row = d3.select(self.find("tbody.legend"))
+
+
+
+
+
+
+
+
+		var row = d3.select(self.find("tbody.legend"))
           .append("tr")
             .datum(streamdata)
             .attr("class", function (d) { return "legend-" + d.uuid; });
@@ -79,12 +87,26 @@ function toggleLegend (self, show, streamdata, update) {
                         "stroke": newColor,
                         "fill": newColor
                     });
+
+				var legendColor = self.$(".legendcolor-" + streamdata.uuid).attr({
+                        "fill": newColor
+                    });
+
+				// console.log(legendColor);
+
                 s3ui.applyDisplayColor(self, self.idata.axisMap[streamSettings[streamdata.uuid].axisid], streamSettings);
                 self.$("polyline.density-" + streamdata.uuid).attr("stroke", newColor);
                 color = [parseInt(newColor.slice(1, 3), 16), parseInt(newColor.slice(3, 5), 16), parseInt(newColor.slice(5, 7), 16)].join(", ");
                 if (self.idata.selectedLegendEntry == nameElem) {
                     nameCell.style("background-color", "rgba(" + color + ", 0.3)");
                 }
+
+				// console.log(".legendcolor-" + streamdata.uuid);
+				// CHANGING CHART LEGEND COLORS
+
+				// self.find(".legendcolor-" + ).style.fill = color;
+				// self.idata.streamSettings[legend_array[i].uuid].color
+
             };
         streamSettings[streamdata.uuid] = { color: colorMenu[colorMenu.selectedIndex].value, axisid: "y1", active: true }; // axisid is changed
         self.idata.streamMessages[streamdata.uuid] = [{0: ""}, 0];
@@ -93,7 +115,10 @@ function toggleLegend (self, show, streamdata, update) {
         var nameCell = row.append("td")
             .html(function (d) { return s3ui.getFilepath(d); })
             .attr("class", "streamName streamName-" + streamdata.uuid);
-        nameElem = nameCell.node();
+
+
+
+		nameElem = nameCell.node();
         nameElem.onclick = function () {
                 if (self.idata.selectedLegendEntry == nameElem) {
                     self.idata.selectedLegendEntry = undefined;
@@ -139,7 +164,7 @@ function toggleLegend (self, show, streamdata, update) {
             .attr("class", "axis-select form-control axis-select-" + streamdata.uuid)
             .attr("style", "padding: 0px; min-width: 4em;");
         selectElem.selectAll("option")
-          .data(self.idata.yAxes)
+          .data(self.idata.yAxes.filter(s3ui.getPSLAxisFilter(streamdata))) // The filter was added at PSL's request
           .enter()
           .append("option")
             .attr("class", function (d) { return "option-" + d.axisid; })
@@ -181,6 +206,7 @@ function toggleLegend (self, show, streamdata, update) {
         var oldAxis = selectElem[selectElem.selectedIndex].value;
         s3ui.changeAxis(self, streamdata, oldAxis, null);
         toRemove.parentNode.removeChild(toRemove);
+
         // we could delete self.idata.streamSettings[streamdata.uuid]; but I want to keep the settings around
         streamSettings[streamdata.uuid].active = false;
         for (var i = 0; i < self.idata.selectedStreamsBuffer.length; i++) {
@@ -224,7 +250,7 @@ function setStreamMessage(self, uuid, message, importance) {
 function updatePlotMessage(self) {
     var message = "";
     if (self.idata.changedTimes) {
-        message = 'Click "Apply and Plot" to update the graph, using the selected the start and end times.';
+        message = 'Click "Apply Date Range and Plot" to update the graph, using the selected the start and end times.';
     } else if (self.idata.addedStreams || self.idata.otherChange) {
         message = 'Click "Apply Settings" below to update the graph.';
     }
@@ -256,8 +282,11 @@ function createPlotDownload(self) {
         + '<defs><style type="text/css"><![CDATA[' + graphStyle + ']]></style></defs>' + chartData + '</svg>';
     var downloadAnchor = document.createElement("a");
     downloadAnchor.innerHTML = "Download Image (created " + (new Date()).toLocaleString() + ", local time)";
-    downloadAnchor.setAttribute("href", 'data:application/octet-stream;charset=utf-8,' + encodeURIComponent(xmlData));
-    downloadAnchor.setAttribute("download", "graph.svg");
+	downloadAnchor.setAttribute("href", 'data:application/octet-stream;charset=utf-8,' + encodeURIComponent(xmlData));
+	downloadAnchor.setAttribute("download", "graph.svg");
+	// var da = 'data:application/octet-stream;charset=utf-8,' + encodeURIComponent(xmlData);
+    // downloadAnchor.setAttribute("onclick", "window.open('" + da + "')" );
+
     var linkLocation = self.find(".download-graph");
     linkLocation.innerHTML = ""; // Clear what was there before...
     linkLocation.insertBefore(downloadAnchor, null); // ... and replace it with this download link
@@ -308,17 +337,20 @@ function createPermalink(self, return_raw_document) {
     if (return_raw_document) {
         return permalink;
     }
-    
+
     var permalocation = self.find(".permalink");
     permalocation.innerHTML = 'Generating permalink...';
-    
+
     self.requester.makePermalinkInsertRequest(permalink, function (result) {
             var id = result;
             var URL = self.idata.initPermalink + id;
-            var anchor = document.createElement("a");
-            anchor.innerHTML = URL;
-            anchor.setAttribute("href", URL);
-            anchor.setAttribute("target", "_blank");
+            var anchor = document.createElement("input");
+            anchor.value = URL;
+            anchor.setAttribute("style", "width: 100%;");
+            anchor.setAttribute("id", "copy_contents");
+            anchor.setAttribute("onclick", 'copyToClipboard("copy_contents")');
+            anchor.setAttribute("onfocus", 'this.select();');
+            anchor.setAttribute("onmouseup", 'return false;');
             permalocation.innerHTML = "";
             permalocation.insertBefore(anchor, null);
             self.idata.loadedPermalink = true;
@@ -326,7 +358,7 @@ function createPermalink(self, return_raw_document) {
             console.log(error);
             permalocation.innerHTML = 'Permalink could not be generated.';
         });
-        
+
     return true;
 }
 
@@ -344,28 +376,32 @@ function buildCSVMenu(self) {
         groups = update.enter()
           .append("div")
             .attr("class", "input-group");
-        groups.append("span")
-            .attr("class", "input-group-btn")
-          .append("div")
-            .attr("class", "btn btn-default active")
-            .attr("data-toggle", "button")
-            .html("Included")
-            .each(function () {
-                    this.onclick = function () {
-                            var streamName = this.parentNode.nextSibling;
-                            if (this.innerHTML == "Included") {
-                                this.innerHTML = "Include Stream";
-                                delete settingsObj[this.__data__.uuid];
-                                streamName.value = s3ui.getFilepath(this.__data__);
-                            } else {
-                                this.innerHTML = "Included";
-                                settingsObj[this.__data__.uuid] = streamName.value;
-                            }
-                            streamName.disabled = !streamName.disabled;
-                        };
-                });
+
+		// HIDDEN STREAM SELECTION
+        // groups.append("span")
+            // .attr("class", "input-group-btn")
+          // .append("div")
+            // .attr("class", "btn btn-default active")
+            // .attr("data-toggle", "button")
+            // .html("Included")
+            // .each(function () {
+                    // this.onclick = function () {
+                            // var streamName = this.parentNode.nextSibling;
+                            // if (this.innerHTML == "Included") {
+                                // this.innerHTML = "Include Stream";
+                                // delete settingsObj[this.__data__.uuid];
+                                // streamName.value = s3ui.getFilepath(this.__data__);
+                            // } else {
+                                // this.innerHTML = "Included";
+                                // settingsObj[this.__data__.uuid] = streamName.value;
+                            // }
+                            // streamName.disabled = !streamName.disabled;
+                        // };
+                // });
+
         groups.append("input")
-            .attr("type", "text")
+		// TEXT INPUTS HIDDEN
+            .attr("type", "hidden")
             .attr("class", "form-control")
             .property("value", function (d) { return s3ui.getFilepath(d); })
             .each(function () {
@@ -378,8 +414,10 @@ function buildCSVMenu(self) {
     } else {
         streamsettings.innerHTML = "You must plot streams in your desired time range before you can generate a CSV file.";
     }
-    
+
     var pwselector = graphExport.querySelector(".pointwidth-selector");
+    var pwselectbox = graphExport.querySelector(".resolutions");
+
     var domain = self.idata.oldXScale;
     var submitButton = graphExport.querySelector("div.csv-button");
     var $submitButton = $(submitButton);
@@ -387,25 +425,44 @@ function buildCSVMenu(self) {
     if (streams.length > 0 && domain != undefined) {
         domain = domain.domain();
         $(pwselector).css("display", "");
-        pwselector.onchange = function () {
+
+		pwselector.onchange = function () {
                 var pw = Math.pow(2, 62 - this.value);
                 var m1 = this.nextSibling.nextSibling;
-                m1.innerHTML = "Point width: " + s3ui.nanosToUnit(pw) + " [exponent = " + (62 - this.value) + "]";
+                //m1.innerHTML = "Point width: " + s3ui.nanosToUnit(pw) + " [exponent = " + (62 - this.value) + "]";
                 var pps = Math.ceil(1000000 * (domain[1] - domain[0]) / pw);
-                var statusString = "About " + pps + (pps == 1 ? " point per stream" : " points per stream");
+                var statusString = "(There will be " + pps + (pps == 1 ? " row in your CSV file)" : " rows in your CSV file)");
                 if (pps > 100000) {
                     $submitButton.addClass("disabled")
-                    statusString += " <strong>(too many to download)</strong>"
+                    statusString += "<br><strong>(Too many to download - choose a longer time per CSV row)</strong>"
                 } else {
                     $submitButton.removeClass("disabled")
                 }
                 m1.nextSibling.nextSibling.innerHTML = statusString;
             };
+
+		pwselectbox.onchange = function () {
+                var pw = Math.pow(2, 62 - this.value);
+                var m1 = this.nextSibling.nextSibling.nextSibling.nextSibling;
+                // m1.innerHTML = "Point width: " + s3ui.nanosToUnit(pw) + " [exponent = " + (62 - this.value) + "]";
+                var pps = Math.ceil(1000000 * (domain[1] - domain[0]) / pw);
+                var statusString = "(There will be " + pps + (pps == 1 ? " row in your CSV file)" : " rows in your CSV file)");
+                if (pps > 100000) {
+                    $submitButton.addClass("disabled")
+                    statusString += "<br><strong>(Too many to download - choose a longer time per CSV row)</strong>"
+                } else {
+                    $submitButton.removeClass("disabled")
+                }
+                m1.nextSibling.nextSibling.innerHTML = statusString;
+            };
+
         pwselector.value = 63 - self.idata.oldData[streams[0].uuid][2];
+        pwselectbox.value = 63 - self.idata.oldData[streams[0].uuid][2];
         pwselector.onchange();
-        
+        pwselectbox.onchange();
+
         submitButton.onclick = function () {
-                createCSVDownload(self, streams, settingsObj, domain, 62 - parseInt(pwselector.value), graphExport);
+                createCSVDownload(self, streams, settingsObj, domain, 62 - parseInt(pwselectbox.value), graphExport);
             };
     } else {
         $(pwselector).css("display", "none");
@@ -440,10 +497,10 @@ function login(self) {
     var password = passwordfield.value;
     usernamefield.value = "";
     passwordfield.value = "";
-    
+
     var $loginButton = $(loginElem.querySelector(".loginMenu"));
     var loginmessage = loginElem.querySelector(".loginmessage");
-    
+
     setButtonEnabled($loginButton, false);
     setLoginText(self, "Logging in...");
     self.requester.makeLoginRequest(username, password, function (token) {
@@ -508,32 +565,32 @@ function changepw(self, event) {
     var loginElem = self.find(".logindiv");
     var newpasswordfield1 = loginElem.querySelector(".newpassword1");
     var newpasswordfield2 = loginElem.querySelector(".newpassword2");
-    
+
     var loginmessage = loginElem.querySelector(".loginmessage");
-    
+
     if (newpasswordfield1.value !== newpasswordfield2.value) {
         loginmessage.innerHTML = "New passwords do not match";
         event.stopPropagation(); // keep the dropdown from closing
         return;
     }
-    
+
     var oldpasswordfield = loginElem.querySelector(".oldpassword");
-    
+
     var oldpassword = oldpasswordfield.value;
     var newpassword = newpasswordfield1.value;
-    
+
     oldpasswordfield.value = "";
     newpasswordfield1.value = "";
     newpasswordfield2.value = "";
-    
+
     var $loginButton = $(loginElem.querySelector(".loginMenu"));
     var loginmessage = loginElem.querySelector(".loginmessage");
-    
+
     var errorfunc = function () {
             loginmessage.innerHTML = "A server error has occurred";
             showChangepwMenu(self);
         };
-    
+
     setButtonEnabled($loginButton, false);
     setLoginText(self, "Changing password...");
     self.requester.makeChangePasswordRequest(oldpassword, newpassword, function (response) {

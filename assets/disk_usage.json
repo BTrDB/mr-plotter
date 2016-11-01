@@ -1,0 +1,14 @@
+{
+  "diskarray": [
+    {
+      "mount": "/dev/sda1", 
+      "spacetotal": "140207016", 
+      "spaceavail": "126137896"
+    }, 
+    {
+      "mount": "/dev/sdb1", 
+      "spacetotal": "2000152064", 
+      "spaceavail": "820176000"
+    }
+  ]
+}

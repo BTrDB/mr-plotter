@@ -1,0 +1,9 @@
+{ 
+	"home": 			"Página Principal"
+	"help": 			"Ayudar",
+	"select_streams": 	"Seleccionar Streams",
+	"start_date": 		"Zoom Manual: Start Date",
+	"end_date": 		"Zoom Manual: End Date",
+	"manual_zoom": 		"&larr; Zoom Manual &rarr;",
+	"timezone": 		"Zona Horaria",
+}

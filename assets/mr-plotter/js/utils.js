@@ -226,6 +226,23 @@ function getDisplayColor(axisObj, streamSettings) {
     return "rgb(0, 0, 0)";
 }
 
+function getLegendColor(axisObj, streamSettings) {
+    var streams = axisObj.streams;
+    if (streams.length > 0) {
+        var color = streamSettings[streams[0].uuid].color;
+		console.log(streamSettings[streams[0].uuid]);
+        for (var k = 1; k < streams.length; k++) {
+            if (streamSettings[streams[k].uuid].color != color) {
+				return color;
+                // return "rgb(0, 0, 0)";
+            }
+        }
+        return color;
+    }
+	return color;
+    // return "rgb(0, 0, 0)";
+}
+
 function getUnitString(unitDict) {
     var unitList = [];
     for (unit in unitDict) {
@@ -234,6 +251,20 @@ function getUnitString(unitDict) {
         }
     }
     return unitList.join(", ");
+}
+
+function getPSLUnit(stream) {
+    var pathcomps = stream.Path.split("/");
+    var last = pathcomps[pathcomps.length - 1];
+    if (s3ui.pslunitmap.hasOwnProperty(last)) {
+        return s3ui.pslunitmap[last];
+    } else {
+        return stream.Properties.UnitofMeasure;
+    }
+}
+
+function getPSLAxisFilter(stream) {
+    return function (d) { return !d.fixedaxis || d.axisname === s3ui.getPSLUnit(stream); }
 }
 
 s3ui.formatPath = formatPath;
@@ -248,4 +279,29 @@ s3ui.timeToStr = timeToStr;
 s3ui.escapeHTMLEntities = escapeHTMLEntities;
 s3ui.getTimezoneOffsetMinutes = getTimezoneOffsetMinutes;
 s3ui.getDisplayColor = getDisplayColor;
+s3ui.getLegendColor = getLegendColor;
 s3ui.getUnitString = getUnitString;
+s3ui.getPSLUnit = getPSLUnit
+s3ui.pslaxisnames = ["Degrees", "Amps", "Volts", "Hertz", "Watts", "VA", "VAR", "DPF", "bitmap"];
+s3ui.pslunitmap = {
+                    "C1ANG": "Degrees",
+                    "C1MAG": "Amps",
+                    "C2ANG": "Degrees",
+                    "C2Mag": "Amps",
+                    "C3ANG": "Degrees",
+                    "C3MAG": "Amps",
+                    "FREQ_L1_1S": "Hertz",
+                    "FREQ_L1_C37": "Hertz",
+                    "FUND_DPF": "DPF",
+                    "FUND_VA": "VA",
+                    "FUND_VAR": "VAR",
+                    "FUND_W": "Watts",
+                    "L1ANG": "Degrees",
+                    "L1MAG": "Volts",
+                    "L2ANG": "Degrees",
+                    "L2MAG": "Volts",
+                    "L3ANG": "Degrees",
+                    "L3MAG": "Volts",
+                    "LSTATE": "bitmap"
+                };
+s3ui.getPSLAxisFilter = getPSLAxisFilter;

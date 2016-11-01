@@ -74,6 +74,8 @@ function init_plot(self) {
     self.idata.xTitle = undefined;
     self.idata.xStart = undefined;
     self.idata.xEnd = undefined;
+    self.idata.xLegend = undefined;
+    
     
     self.idata.zoom = d3.behavior.zoom()
         .on("zoomstart", function () { repaintZoomNewData(self, function () {}, true); })
@@ -146,8 +148,10 @@ function repaintZoomNewData(self, callback, stopCache, widthEstimate) {
     }
     var selectedStreams = self.idata.selectedStreams;
     var domain = self.idata.oldXScale.domain();
-    self.idata.xStart.innerHTML = self.idata.labelFormatter.format(domain[0]);
-    self.idata.xEnd.innerHTML = self.idata.labelFormatter.format(domain[1]);
+    
+	// textContent added instead for IE compatibility and to patch cross-site scripting vulnerability
+	self.idata.xStart.textContent = self.idata.labelFormatter.format(domain[0]);
+    self.idata.xEnd.textContent = self.idata.labelFormatter.format(domain[1]);
     s3ui.updateVertCursorStats(self);
     var numResponses = 0;
     function makeDataCallback(stream, startTime, endTime) {
@@ -211,7 +215,9 @@ function initPlot(self) {
         .attr("width", self.idata.WIDTH)
         .attr("height", self.idata.HEIGHT)
         .attr("transform", "translate(" + self.idata.margin.left + ", " + self.idata.margin.top + ")");
-    var yaxiscover = chart.append("g")
+    
+	
+	var yaxiscover = chart.append("g")
         .attr("class", "y-axis-cover axiscover");
     yaxiscover.append("rect")
         .attr("width", self.idata.margin.left)
@@ -224,7 +230,8 @@ function initPlot(self) {
         .attr("transform", "translate(" + (self.idata.margin.left + self.idata.WIDTH) + ", 0)")
         .attr("class", "y-axis-background-right")
         .attr("fill", "white");
-    var xaxiscover = chart.append("g")
+    
+	var xaxiscover = chart.append("g")
         .attr("class", "x-axis-cover")
         .attr("transform", "translate(" + self.idata.margin.left + ", " + (self.idata.margin.top + self.idata.HEIGHT) + ")");
     xaxiscover.append("rect")
@@ -234,24 +241,45 @@ function initPlot(self) {
         .attr("class", "x-axis-background")
         .attr("fill", "white");
     self.idata.xTitle = xaxiscover.append("text")
-        .attr("class", "xtitle title")
+        .attr("class", "xtitle label")
         .attr("text-anchor", "middle")
         .attr("x", self.idata.WIDTH / 2)
-        .attr("y", 53)
-        .html("Time")
+        .attr("y", 42)
+        .text("Time")
       .node();
     self.idata.xStart = xaxiscover.append("text")
         .attr("text-anchor", "middle")
         .attr("class", "label")
+        .attr("id", "start_time")
         .attr("x", 0)
-        .attr("y", 35)
+        .attr("y", 42)
+        .text("Start Time")
       .node();
     self.idata.xEnd = xaxiscover.append("text")
         .attr("text-anchor", "middle")
         .attr("class", "label")
+        .attr("id", "end_time")
         .attr("x", self.idata.WIDTH)
-        .attr("y", 35)
+        .attr("y", 42)
+        .text("End Time")
       .node();
+    
+	
+	var xlegendcover = chart.append("g")
+        .attr("class", "x-legend-cover")
+        .attr("id", "legend-container")
+        .attr("style", "display: block;")
+        .attr("style", "visibility: visible;")
+		.attr("transform", "translate(" + (self.idata.margin.left + self.idata.WIDTH + 40 ) + ", 50)");
+
+	self.idata.xLegend = xlegendcover.append("g")
+        .attr("text-anchor", "end")
+        // .attr("class", "label")
+        .attr("id", "legend_top")
+        // .text("Legend")
+      .node();
+	
+	  
     var scriptsize = self.idata.scriptsize;
     var subscriptoffset = "4px";
     var superscriptoffset = "6px";
@@ -313,8 +341,8 @@ function initPlot(self) {
         .attr("dy", "-" + subscriptoffset)
         .html(" = ");
     cursors.deltax = [deltax.node(), deltax.append("tspan").node()];
-    deltax.append("tspan")
-        .html(" ns");
+    //deltax.append("tspan")
+        //.html(" ns");
     s3ui.hideEntry(cursors.deltax);
     
     var freqx = xaxiscover.append("text")
@@ -471,7 +499,7 @@ function initPlot(self) {
         .attr("height", self.idata.margin.top)
         .attr("transform", "translate(-1, 0)")
         .attr("class", "data-density-background")
-        .attr("fill", "white");
+        .attr("fill", "none");
     xaxiscover.append("g")
         .attr("class", "x-axis axis");
     var yaxes = chart.append("g")
@@ -482,7 +510,8 @@ function initPlot(self) {
     yaxes.append("g")
         .attr("transform", "translate(" + (self.idata.margin.left + self.idata.WIDTH) + ", 0)")
         .attr("class", "y-axes-right");
-    datadensitycover.append("g")
+    
+	datadensitycover.append("g")
         .attr("transform", "translate(0, 10)")
         .attr("class", "data-density-plot")
       .append("g")
@@ -523,14 +552,14 @@ function initPlot(self) {
             newCursor.select(event.pageY);
         }
     };
-    $(leftcursorselect).mousedown(createHorizCursor);
+    // $(leftcursorselect).mousedown(createHorizCursor);
     var rightcursorselect = chart.append("rect")
         .attr("width", self.idata.margin.right)
         .attr("height", self.idata.HEIGHT)
         .attr("class", "clickscreen rightcursorselect")
         .attr("transform", "translate(" + (self.idata.margin.left + self.idata.WIDTH) + ", " + self.idata.margin.top + ")")
       .node();
-    $(rightcursorselect).mousedown(createHorizCursor);
+    // $(rightcursorselect).mousedown(createHorizCursor);
     self.idata.cursorgroup = chart.append("g")
         .attr("transform", "translate(" + self.idata.margin.left + ", " + self.idata.margin.top + ")")
         .attr("class", "cursorgroup");
@@ -598,6 +627,7 @@ function updateSize(self, redraw) {
     zoom.size([WIDTH, HEIGHT]);
     self.idata.xTitle.setAttribute("x", WIDTH / 2);
     self.idata.xEnd.setAttribute("x", WIDTH);
+    self.idata.xLegend.setAttribute("x", WIDTH+28);
     self.$("svg.chart text.cursor-right-align").attr("x", WIDTH + 80);
     self.idata.cursorDataElems.deltay[0].setAttribute("x", WIDTH / 2);
     // Deal with cursor display
@@ -683,7 +713,7 @@ function drawPlot(self) {
         var tz = s3ui.getTimezoneOffsetMinutes(selectedTimezone, dst, true)
         self.idata.offset = tz[0] * -60000; // what to add to UTC to get to selected time zone
         // I probably don't need to sanitize the selectedTimezone since we know at this point that it's valid. But, it doesn't hurt.
-        self.idata.xTitle.innerHTML = "Time [" + s3ui.escapeHTMLEntities(selectedTimezone) + " (" + tz[1] + ")]";
+        self.idata.xTitle.textContent = "Time [" + s3ui.escapeHTMLEntities(selectedTimezone) + " (" + tz[1] + ")]";
         var startDateObj = new timezoneJS.Date(naiveStartDateObj.getFullYear(), naiveStartDateObj.getMonth(), naiveStartDateObj.getDate(), naiveStartDateObj.getHours(), naiveStartDateObj.getMinutes(), naiveStartDateObj.getSeconds(), 'UTC');
         var endDateObj = new timezoneJS.Date(naiveEndDateObj.getFullYear(), naiveEndDateObj.getMonth(), naiveEndDateObj.getDate(), naiveEndDateObj.getHours(), naiveEndDateObj.getMinutes(), naiveEndDateObj.getSeconds(), 'UTC');
         // startDateObj.getTime() and endDateObj.getTime() are in selected time zone
@@ -845,7 +875,10 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
     self.idata.oldAxisData = axisData;    
     
     numstreams = streams.length;
-    
+
+	
+	
+	
     var yScales = $.map(toDraw, function (elem) {
             var scale;
             if (isNaN(axisData[elem.axisid][0])) { // manual scale
@@ -897,23 +930,140 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
     }
     
     self.idata.oldYAxisArray = yAxisArray;
-    var leftMargins = leftYAxes.map(function (axis) { var scale = axis.scale(); return 65 + Math.max(35, Math.max.apply(this, scale.ticks().map(function (d) { self.idata.testElem.innerHTML = scale.tickFormat()(d); return self.idata.testElem.getComputedTextLength(); }))); });
-    var rightMargins = rightYAxes.map(function (axis) { var scale = axis.scale(); return 65 + Math.max(35, Math.max.apply(this, scale.ticks().map(function (d) { self.idata.testElem.innerHTML = scale.tickFormat()(d); return self.idata.testElem.getComputedTextLength(); }))); });
-    for (i = 1; i < leftMargins.length; i++) {
+    var leftMargins = leftYAxes.map(function (axis) { var scale = axis.scale(); return 65 + Math.max(35, Math.max.apply(this, scale.ticks().map(function (d) { self.idata.testElem.textContent = scale.tickFormat()(d); return self.idata.testElem.getComputedTextLength(); }))); });
+    var rightMargins = rightYAxes.map(function (axis) { var scale = axis.scale(); return 65 + Math.max(35, Math.max.apply(this, scale.ticks().map(function (d) { self.idata.testElem.textContent = scale.tickFormat()(d); return self.idata.testElem.getComputedTextLength(); }))); });
+    
+	for (i = 1; i < leftMargins.length; i++) {
         leftMargins[i] += leftMargins[i - 1];
     }
     leftMargins.unshift(0);
-    for (i = 1; i < rightMargins.length; i++) {
+    
+	for (i = 1; i < rightMargins.length; i++) {
         rightMargins[i] += rightMargins[i - 1];
     }
     rightMargins.unshift(0);
-    self.idata.margin.left = Math.max(100, leftMargins[leftMargins.length - 1]);
+       
+	self.idata.margin.left = Math.max(100, leftMargins[leftMargins.length - 1]);
     self.idata.margin.right = Math.max(100, rightMargins[rightMargins.length - 1]);
     updateSize(self, false);
-    
+ 
+    // color = streamSettings[streams[i].uuid].color;
+	// console.log(self.idata.streamSettings);
+	
     // Draw the y-axes
     var update;
-    update = d3.select(self.find("svg.chart g.y-axes"))
+	
+	var legend_box = d3.select(self.find("svg.chart g.x-legend-cover")).selectAll(".legend_box").remove();
+	var legend_refresh = d3.select(self.find("svg.chart g.x-legend-cover")).selectAll("rect#legend-background").remove();
+	
+	var legend;
+	var legend_item;
+	var legend_background;
+	var legend_array = self.idata.selectedStreams;
+
+		legend_background = d3.select(self.find("svg.chart g.x-legend-cover")).selectAll("g#legend_top")
+		legend_background.append("rect")
+		.attr("id", "legend-background")
+		.style("stroke", "black")
+		.style("stroke-width", 1)
+        .attr("fill", "white");
+	
+	if (legend_array.length == 1) {
+		
+		// ADDED IN CASE USER WANTS TO ALWAYS DEFAULT FIRST STREAM TO HAVE LEGEND ENABLED
+		var e = document.getElementById("legend-container");
+		if( e.style.display == 'none' ) { 
+		  $("#legend_toggler").html( "Hide Legend" );
+		  e.style.display = 'block';
+		  }
+		
+	
+		legend_item = d3.select(self.find("svg.chart g.x-legend-cover")).selectAll("g#legend_top")
+		.append("g")
+		.attr("class", "legend_box")
+	
+		
+			var legend_first = legend_item.append("text")
+				.attr("font-size", "12px")
+				.attr("class", function () { return "legend_item legendcolor-" + legend_array[0].uuid; })
+				.attr("text-anchor", "end")
+				.attr("fill", self.idata.streamSettings[legend_array[0].uuid].color)
+				.attr("transform", (function () {
+						return function () {
+							return "translate(" + 0 + ", " + ( 0 ) + ")rotate(0)";
+						};
+					 })())
+				.text( function () { return legend_array[0].Path + " —"; } );
+		
+		// console.log(legend_item);
+		
+	} else if (legend_array.length == 0) {
+		
+		// BASE CASE IF USER DESELECTS ALL STREAMS TO REMOVE LEGEND BOX
+		var e = document.getElementById("legend-container");
+		if( e.style.display == 'block' ) {
+		  $("#legend_toggler").html( "Show Legend" );
+		  e.style.display = 'none';
+		  }
+		
+	} else {
+		
+		
+		legend_item = d3.select(self.find("svg.chart g.x-legend-cover")).selectAll("g#legend_top")
+		.data(legend_array)
+		.enter()
+		.append("g")
+		.attr("class", "legend_box")
+		
+		
+		var legend_box = d3.select(self.find("svg.chart g.x-legend-cover")).selectAll(".legend_box").remove();
+        
+		legend = d3.selectAll(legend_array)
+			.each(function(d, i) {
+					
+				legend_item = d3.select(self.find("svg.chart g.x-legend-cover")).selectAll("g#legend_top")
+				.append("g")
+				.attr("class", "legend_box")
+				
+				// console.log(self.idata.streamSettings[legend_array[i].uuid].color);
+				
+				var legend_items = legend_item.append("text")
+					.attr("font-size", "12px")
+					.attr("class", function (d) { return "legend_item legend_number-"+ i +" legendcolor-" + legend_array[i].uuid; })
+					.attr("text-anchor", "end")
+					.attr("fill", self.idata.streamSettings[legend_array[i].uuid].color)
+					.attr("transform", (function () {
+							return function () {
+								return "translate(" + 0 + ", " + ( i*20 ) + ")rotate(0)";
+							};
+						 })())
+					.text( function () { return legend_array[i].Path + " —"; } );
+		});
+
+		// console.log(legend_item);
+	};
+    
+	
+	// LEGEND RESIZE FUNCTION NEEDS TO BE AFTER ITEMS ARE INITIALIZED
+	var lb_height = document.getElementById("legend_top").getBBox().height;
+	// console.log(lb_height);
+	var lb_width = document.getElementById("legend_top").getBBox().width;
+	// console.log(lb_width);
+	
+	var legend_resize = d3.select(self.find("svg.chart g.x-legend-cover")).selectAll("rect#legend-background")
+	.attr("width", lb_width + 40 ) // Move 1 to the left and increase width by 2 to cover boundaries when zooming
+	.attr("transform", "translate(" + ( -lb_width -20 ) + ", " + -30 + ")")
+	.attr("height", lb_height + 35 );
+	
+	
+	
+	// .attr("opacity", .5)
+
+	
+	
+	
+	// Generate Axis Bars
+	update = d3.select(self.find("svg.chart g.y-axes"))
       .selectAll("g.y-axis-left")
       .data(leftYAxes);
     update.enter()
@@ -924,6 +1074,9 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
         .each(function (yAxis) { d3.select(this).call(yAxis.orient("left")); });
     update.exit().remove();
     
+	
+	
+	
     update = d3.select(self.find("svg.chart g.y-axes-right"))
       .selectAll("g.y-axis-right")
       .data(rightYAxes);
@@ -934,8 +1087,11 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
         .attr("class", function (d, i) { return "y-axis-right axis drawnAxis-" + rightYObjs[i].axisid; })
         .each(function (yAxis) { d3.select(this).call(yAxis.orient("right")); });
     update.exit().remove();
+	
+	
+	
     
-    // Draw the y-axis titles
+    // Draw the y-axis titles on left side
     update = d3.select(self.find("svg.chart g.y-axes-left"))
       .selectAll("text.ytitle")
       .data(leftYObjs);
@@ -950,8 +1106,11 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
                     return "translate(" + (self.idata.margin.left - leftMargins[++j] + 40) + ", " + (self.idata.HEIGHT / 2) + ")rotate(-90)";
                 };
              })())
-        .html(function (d) { return d.axisname; });
+        .text(function (d) { return d.axisname; });
     update.exit().remove();
+	
+	
+    // Draw the y-axis titles on right side
     update = d3.select(self.find("svg.chart g.y-axes-right"))
       .selectAll("text.ytitle")
       .data(rightYObjs);
@@ -966,18 +1125,26 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
                     return "translate(" + (rightMargins[++i] - 40) + ", " + (self.idata.HEIGHT / 2) + ")rotate(90)";
                 };
              })())
-        .html(function (d) { return d.axisname; });
+        .text(function (d) { return d.axisname; });
     update.exit().remove();
+
     
     s3ui.updateHorizCursorStats(self);
     
+	// console.log(toDraw);
+
     for (var i = 0; i < toDraw.length; i++) {
         s3ui.applyDisplayColor(self, toDraw[i], streamSettings);
+		// console.log("TODRAW: ");
     }
     
-    self.find(".permalink").innerHTML = "";
+	
+	self.find(".permalink").innerHTML = "";
     drawStreams(self, data, streams, streamSettings, xScale, yScales, yAxisArray, axisData, $loadingElem, false);
 }
+
+
+
 
 /* Render the graph on the screen. If DRAWFAST is set to true, the entire plot is not drawn (for the sake of speed); in
    paticular new streams are not added and old ones not removed (DRAWFAST tells it to optimize for scrolling).
@@ -1068,6 +1235,7 @@ function drawStreams (self, data, streams, streamSettings, xScale, yScales, yAxi
             s3ui.setStreamMessage(self, streams[i].uuid, undefined, 3);
         }
         color = streamSettings[streams[i].uuid].color;
+		// console.log(color);
         dataObj = {color: color, points: points, uuid: streams[i].uuid};
         dataObj.linechunks = lineChunks.map(function (x) {
                 x[0].reverse();
@@ -1076,12 +1244,27 @@ function drawStreams (self, data, streams, streamSettings, xScale, yScales, yAxi
                 return x;
             });
         dataArray.push(dataObj);
+		
+		// console.log(dataObj);
+
+		
         if (outOfRange) {
             s3ui.setStreamMessage(self, streams[i].uuid, "Data outside axis range; try rescaling y-axis", 2);
         } else {
             s3ui.setStreamMessage(self, streams[i].uuid, undefined, 2);
         }
     }
+	
+	
+	
+	for (var i = 0; i < dataObj.length; i++) {        
+		// s3ui.applyLegendColor(self, dataObj[i], streamSettings);
+		console.log(dataObj[i]);
+	}
+
+	
+
+	
     update = d3.select(self.find("g.chartarea"))
       .selectAll("g.streamGroup")
       .data(dataArray);
@@ -1331,7 +1514,7 @@ function resetZoom(self) {
 }
 
 function applyDisplayColor(self, axisObj, streamSettings) {
-    var color = s3ui.getDisplayColor(axisObj, streamSettings);
+	var color = s3ui.getDisplayColor(axisObj, streamSettings);
     yAxisDOMElem = self.find(".drawnAxis-" + axisObj.axisid);
     if (yAxisDOMElem === null) {
         return;
@@ -1340,6 +1523,9 @@ function applyDisplayColor(self, axisObj, streamSettings) {
     $(yAxisDOMElem.querySelectorAll("line")).css("stroke", color);
     yAxisDOMElem.querySelector("path").style.stroke = color;
     self.find(".axistitle-" + axisObj.axisid).style.fill = color;
+	
+    // self.find(".legend_item").style.fill = color;
+    // self.find(".legendcolor-" + axisObj.axisid).style.fill = color;
 }
 
 s3ui.init_plot = init_plot;
