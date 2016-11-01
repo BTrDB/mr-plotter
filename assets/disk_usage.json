@@ -7,8 +7,8 @@
     }, 
     {
       "mount": "/dev/sdb1", 
-      "spacetotal": "2000152064", 
-      "spaceavail": "820176000"
+      "spacetotal": "0", 
+      "spaceavail": "0"
     }
   ]
 }
