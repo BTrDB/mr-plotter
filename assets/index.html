@@ -234,7 +234,7 @@
 
                   $(".prgbar").width( 100 - (space_remaining).toFixed(2)*100 +"%");
                   // $(".prgbar").width( (100) +"%");
-                  $(".prgtext").html( 100 - (space_remaining).toFixed(3)*100 +"% <span data-localize='space_used'>used</span> ( " + bytesToSize(space_total - space_available) + " of " + bytesToSize(space_total) + " )" );
+                  $(".prgtext").html( (100 - (space_remaining).toFixed(3)*100).toString().substring(0,5) +"% <span data-localize='space_used'>used</span> ( " + bytesToSize(space_total - space_available) + " of " + bytesToSize(space_total) + " )" );
 
                 });
 
