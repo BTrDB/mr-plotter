@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Mr. Plotter.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 // Code to describe the behavior of cursors
 
 function init_cursors(self) {
