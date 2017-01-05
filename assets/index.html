@@ -588,20 +588,21 @@
 
                                                         Time per row in your CSV file:
                                                         <select class="resolutions" oninput="updateInput(this.value)" onchange="updateInput(this.value)">
-                                                                <option value="16">about 1 Day</option>
-                                                                <option value="20">about 1 Hour</option>
-                                                                <option value="26">about 1 Minute</option>
-                                                                <option value="32">about 1 Second</option>
-                                                                <option value="38">about 1 Cycle</option>
-                                                                <option value="39">about 1/2 Cycle</option>
+                                                          <option value="0">1/2 60Hz cycle (8333333 ns)</option>
+                                                          <option value="1">1/2 50hz cycle (10000000 ns)</option>
+                                                          <option value="2">1 60Hz cycle (16666666 ns)</option>
+                                                          <option value="3">1 50Hz cycle (20000000 ns)</option>
+                                                          <option value="4">1 second</option>
+                                                          <option value="5">1 minute</option>
+                                                          <option value="6">5 minutes</option>
+                                                          <option value="7">30 minutes</option>
+                                                          <option value="8">1 hour</option>
+                                                          <option value="9">1 day</option>
                                                         </select>
 
-                                                        <input type="hidden" id="resolutions" min='0' max='62' class="pointwidth-selector"/>
-
-                                                            <div class="selected-pointwidth"></div>
-                                                            <div class="selected-pw-desc"></div>
-
-
+                                                        <input type="hidden" id="resolutions" min='0' max='9' class="windowwidth-selector"/>
+                                                            <div class="selected-windowwidth"></div>
+                                                            <div class="selected-window-desc"></div>
                                                         </div>
 
 

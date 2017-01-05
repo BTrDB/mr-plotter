@@ -412,54 +412,66 @@ function buildCSVMenu(self) {
         streamsettings.innerHTML = "You must plot streams in your desired time range before you can generate a CSV file.";
     }
 
-    var pwselector = graphExport.querySelector(".pointwidth-selector");
+    var pwselector = graphExport.querySelector(".windowwidth-selector");
     var pwselectbox = graphExport.querySelector(".resolutions");
 
     var domain = self.idata.oldXScale;
     var submitButton = graphExport.querySelector("div.csv-button");
     var $submitButton = $(submitButton);
     var textSpace;
+    var widthlists = [
+      8333333, //half 60hz
+      10000000, //half 50hz
+      16666666, //full 60hz
+      20000000, //full 50hz
+      1000000000, //second
+      60000000000, //minute
+      300000000000, //5 minutes
+      1800000000000, //30 minutes
+      3600000000000, //hour
+      86400000000000 //day
+    ];
     if (streams.length > 0 && domain != undefined) {
         domain = domain.domain();
         $(pwselector).css("display", "");
 
         pwselector.onchange = function () {
-                var pw = Math.pow(2, 62 - this.value);
+                var wt = widthlists[this.value];
                 var m1 = this.nextSibling.nextSibling;
-                //m1.innerHTML = "Point width: " + s3ui.nanosToUnit(pw) + " [exponent = " + (62 - this.value) + "]";
-                var pps = Math.ceil(1000000 * (domain[1] - domain[0]) / pw);
+                //m1.innerHTML = "Window width: "+widthdesc[this.value];
+                var pps = Math.ceil(1000000 * (domain[1] - domain[0]) / wt);
                 var statusString = "(There will be " + pps + (pps == 1 ? " row in your CSV file)" : " rows in your CSV file)");
                 if (pps > 100000) {
-                    $submitButton.addClass("disabled")
-                    statusString += "<br><strong>(Too many to download - choose a longer time per CSV row)</strong>"
+                   $submitButton.addClass("disabled")
+                   statusString += "<br><strong>(Too many to download - choose a longer time per CSV row)</strong>"
                 } else {
-                    $submitButton.removeClass("disabled")
+                   $submitButton.removeClass("disabled")
                 }
                 m1.nextSibling.nextSibling.innerHTML = statusString;
             };
 
         pwselectbox.onchange = function () {
-                var pw = Math.pow(2, 62 - this.value);
+                var wt = widthlists[this.value];
                 var m1 = this.nextSibling.nextSibling.nextSibling.nextSibling;
-                // m1.innerHTML = "Point width: " + s3ui.nanosToUnit(pw) + " [exponent = " + (62 - this.value) + "]";
-                var pps = Math.ceil(1000000 * (domain[1] - domain[0]) / pw);
+                //m1.innerHTML = "Window width: "+widthdesc[this.value];
+                var pps = Math.ceil(1000000 * (domain[1] - domain[0]) / wt);
                 var statusString = "(There will be " + pps + (pps == 1 ? " row in your CSV file)" : " rows in your CSV file)");
                 if (pps > 100000) {
-                    $submitButton.addClass("disabled")
-                    statusString += "<br><strong>(Too many to download - choose a longer time per CSV row)</strong>"
+                   $submitButton.addClass("disabled")
+                   statusString += "<br><strong>(Too many to download - choose a longer time per CSV row)</strong>"
                 } else {
-                    $submitButton.removeClass("disabled")
+                   $submitButton.removeClass("disabled")
                 }
                 m1.nextSibling.nextSibling.innerHTML = statusString;
             };
 
-        pwselector.value = 63 - self.idata.oldData[streams[0].uuid][2];
-        pwselectbox.value = 63 - self.idata.oldData[streams[0].uuid][2];
+        pwselector.value = self.idata.oldData[streams[0].uuid][2];
+        pwselectbox.value = self.idata.oldData[streams[0].uuid][2];
         pwselector.onchange();
         pwselectbox.onchange();
 
         submitButton.onclick = function () {
-                createCSVDownload(self, streams, settingsObj, domain, 62 - parseInt(pwselectbox.value), graphExport);
+                createCSVDownload(self, streams, settingsObj, domain, widthlists[parseInt(pwselector.value)], graphExport);
             };
     } else {
         $(pwselector).css("display", "none");
@@ -470,7 +482,8 @@ function buildCSVMenu(self) {
     }
 }
 
-function createCSVDownload(self, streams, settingsObj, domain, pwe, graphExport) {
+
+function createCSVDownload(self, streams, settingsObj, domain, wt, graphExport) {
     streams = streams.filter(function (x) { return settingsObj.hasOwnProperty(x.uuid); }).map(function (x) { return x.uuid; });
     var dataJSON = {
             "UUIDS": streams,
@@ -478,7 +491,7 @@ function createCSVDownload(self, streams, settingsObj, domain, pwe, graphExport)
             "StartTime": domain[0] - self.idata.offset,
             "EndTime": domain[1] - self.idata.offset,
             "UnitOfTime": "ms",
-            "PointWidth": pwe,
+            "WindowWidth": wt,
             "_token": self.requester.getToken()
         };
     var csvform = graphExport.querySelector(".csv-form");
