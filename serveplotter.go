@@ -56,13 +56,13 @@ const (
 )
 
 type CSVRequest struct {
-	StartTime int64
-	EndTime int64
-	UUIDs []string `json:"UUIDS"`
-	Labels []string
-	UnitofTime string
-	Token string `json:"_token,omitempty"`
-	PointWidth uint8
+	StartTime   int64
+	EndTime     int64
+	UUIDs       []string `json:"UUIDS"`
+	Labels      []string
+	UnitofTime  string
+	Token       string `json:"_token,omitempty"`
+	WindowWidth int64
 }
 
 var upgrader = ws.Upgrader{}
@@ -774,9 +774,9 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if jsonCSVReq.PointWidth > 62 {
+	if jsonCSVReq.WindowWidth < 0 {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(fmt.Sprintf("Invalid point width: %d", jsonCSVReq.PointWidth)))
+		w.Write([]byte(fmt.Sprintf("Invalid window width: %d", jsonCSVReq.WindowWidth)))
 		return
 	}
 
@@ -800,10 +800,7 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var pps int64 = deltaT >> jsonCSVReq.PointWidth
-	if deltaT & ((1 << jsonCSVReq.PointWidth) - 1) != 0 {
-		pps += 1
-	}
+	var pps int64 = deltaT / jsonCSVReq.WindowWidth
 	if pps > csvMaxPoints {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(fmt.Sprintf("CSV file too big: estimated %d points", pps)))
