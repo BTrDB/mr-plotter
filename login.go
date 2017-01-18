@@ -25,6 +25,7 @@ package main
 
 import (
 	"crypto/rand"
+	"fmt"
 	"log"
 	"math/big"
 	"sync"
@@ -36,6 +37,12 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+var aes_key_length int
+var aes_encrypt_key []byte
+
+var hmac_key_length int
+var hmac_key []byte
+
 /* 16 bytes should be longer than anyone can guess. */
 const TOKEN_BYTE_LEN = 16
 var MAX_TOKEN_BYTES = []byte{ 1,
@@ -46,6 +53,7 @@ type LoginSession struct {
 	lastUsed int64
 	user string
 	token [TOKEN_BYTE_LEN]byte
+	//issued int64
 	tags []string
 }
 
@@ -61,6 +69,26 @@ var sessionsbyidlock sync.Mutex = sync.Mutex{} // also protects session contents
 // Maps user to session
 var sessionsbyuser map[string]*LoginSession = make(map[string]*LoginSession)
 var sessionsbyuserlock sync.RWMutex = sync.RWMutex{}
+
+func SetEncryptKey(key []byte) error {
+	var keylen int = len(key)
+	if keylen != 16 && keylen != 24 && keylen != 32 {
+		return fmt.Errorf("Key length is invalid: must be 16, 24, or 32 bytes (got %d bytes)", keylen)
+	}
+	aes_encrypt_key = key
+	aes_key_length = keylen
+	return nil
+}
+
+func SetMACKey(key []byte) error {
+	var keylen int = len(key)
+	if keylen < 16 {
+		return fmt.Errorf("Key length must be at least 16 bytes (got %d bytes)", keylen)
+	}
+	hmac_key = key
+	hmac_key_length = keylen
+	return nil
+}
 
 func checkpassword(passwordConn *mgo.Collection, user string, password []byte) (userdoc map[string]interface{}, err error) {
 	userquery := bson.M{ "user": user }

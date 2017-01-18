@@ -108,6 +108,9 @@ type Config struct {
 	CertFile string
 	KeyFile string
 
+	SessionEncryptKeyFile string
+	SessionMacKeyFile string
+
 	BtrdbEndpoints []string
 	NumDataConn uint16
 	NumBracketConn uint16
@@ -135,6 +138,9 @@ var configRequiredKeys = map[string]bool{
 	"plotter_dir": true,
 	"cert_file": true,
 	"key_file": true,
+
+	"session_encrypt_key_file": true,
+	"session_mac_key_file": true,
 
 	"btrdb_endpoints": true,
 	"max_data_requests": true,
@@ -179,6 +185,26 @@ func main() {
 	err = rawConfig.MapTo(&config)
 	if err != nil {
 		log.Fatalf("Could not map configuration file: %v", err)
+	}
+
+	ekey, err := ioutil.ReadFile(config.SessionEncryptKeyFile)
+	if err != nil {
+		log.Fatalf("Could not read encryption key file: %v", err)
+	}
+
+	err = SetEncryptKey(ekey)
+	if err != nil {
+		log.Fatalf("Invalid encryption key: %v", err)
+	}
+
+	mkey, err := ioutil.ReadFile(config.SessionMacKeyFile)
+	if err != nil {
+		log.Fatalf("Coult not read MAC key file: %v", err)
+	}
+
+	err = SetMACKey(mkey)
+	if err != nil {
+		log.Fatalf("Invalid MAC key: %v", err)
 	}
 
 	mdServer = config.MetadataServer
