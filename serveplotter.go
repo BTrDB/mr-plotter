@@ -22,6 +22,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -36,6 +37,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"gopkg.in/btrdb.v4"
 
 	"gopkg.in/ini.v1"
 
@@ -76,6 +79,7 @@ func (rw RespWrapper) GetWriter() io.Writer {
 }
 
 /* State needed to handle HTTP requests. */
+var btrdbConn *btrdb.BTrDB
 var dr *DataRequester
 var br *DataRequester
 var mdServer string
@@ -102,7 +106,7 @@ type Config struct {
 	CertFile string
 	KeyFile string
 
-	DbAddr string
+	BtrdbEndpoints []string
 	NumDataConn uint16
 	NumBracketConn uint16
 	MaxDataRequests uint32
@@ -130,9 +134,7 @@ var configRequiredKeys = map[string]bool{
 	"cert_file": true,
 	"key_file": true,
 
-	"db_addr": true,
-	"num_data_conn": true,
-	"num_bracket_conn": true,
+	"btrdb_endpoints": true,
 	"max_data_requests": true,
 	"max_bracket_requests": true,
 	"metadata_server": true,
@@ -194,11 +196,17 @@ func main() {
 	permalinkConn = plotterDBConn.C("permalinks")
 	accountConn = plotterDBConn.C("accounts")
 
-	dr = NewDataRequester(config.DbAddr, int(config.NumDataConn), config.MaxDataRequests, time.Duration(config.DbDataTimeoutSeconds) * time.Second, false)
+	btrdbConn, err = btrdb.Connect(context.TODO(), config.BtrdbEndpoints...)
+	if err != nil {
+		fmt.Errorf("Could not connnect to BTrDB cluster: %v\n", err)
+		os.Exit(1)
+	}
+
+	dr = NewDataRequester(btrdbConn, config.MaxDataRequests)
 	if dr == nil {
 		os.Exit(1)
 	}
-	br = NewDataRequester(config.DbAddr, int(config.NumBracketConn), config.MaxBracketRequests, time.Duration(config.DbBracketTimeoutSeconds) * time.Second, true)
+	br = NewDataRequester(btrdbConn, config.MaxBracketRequests)
 	if br == nil {
 		os.Exit(1)
 	}
@@ -416,7 +424,7 @@ func datawsHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			if hasPermission(loginsession, uuidBytes) {
-				dr.MakeDataRequest(uuidBytes, startTime, endTime, uint8(pw), &cw)
+				dr.MakeDataRequest(context.Background(), uuidBytes, startTime, endTime, uint8(pw), &cw)
 			} else {
 				cw.GetWriter().Write([]byte("[]"))
 			}
@@ -471,7 +479,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if hasPermission(loginsession, uuidBytes) {
-			dr.MakeDataRequest(uuidBytes, startTime, endTime, uint8(pw), wrapper)
+			dr.MakeDataRequest(context.Background(), uuidBytes, startTime, endTime, uint8(pw), wrapper)
 		} else {
 			wrapper.GetWriter().Write([]byte("[]"))
 		}
@@ -518,7 +526,7 @@ func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
 					viewable = append(viewable, uuid)
 				}
 			}
-			br.MakeBracketRequest(uuids, &cw)
+			br.MakeBracketRequest(context.Background(), uuids, &cw)
 		}
 		if cw.CurrWriter != nil {
 			cw.CurrWriter.Close()
@@ -577,9 +585,9 @@ func bracketHandler (w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if canview {
-			br.MakeBracketRequest(uuids, wrapper)
+			br.MakeBracketRequest(context.Background(), uuids, wrapper)
 		} else {
-			br.MakeBracketRequest([]uuid.UUID{}, wrapper)
+			br.MakeBracketRequest(context.Background(), []uuid.UUID{}, wrapper)
 		}
 	}
 }
