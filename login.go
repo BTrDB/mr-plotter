@@ -25,7 +25,7 @@ package main
 
 import (
 	"crypto/rand"
-	"fmt"
+	"log"
 	"math/big"
 	"sync"
 	"time"
@@ -89,7 +89,7 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 
 	tagintlist, ok := userdoc["tags"].([]interface{})
 	if !ok {
-		fmt.Println("Corrupt Mongo document: required key \"tags\" does not refer to an object")
+		log.Println("Corrupt Mongo document: required key \"tags\" does not refer to an object")
 		return nil
 	}
 
@@ -97,7 +97,7 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 	for i := 0; i < len(taglist); i++ {
 		taglist[i], ok = tagintlist[i].(string)
 		if !ok {
-			fmt.Printf("Corrupt Mongo document: tag at index %d for user %s is not a string\n", i, user)
+			log.Printf("Corrupt Mongo document: tag at index %d for user %s is not a string", i, user)
 			return nil
 		}
 	}
@@ -116,7 +116,7 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 		for true {
 			token, err = rand.Int(rand.Reader, &MAX_TOKEN)
 			if err != nil {
-				fmt.Println("Could not generate session key")
+				log.Println("Could not generate session key")
 				return nil
 			}
 			tokenbytes := token.Bytes()

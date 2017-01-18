@@ -91,6 +91,8 @@ var token64dlen int
 var permalinklen int
 var permalinkdlen int
 var csvMaxPoints int64
+var dataTimeout time.Duration
+var bracketTimeout time.Duration
 
 /* I don't order these elements from largest to smallest, so the int64s at the
    bottom may not be 8-byte aligned. That's OK, because I don't anticipate
@@ -162,45 +164,48 @@ func main() {
 
 	rawConfig, err := ini.Load(filename)
 	if err != nil {
-		fmt.Printf("Could not parse %s: %v\n", filename, err)
-		return
+		log.Fatalf("Could not parse %s: %v", filename, err)
 	}
 
 	/* Validate the configuration file. */
 	defaultSect := rawConfig.Section("")
 	for requiredKey, _ := range configRequiredKeys {
 		if !defaultSect.HasKey(requiredKey) {
-			fmt.Printf("Configuration file is missing required key \"%s\"\n", requiredKey)
-			return
+			log.Fatalf("Configuration file is missing required key \"%s\"", requiredKey)
 		}
 	}
 
 	rawConfig.NameMapper = ini.TitleUnderscore
 	err = rawConfig.MapTo(&config)
 	if err != nil {
-		fmt.Printf("Could not map configuration file: %v\n", err)
-		return
+		log.Fatalf("Could not map configuration file: %v", err)
 	}
 
 	mdServer = config.MetadataServer
 	csvURL = config.CsvUrl
 	csvMaxPoints = config.CsvMaxPointsPerStream
 
+	log.Printf("Connecting to MongoDB... ")
 	mongoConn, err := mgo.Dial(config.MongoServer)
 	if err != nil {
-		fmt.Printf("Could not connect to MongoDB Server at address %s\n", config.MongoServer)
-		os.Exit(1)
+		log.Fatalf("Error: %v\n", err)
 	}
+	log.Println("Successfully connected to MongoDB")
 
 	plotterDBConn := mongoConn.DB("mr_plotter")
 	permalinkConn = plotterDBConn.C("permalinks")
 	accountConn = plotterDBConn.C("accounts")
 
-	btrdbConn, err = btrdb.Connect(context.TODO(), config.BtrdbEndpoints...)
+	log.Printf("Connecting to BTrDB cluster... ")
+	btrdbConn, err = btrdb.Connect(context.Background(), config.BtrdbEndpoints...)
 	if err != nil {
-		fmt.Errorf("Could not connnect to BTrDB cluster: %v\n", err)
+		log.Fatalf("Error: %v\n", err)
 		os.Exit(1)
 	}
+	log.Println("Successfully connected to BTrDB")
+
+	dataTimeout = time.Duration(config.DbDataTimeoutSeconds) * time.Second
+	bracketTimeout = time.Duration(config.DbBracketTimeoutSeconds) * time.Second
 
 	dr = NewDataRequester(btrdbConn, config.MaxDataRequests)
 	if dr == nil {
@@ -212,10 +217,8 @@ func main() {
 	}
 
 	go purgeSessionsPeriodically(config.SessionExpirySeconds, config.SessionPurgeIntervalSeconds)
-
-	go logWaitingRequests(os.Stdout, time.Duration(config.OutstandingRequestLogInterval) * time.Second)
-
-	go logNumGoroutines(os.Stdout, time.Duration(config.NumGoroutinesLogInterval) * time.Second)
+	go logWaitingRequests(time.Duration(config.OutstandingRequestLogInterval) * time.Second)
+	go logNumGoroutines(time.Duration(config.NumGoroutinesLogInterval) * time.Second)
 
 	token64len = base64.StdEncoding.EncodedLen(TOKEN_BYTE_LEN)
 	token64dlen = base64.StdEncoding.DecodedLen(token64len)
@@ -265,17 +268,17 @@ func main() {
 	os.Exit(1);
 }
 
-func logWaitingRequests(output io.Writer, period time.Duration) {
+func logWaitingRequests(period time.Duration) {
 	for {
 		time.Sleep(period)
-		output.Write([]byte(fmt.Sprintf("Waiting data requests: %v; Waiting bracket requests: %v\n", dr.totalWaiting, br.totalWaiting)))
+		log.Printf("Waiting data requests: %v; Waiting bracket requests: %v", dr.totalWaiting, br.totalWaiting)
 	}
 }
 
-func logNumGoroutines(output io.Writer, period time.Duration) {
+func logNumGoroutines(period time.Duration) {
 	for {
 		time.Sleep(period)
-		output.Write([]byte(fmt.Sprintf("Number of goroutines: %v\n", runtime.NumGoroutine())))
+		log.Printf("Number of goroutines: %v", runtime.NumGoroutine())
 	}
 }
 
@@ -424,7 +427,11 @@ func datawsHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			if hasPermission(loginsession, uuidBytes) {
-				dr.MakeDataRequest(context.Background(), uuidBytes, startTime, endTime, uint8(pw), &cw)
+				var ctx context.Context
+				var cancelfunc context.CancelFunc
+				ctx, cancelfunc = context.WithTimeout(context.Background(), dataTimeout)
+				dr.MakeDataRequest(ctx, uuidBytes, startTime, endTime, uint8(pw), &cw)
+				cancelfunc()
 			} else {
 				cw.GetWriter().Write([]byte("[]"))
 			}
@@ -435,13 +442,13 @@ func datawsHandler(w http.ResponseWriter, r *http.Request) {
 
 		writer, err := websocket.NextWriter(ws.TextMessage)
 		if err != nil {
-			fmt.Println("Could not echo tag to client")
+			log.Printf("Could not echo tag to client: %v", err)
 		}
 
 		if cw.CurrWriter != nil {
 			_, err = writer.Write([]byte(echoTag))
 			if err != nil {
-				fmt.Println("Could not echo tag to client")
+				log.Printf("Could not echo tag to client: %v", err)
 			}
 			writer.Close()
 		}
@@ -479,7 +486,11 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if hasPermission(loginsession, uuidBytes) {
-			dr.MakeDataRequest(context.Background(), uuidBytes, startTime, endTime, uint8(pw), wrapper)
+			var ctx context.Context
+			var cancelfunc context.CancelFunc
+			ctx, cancelfunc = context.WithTimeout(context.Background(), dataTimeout)
+			dr.MakeDataRequest(ctx, uuidBytes, startTime, endTime, uint8(pw), wrapper)
+			cancelfunc()
 		} else {
 			wrapper.GetWriter().Write([]byte("[]"))
 		}
@@ -526,7 +537,11 @@ func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
 					viewable = append(viewable, uuid)
 				}
 			}
-			br.MakeBracketRequest(context.Background(), uuids, &cw)
+			var ctx context.Context
+			var cancelfunc context.CancelFunc
+			ctx, cancelfunc = context.WithTimeout(context.Background(), bracketTimeout)
+			br.MakeBracketRequest(ctx, uuids, &cw)
+			cancelfunc()
 		}
 		if cw.CurrWriter != nil {
 			cw.CurrWriter.Close()
@@ -534,13 +549,13 @@ func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
 
 		writer, err := websocket.NextWriter(ws.TextMessage)
 		if err != nil {
-			fmt.Println("Could not echo tag to client")
+			log.Printf("Could not echo tag to client: %v", err)
 		}
 
 		if cw.CurrWriter != nil {
 			_, err = writer.Write([]byte(echoTag))
 			if err != nil {
-				fmt.Println("Could not echo tag to client")
+				log.Printf("Could not echo tag to client: %v", err)
 			}
 			writer.Close()
 		}
@@ -584,11 +599,15 @@ func bracketHandler (w http.ResponseWriter, r *http.Request) {
 				break
 			}
 		}
+		var ctx context.Context
+		var cancelfunc context.CancelFunc
+		ctx, cancelfunc = context.WithTimeout(context.Background(), dataTimeout)
 		if canview {
-			br.MakeBracketRequest(context.Background(), uuids, wrapper)
+			br.MakeBracketRequest(ctx, uuids, wrapper)
 		} else {
-			br.MakeBracketRequest(context.Background(), []uuid.UUID{}, wrapper)
+			br.MakeBracketRequest(ctx, []uuid.UUID{}, wrapper)
 		}
+		cancelfunc()
 	}
 }
 
@@ -711,7 +730,7 @@ func permalinkHandler(w http.ResponseWriter, r *http.Request) {
 
 		if err != nil {
 			// In the future I could try something like restarting the connection
-			fmt.Printf("Could not update permalink record: %v\n", err)
+			log.Printf("Could not update permalink record: %v", err)
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -720,7 +739,7 @@ func permalinkHandler(w http.ResponseWriter, r *http.Request) {
 		err = permalinkEncoder.Encode(jsonPermalink)
 
 		if err != nil {
-			fmt.Printf("Could not encode permlink data: %v\n", err)
+			log.Printf("Could not encode permlink data: %v", err)
 		}
 	} else {
 		var permalinkDecoder *json.Decoder = json.NewDecoder(r.Body)

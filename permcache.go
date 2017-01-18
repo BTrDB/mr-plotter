@@ -26,6 +26,7 @@ import (
 	"container/list"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -124,7 +125,7 @@ func tagHasPermission(tag string, uuidBytes uuid.UUID, uuidString string) bool {
 		hasPerm = false
 	} else {
 		/* Server error. */
-		fmt.Printf("Metadata server error: %v %c %c %c\n", n, buf[0], buf[1], buf[2])
+		log.Printf("Metadata server error: %v %c %c %c", n, buf[0], buf[1], buf[2])
 		return false
 	}
 
@@ -137,7 +138,7 @@ func tagHasPermission(tag string, uuidBytes uuid.UUID, uuidString string) bool {
 			totalCached += 1
 			if totalCached > MAX_CACHED {
 				// Make this access return quickly, so start pruning in a new goroutine
-				fmt.Println("Pruning cache")
+				log.Println("Pruning cache")
 				go pruneCache()
 			}
 		}

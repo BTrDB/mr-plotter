@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"sync"
 	"sync/atomic"
 
@@ -77,7 +78,7 @@ func (cw *ConnWrapper) GetWriter() io.Writer {
 		cw.CurrWriter = w
 		return w
 	} else {
-		fmt.Printf("Could not get writer on WebSocket: %v", err)
+		log.Printf("Could not get writer on WebSocket: %v", err)
 		return nil
 	}
 }
