@@ -86,8 +86,6 @@ var mdServer string
 var permalinkConn *mgo.Collection
 var accountConn *mgo.Collection
 var csvURL string
-var token64len int
-var token64dlen int
 var permalinklen int
 var permalinkdlen int
 var csvMaxPoints int64
@@ -120,7 +118,7 @@ type Config struct {
 	MongoServer string
 	CsvUrl string
 
-	SessionExpirySeconds int64
+	SessionExpirySeconds uint64
 	SessionPurgeIntervalSeconds int64
 	CsvMaxPointsPerStream int64
 	OutstandingRequestLogInterval int64
@@ -192,7 +190,7 @@ func main() {
 		log.Fatalf("Could not read encryption key file: %v", err)
 	}
 
-	err = SetEncryptKey(ekey)
+	err = setEncryptKey(ekey)
 	if err != nil {
 		log.Fatalf("Invalid encryption key: %v", err)
 	}
@@ -202,7 +200,7 @@ func main() {
 		log.Fatalf("Coult not read MAC key file: %v", err)
 	}
 
-	err = SetMACKey(mkey)
+	err = setMACKey(mkey)
 	if err != nil {
 		log.Fatalf("Invalid MAC key: %v", err)
 	}
@@ -242,12 +240,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	go purgeSessionsPeriodically(config.SessionExpirySeconds, config.SessionPurgeIntervalSeconds)
+	setSessionExpiry(config.SessionExpirySeconds)
+
 	go logWaitingRequests(time.Duration(config.OutstandingRequestLogInterval) * time.Second)
 	go logNumGoroutines(time.Duration(config.NumGoroutinesLogInterval) * time.Second)
 
-	token64len = base64.StdEncoding.EncodedLen(TOKEN_BYTE_LEN)
-	token64dlen = base64.StdEncoding.DecodedLen(token64len)
 	permalinklen = base64.URLEncoding.EncodedLen(MONGO_ID_LEN)
 	permalinkdlen = base64.URLEncoding.DecodedLen(permalinklen)
 
@@ -412,7 +409,7 @@ func parseBracketRequest(request string, writ Writable, expectExtra bool) (uuids
 
 func validateToken(token string) *LoginSession {
 	tokenslice, err := base64.StdEncoding.DecodeString(token)
-	if err != nil || len(tokenslice) != TOKEN_BYTE_LEN {
+	if err != nil {
 		return nil
 	}
 	return getloginsession(tokenslice)
@@ -660,14 +657,13 @@ func metadataHandler (w http.ResponseWriter, r *http.Request) {
 		tokenencoded := request[semicolonindex + 1:]
 		request = request[:semicolonindex + 1]
 
-		if len(tokenencoded) == token64len {
-			tokenslice := make([]byte, token64dlen, token64dlen)
-			n, err = base64.StdEncoding.Decode(tokenslice, tokenencoded)
-			if n == TOKEN_BYTE_LEN && err == nil {
-				tagslice := usertags(tokenslice)
-				if tagslice != nil {
-					tags = strings.Join(tagslice, ",")
-				}
+		tokenslice := make([]byte, base64.StdEncoding.DecodedLen(len(tokenencoded)))
+		n, err = base64.StdEncoding.Decode(tokenslice, tokenencoded)
+		if err == nil {
+			tokenslice = tokenslice[:n]
+			tagslice := usertags(tokenslice)
+			if tagslice != nil {
+				tags = strings.Join(tagslice, ",")
 			}
 		}
 	}
@@ -984,22 +980,17 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	tokenarr := userlogin(accountConn, username, []byte(password))
 	if tokenarr != nil {
-		token64buf := make([]byte, token64len)
+		token64buf := make([]byte, base64.StdEncoding.EncodedLen(len(tokenarr)))
 		base64.StdEncoding.Encode(token64buf, tokenarr)
 		w.Write(token64buf)
 	}
 }
 
-func parseToken(reader io.Reader) []byte {
-	tokenencoded := make([]byte, token64len, token64len)
-	tokenslice := make([]byte, token64dlen, token64dlen)
-
-	n, err := io.ReadFull(reader, tokenencoded)
-	if err == nil && n == token64len {
-		n, err = base64.StdEncoding.Decode(tokenslice, tokenencoded)
-		if n == TOKEN_BYTE_LEN && err == nil {
-			return tokenslice
-		}
+func parseToken(tokenencoded []byte) []byte {
+	tokenslice := make([]byte, base64.StdEncoding.DecodedLen(len(tokenencoded)))
+	n, err := base64.StdEncoding.Decode(tokenslice, tokenencoded)
+	if err == nil {
+		return tokenslice[:n]
 	}
 
 	return nil
@@ -1013,8 +1004,13 @@ func logoffHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// parseToken doesn't buffer the whole request in memory, so we don't need to use http.MaxBytesReader
-	tokenslice := parseToken(r.Body)
+	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
+	tokenencoded, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("Could not read received POST payload: %v", err)))
+		return
+	}
+	tokenslice := parseToken(tokenencoded)
 
 	if tokenslice != nil && userlogoff(tokenslice) {
 		w.Write([]byte("Logoff successful."))
@@ -1087,13 +1083,8 @@ func changepwHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(token) != token64len {
-		w.Write([]byte(ERROR_INVALID_TOKEN))
-		return
-	}
-
 	tokenslice, err = base64.StdEncoding.DecodeString(token)
-	if err != nil || len(tokenslice) != TOKEN_BYTE_LEN {
+	if err != nil {
 		w.Write([]byte(ERROR_INVALID_TOKEN))
 		return
 	}
@@ -1110,7 +1101,13 @@ func checktokenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenslice := parseToken(r.Body)
+	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
+	tokenencoded, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("Could not read received POST payload: %v", err)))
+		return
+	}
+	tokenslice := parseToken(tokenencoded)
 
 	if tokenslice != nil && getloginsession(tokenslice) != nil {
 		w.Write([]byte("ok"))

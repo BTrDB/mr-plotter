@@ -60,7 +60,7 @@ func hasPermission(session *LoginSession, uuidBytes uuid.UUID) bool {
 	if session == nil {
 		tags = defaulttags
 	} else {
-		tags = session.tags
+		tags = session.Tags
 	}
 	uuidString := uuidBytes.String()
 	for _, tag := range tags {

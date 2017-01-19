@@ -24,11 +24,16 @@
 package main
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha512"
+	"encoding/json"
+	"hash"
+	"io"
 	"fmt"
 	"log"
-	"math/big"
-	"sync"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -37,56 +42,39 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-var aes_key_length int
-var aes_encrypt_key []byte
+var sessionExpirySeconds uint64
 
-var hmac_key_length int
+var aes_encrypt_cipher cipher.Block
 var hmac_key []byte
 
-/* 16 bytes should be longer than anyone can guess. */
-const TOKEN_BYTE_LEN = 16
-var MAX_TOKEN_BYTES = []byte{ 1,
-							  0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-							  0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 }
-
 type LoginSession struct {
-	lastUsed int64
-	user string
-	token [TOKEN_BYTE_LEN]byte
-	//issued int64
-	tags []string
+	Issued int64
+	Tags []string
+	User string
 }
 
-// Monotonically increasing identifier
-var useid uint64
+func setSessionExpiry(seconds uint64) {
+	sessionExpirySeconds = seconds
+}
 
-/* Initialized to the above byte value on use. */
-var MAX_TOKEN big.Int = big.Int{}
-
-// Maps ID to session
-var sessionsbyid map[[TOKEN_BYTE_LEN]byte]*LoginSession = make(map[[TOKEN_BYTE_LEN]byte]*LoginSession)
-var sessionsbyidlock sync.Mutex = sync.Mutex{} // also protects session contents
-// Maps user to session
-var sessionsbyuser map[string]*LoginSession = make(map[string]*LoginSession)
-var sessionsbyuserlock sync.RWMutex = sync.RWMutex{}
-
-func SetEncryptKey(key []byte) error {
+func setEncryptKey(key []byte) error {
 	var keylen int = len(key)
 	if keylen != 16 && keylen != 24 && keylen != 32 {
 		return fmt.Errorf("Key length is invalid: must be 16, 24, or 32 bytes (got %d bytes)", keylen)
 	}
-	aes_encrypt_key = key
-	aes_key_length = keylen
-	return nil
+	cipher, err := aes.NewCipher(key)
+	if err == nil {
+		aes_encrypt_cipher = cipher
+	}
+	return err
 }
 
-func SetMACKey(key []byte) error {
+func setMACKey(key []byte) error {
 	var keylen int = len(key)
 	if keylen < 16 {
 		return fmt.Errorf("Key length must be at least 16 bytes (got %d bytes)", keylen)
 	}
 	hmac_key = key
-	hmac_key_length = keylen
 	return nil
 }
 
@@ -130,67 +118,128 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 		}
 	}
 
-	// Check if we already have a session for this user
-	sessionsbyuserlock.RLock()
-	loginsession = sessionsbyuser[user]
-	sessionsbyuserlock.RUnlock()
-	if loginsession == nil {
-		// Need to create a new session
-		if MAX_TOKEN.Sign() == 0 {
-			(&MAX_TOKEN).SetBytes(MAX_TOKEN_BYTES)
-		}
-		var token *big.Int
-		var tokenarr [TOKEN_BYTE_LEN]byte
-		for true {
-			token, err = rand.Int(rand.Reader, &MAX_TOKEN)
-			if err != nil {
-				log.Println("Could not generate session key")
-				return nil
-			}
-			tokenbytes := token.Bytes()
-
-			copy(tokenarr[TOKEN_BYTE_LEN - len(tokenbytes):], tokenbytes)
-
-			sessionsbyidlock.Lock()
-			if sessionsbyid[tokenarr] == nil {
-				break
-			} else {
-				sessionsbyidlock.Unlock()
-			}
-		}
-
-		loginsession = &LoginSession{
-			lastUsed: time.Now().Unix(),
-			user: user,
-			token: tokenarr,
-			tags: taglist,
-		}
-
-		sessionsbyid[tokenarr] = loginsession
-		sessionsbyidlock.Unlock()
-
-		sessionsbyuserlock.Lock()
-		sessionsbyuser[user] = loginsession
-		sessionsbyuserlock.Unlock()
-
-		return tokenarr[:]
-	} else {
-		return loginsession.token[:]
+	// Create a new session
+	loginsession = &LoginSession{
+		Issued: time.Now().Unix(),
+		Tags: taglist,
+		User: user,
 	}
+
+	// Construct the JSON plaintext for this login session
+	var plaintext []byte
+	plaintext, err = json.Marshal(loginsession)
+	if err != nil {
+		log.Fatalf("Could not JSON-encode login session: %v", err)
+	}
+	var blocksize int = aes_encrypt_cipher.BlockSize()
+	var paddinglen int = blocksize - (len(plaintext) % blocksize)
+	var padding []byte = make([]byte, paddinglen)
+	plaintext = append(plaintext, padding...)
+
+	// Encrypt and MAC the plaintext to get the token
+	// The token consists of the IV, ciphertext, and HMAC concatenated
+	var hmac_hash hash.Hash = hmac.New(sha512.New, hmac_key)
+	var macsize int = hmac_hash.Size()
+	var token []byte = make([]byte, blocksize + len(plaintext), blocksize + len(plaintext) + macsize)
+	var iv []byte = token[:blocksize]
+	var ciphertext []byte = token[blocksize:]
+
+	_, err = io.ReadFull(rand.Reader, iv)
+	if err != nil {
+		log.Fatalf("Could not generate IV: %v", err)
+	}
+
+	var encrypter cipher.BlockMode = cipher.NewCBCEncrypter(aes_encrypt_cipher, iv)
+	encrypter.CryptBlocks(ciphertext, plaintext)
+
+	_, err = hmac_hash.Write(plaintext)
+	if err != nil {
+		log.Fatalf("Could not compute HMAC of plaintext token: %v", err)
+	}
+	token = hmac_hash.Sum(token)
+
+	return token
+}
+
+func decodetoken(token []byte) []byte {
+	var hmac_hash hash.Hash = hmac.New(sha512.New, hmac_key)
+
+	var blocksize int = aes_encrypt_cipher.BlockSize()
+	var macsize int = hmac_hash.Size()
+
+	if len(token) <= blocksize + macsize {
+		return nil
+	}
+
+	var iv []byte = token[:blocksize]
+	var ciphertext []byte = token[blocksize:len(token) - macsize]
+	var mac []byte = token[len(token) - macsize:]
+
+	if (len(ciphertext) % blocksize) != 0 {
+		return nil
+	}
+
+	var plaintext []byte = make([]byte, len(ciphertext))
+	var decrypter cipher.BlockMode = cipher.NewCBCDecrypter(aes_encrypt_cipher, iv)
+	decrypter.CryptBlocks(plaintext, ciphertext)
+
+	_, err := hmac_hash.Write(plaintext)
+	if err != nil {
+		log.Fatalf("Could not compute HMAC of plaintext token: %v", err)
+	}
+	var computedmac []byte = hmac_hash.Sum(make([]byte, 0, macsize))
+
+	if !hmac.Equal(computedmac, mac) {
+		log.Printf("Invalid MAC detected: someone is trying to forge a token!")
+		return nil
+	}
+
+	return plaintext
+}
+
+func stolenkeys() {
+	log.Fatalf("THE MAC KEY HAS BEEN STOLEN, AND THE ENCRYPT KEY PROBABLY TOO. CHANGE THE KEYS AND RESTART THIS PROGRAM.")
 }
 
 func getloginsession(token []byte) *LoginSession {
-	var tokenarr [TOKEN_BYTE_LEN]byte
-	copy(tokenarr[:], token)
-
-	var loginsession *LoginSession
-	var now int64 = time.Now().Unix()
-	sessionsbyidlock.Lock()
-	loginsession = sessionsbyid[tokenarr]
-	if loginsession != nil {
-		loginsession.lastUsed = now
+	var plaintext []byte = decodetoken(token)
+	if plaintext == nil {
+		return nil
 	}
-	sessionsbyidlock.Unlock()
+
+	var i int
+	for i = len(plaintext) - 1; i >= 0; i-- {
+		if plaintext[i] != 0 {
+			break
+		}
+	}
+
+	if len(plaintext) - i - 1 >= aes_encrypt_cipher.BlockSize() {
+		log.Println("Invalid padding on token is correctly MAC'ed")
+		stolenkeys()
+		return nil
+	}
+
+	var rawjson []byte = plaintext[:i + 1]
+	var loginsession *LoginSession
+	var err error = json.Unmarshal(rawjson, &loginsession)
+	if err != nil {
+		log.Printf("Correctly MAC'ed token is incorrect JSON: %v", err)
+		stolenkeys()
+		return nil
+	}
+	if loginsession == nil {
+		log.Println("Correctly MAC'ed token is null")
+		stolenkeys()
+		return nil
+	}
+
+	var now int64 = time.Now().Unix()
+	if uint64(now - loginsession.Issued) >= sessionExpirySeconds {
+		log.Printf("Session expired: (issued at %v, expired at %v, now is %v)", loginsession.Issued, loginsession.Issued + int64(sessionExpirySeconds), now)
+		return nil
+	}
+
 	return loginsession
 }
 
@@ -200,12 +249,6 @@ func userlogoff(token []byte) bool {
 		return false
 	}
 
-	sessionsbyidlock.Lock()
-	delete(sessionsbyid, loginsession.token)
-	sessionsbyidlock.Unlock()
-	sessionsbyuserlock.Lock()
-	delete(sessionsbyuser, loginsession.user)
-	sessionsbyuserlock.Unlock()
 	return true
 }
 
@@ -215,7 +258,7 @@ func usertags(token []byte) []string {
 		return nil
 	}
 
-	return loginsession.tags
+	return loginsession.Tags
 }
 
 func userchangepassword(passwordConn *mgo.Collection, token []byte, oldpw []byte, newpw []byte) string {
@@ -227,7 +270,7 @@ func userchangepassword(passwordConn *mgo.Collection, token []byte, oldpw []byte
 	var hash []byte
 	var err error
 
-	user := loginsession.user
+	user := loginsession.User
 	_, err = checkpassword(passwordConn, user, oldpw)
 	if err != nil {
 		return "Bad password"
@@ -246,31 +289,5 @@ func userchangepassword(passwordConn *mgo.Collection, token []byte, oldpw []byte
 		return "Success"
 	} else {
 		return "Server error"
-	}
-}
-
-/* Periodically purges sessions. */
-func purgeSessionsPeriodically(maxAge int64, periodSeconds int64) {
-	var period = time.Duration(periodSeconds) * time.Second
-	for {
-		time.Sleep(period)
-		purgeSessions(maxAge)
-	}
-}
-
-/* Removes sessions that are older than MAXAGE seconds. */
-func purgeSessions(maxAge int64) {
-	sessionsbyidlock.Lock()
-	sessionsbyuserlock.Lock()
-	defer sessionsbyidlock.Unlock()
-	defer sessionsbyuserlock.Unlock()
-
-	var now int64 = time.Now().Unix()
-
-	for _, session := range sessionsbyid {
-		if now - session.lastUsed > maxAge {
-			delete(sessionsbyid, session.token)
-			delete(sessionsbyuser, session.user)
-		}
 	}
 }
