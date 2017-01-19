@@ -102,6 +102,8 @@ type Config struct {
 	UseHttp bool
 	UseHttps bool
 	HttpsRedirect bool
+	LogHttpRequests bool
+	CompressHttpResponses bool
 	PlotterDir string
 	CertFile string
 	KeyFile string
@@ -114,6 +116,7 @@ type Config struct {
 	NumBracketConn uint16
 	MaxDataRequests uint32
 	MaxBracketRequests uint32
+	MaxCachedTagPermissions uint64
 	MetadataServer string
 	MongoServer string
 	CsvUrl string
@@ -133,6 +136,8 @@ var configRequiredKeys = map[string]bool{
 	"use_http": true,
 	"use_https": true,
 	"https_redirect": true,
+	"log_http_requests": true,
+	"compress_http_responses": true,
 	"plotter_dir": true,
 	"cert_file": true,
 	"key_file": true,
@@ -143,6 +148,7 @@ var configRequiredKeys = map[string]bool{
 	"btrdb_endpoints": true,
 	"max_data_requests": true,
 	"max_bracket_requests": true,
+	"max_cached_tag_permissions": true,
 	"metadata_server": true,
 	"mongo_server": true,
 	"csv_url": true,
@@ -206,6 +212,8 @@ func main() {
 		log.Fatalf("Invalid MAC key: %v", err)
 	}
 
+	setTagPermissionCacheSize(config.MaxCachedTagPermissions)
+
 	mdServer = config.MetadataServer
 	csvURL = config.CsvUrl
 	csvMaxPoints = config.CsvMaxPointsPerStream
@@ -221,7 +229,7 @@ func main() {
 	permalinkConn = plotterDBConn.C("permalinks")
 	accountConn = plotterDBConn.C("accounts")
 
-	log.Printf("Connecting to BTrDB cluster... ")
+	log.Printf("Connecting to BTrDB cluster...")
 	btrdbConn, err = btrdb.Connect(context.Background(), config.BtrdbEndpoints...)
 	if err != nil {
 		log.Fatalf("Error: %v\n", err)
@@ -262,13 +270,19 @@ func main() {
 	http.HandleFunc("/changepw", changepwHandler)
 	http.HandleFunc("/checktoken", checktokenHandler)
 
-	var loggedHandler http.Handler = httpHandlers.CompressHandler(httpHandlers.CombinedLoggingHandler(os.Stdout, http.DefaultServeMux))
+	var mrPlotterHandler http.Handler = http.DefaultServeMux
+	if config.LogHttpRequests {
+		mrPlotterHandler = httpHandlers.CombinedLoggingHandler(os.Stdout, mrPlotterHandler)
+	}
+	if config.CompressHttpResponses {
+		mrPlotterHandler = httpHandlers.CompressHandler(mrPlotterHandler)
+	}
 
 	var portStrHTTP string = fmt.Sprintf(":%d", config.HttpPort)
 	var portStrHTTPS string = fmt.Sprintf(":%d", config.HttpsPort)
 	if config.UseHttp && config.UseHttps {
 		go func () {
-				log.Fatal(http.ListenAndServeTLS(portStrHTTPS, config.CertFile, config.KeyFile, loggedHandler))
+				log.Fatal(http.ListenAndServeTLS(portStrHTTPS, config.CertFile, config.KeyFile, mrPlotterHandler))
 				os.Exit(1)
 			}()
 
@@ -282,12 +296,12 @@ func main() {
 			var loggedRedirect http.Handler = httpHandlers.CompressHandler(httpHandlers.CombinedLoggingHandler(os.Stdout, redirect))
 			log.Fatal(http.ListenAndServe(portStrHTTP, loggedRedirect))
 		} else {
-			log.Fatal(http.ListenAndServe(portStrHTTP, loggedHandler))
+			log.Fatal(http.ListenAndServe(portStrHTTP, mrPlotterHandler))
 		}
 	} else if config.UseHttps {
-		log.Fatal(http.ListenAndServeTLS(portStrHTTPS, config.CertFile, config.KeyFile, loggedHandler))
+		log.Fatal(http.ListenAndServeTLS(portStrHTTPS, config.CertFile, config.KeyFile, mrPlotterHandler))
 	} else if config.UseHttp {
-		log.Fatal(http.ListenAndServe(portStrHTTP, loggedHandler))
+		log.Fatal(http.ListenAndServe(portStrHTTP, mrPlotterHandler))
 	}
 	os.Exit(1);
 }

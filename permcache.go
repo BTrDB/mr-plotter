@@ -34,26 +34,59 @@ import (
 	uuid "github.com/pborman/uuid"
 )
 
-const MAX_CACHED uint64 = 4096 // Maximum number of streams that are cached
+var max_cached uint64 // Maximum number of tag permissions that are cached
 
-type TagInfo struct {
-	name string
-	permissions map[uuid.Array]bool // Maps UUID to permission bit. Protected by permcacheLock.
+type TagPermissionQuery struct {
+	tagname string
+	uu uuid.Array
+}
+
+type TagPermission struct {
+	query TagPermissionQuery
+	hasPermission bool
+	queryPending bool
+	requestFailed bool
+	queryPendingCond *sync.Cond
 	element *list.Element
 }
 
 // Maps TAG to a struct describing its permissions
-var permcache map[string]*TagInfo = make(map[string]*TagInfo)
+var permcache map[TagPermissionQuery]*TagPermission = make(map[TagPermissionQuery]*TagPermission)
 var defaulttags = []string{ "public" }
 var totalCached uint64 = 0
 
 // This is a bit coarse: I don't really need to lock the whole permcache if I'm just changing one entry
 // But hierarchical locking would be overkill here...
 var permcacheLock sync.Mutex = sync.Mutex{}
+var pruningCache bool = false // protected by permcacheLock
 
 // Use LRU policy: keep track of which tags are used most recently
 var lruList *list.List = list.New()
 var lruListLock sync.Mutex = sync.Mutex{}
+
+// Lock ordering is to always acquire the permcacheLock before the lruListLock
+
+func setTagPermissionCacheSize(maxCached uint64) {
+	permcacheLock.Lock()
+	lruListLock.Lock()
+	max_cached = maxCached
+	pruneCacheIfNecessary()
+	lruListLock.Unlock()
+	permcacheLock.Unlock()
+}
+
+// the permcacheLock and lruListLock must be held when this function executes
+func pruneCacheIfNecessary() {
+	var element *list.Element
+	var taginfo *TagPermission
+	for totalCached > max_cached {
+		element = lruList.Back() // least recently used
+		lruList.Remove(element)
+		taginfo = element.Value.(*TagPermission)
+		delete(permcache, taginfo.query)
+		totalCached -= 1
+	}
+}
 
 func hasPermission(session *LoginSession, uuidBytes uuid.UUID) bool {
 	var tags []string
@@ -72,38 +105,14 @@ func hasPermission(session *LoginSession, uuidBytes uuid.UUID) bool {
 	return false
 }
 
-func tagHasPermission(tag string, uuidBytes uuid.UUID, uuidString string) bool {
+func checkforpermission(tag string, uuidString string) (bool, error) {
 	var hasPerm bool
-
-	uuidarr := uuidBytes.Array()
-	permcacheLock.Lock()
-	taginfo, ok := permcache[tag]
-	if !ok {
-		/* Cache Miss: never seen this token */
-		taginfo = &TagInfo{ name: tag, permissions: make(map[uuid.Array]bool) }
-		lruListLock.Lock()
-		taginfo.element = lruList.PushFront(taginfo)
-		lruListLock.Unlock()
-		permcache[tag] = taginfo
-	} else {
-		lruListLock.Lock()
-		lruList.MoveToFront(taginfo.element) // most recently used
-		lruListLock.Unlock()
-		hasPerm, ok = taginfo.permissions[uuidBytes.Array()]
-		if ok {
-			/* Cache Hit */
-			permcacheLock.Unlock()
-			return hasPerm
-		}
-		/* Cache Miss: never seen this UUID */
-	}
-	permcacheLock.Unlock()
 
 	/* Ask the metadata server for the metadata of the corresponding stream. */
 	query := fmt.Sprintf("select * where uuid = \"%s\";", uuidString)
 	mdReq, err := http.NewRequest("POST", fmt.Sprintf("%s?tags=%s", mdServer, tag), strings.NewReader(query))
 	if err != nil {
-		return false
+		return false, err
 	}
 
 	mdReq.Header.Set("Content-Type", "text")
@@ -111,7 +120,7 @@ func tagHasPermission(tag string, uuidBytes uuid.UUID, uuidString string) bool {
 	resp, err := http.DefaultClient.Do(mdReq)
 
 	if err != nil {
-		return false
+		return false, err
 	}
 
 	/* If the response is [] we lack permission; if it's longer we have permission. */
@@ -125,65 +134,72 @@ func tagHasPermission(tag string, uuidBytes uuid.UUID, uuidString string) bool {
 		hasPerm = false
 	} else {
 		/* Server error. */
-		log.Printf("Metadata server error: %v %c %c %c", n, buf[0], buf[1], buf[2])
+		return false, fmt.Errorf("Metadata server error: %v %c %c %c", n, buf[0], buf[1], buf[2])
+	}
+
+	return hasPerm, nil
+}
+
+func tagHasPermission(tag string, uuidBytes uuid.UUID, uuidString string) bool {
+	var hasPerm bool
+	var err error
+
+	var query TagPermissionQuery = TagPermissionQuery{tagname: tag, uu: uuidBytes.Array()}
+
+	permcacheLock.Lock()
+	taginfo, ok := permcache[query]
+	if ok {
+		/* Wait for the result if it's still pending. */
+		for taginfo.queryPending {
+			taginfo.queryPendingCond.Wait()
+		}
+		if taginfo.requestFailed {
+			/* The request for the data failed, so just return false. */
+			/* Alternatively, we could work out a way to try again for this request,
+			 * but I think it's a bad idea. */
+			return false
+		}
+		/* Cache hit. */
+		lruListLock.Lock()
+		lruList.MoveToFront(taginfo.element) // most recently used
+		lruListLock.Unlock()
+		hasPerm = taginfo.hasPermission
+		permcacheLock.Unlock()
+		return hasPerm
+	}
+
+	/* Cache Miss: never seen this query */
+	taginfo = &TagPermission{ query: query, queryPending: true, requestFailed: false, queryPendingCond: sync.NewCond(&permcacheLock) }
+	permcache[query] = taginfo
+	permcacheLock.Unlock()
+
+	/* Make a request to the underlying database. */
+	hasPerm, err = checkforpermission(tag, uuidString)
+	if err != nil {
+		log.Printf("Request for tag permission failed: %v", err)
+		permcacheLock.Lock()
+		delete(permcache, taginfo.query)
+		taginfo.queryPending = false
+		taginfo.requestFailed = true
+		taginfo.queryPendingCond.Broadcast()
+		permcacheLock.Unlock()
 		return false
 	}
 
 	/* If we didn't return early due to some kind of error, cache the result and return it. */
 	permcacheLock.Lock()
-	if taginfo.element != nil { // If this has been evicted from the cache, don't bother
-		_, ok := taginfo.permissions[uuidarr]
-		taginfo.permissions[uuidarr] = hasPerm // still update cached value
-		if !ok { // If a different goroutine added it before we got here, then skip this part
-			totalCached += 1
-			if totalCached > MAX_CACHED {
-				// Make this access return quickly, so start pruning in a new goroutine
-				log.Println("Pruning cache")
-				go pruneCache()
-			}
-		}
-	}
+	taginfo.hasPermission = hasPerm
+	taginfo.queryPending = false
+	taginfo.queryPendingCond.Broadcast()
+
+	/* Actually add this to the LRU list. Maybe this should happen before we make the query to get the permission? */
+	lruListLock.Lock()
+	taginfo.element = lruList.PushFront(taginfo)
+	totalCached += 1
+	pruneCacheIfNecessary()
+	lruListLock.Unlock()
+
 	permcacheLock.Unlock()
 
 	return hasPerm
-}
-
-func pruneCache() {
-	permcacheLock.Lock()
-	lruListLock.Lock()
-	defer lruListLock.Unlock()
-	defer permcacheLock.Unlock()
-
-	if totalCached <= (MAX_CACHED >> 1) {
-		// In case this gets invoked twice, make sure it only runs once
-		return
-	}
-
-	var tag string
-	var taginfo *TagInfo
-
-	for tag, taginfo = range permcache {
-		for key, perm := range taginfo.permissions {
-			if !perm {
-				delete(taginfo.permissions, key)
-				totalCached -= 1
-			}
-		}
-		if len(taginfo.permissions) == 0 {
-			lruList.Remove(taginfo.element)
-			delete(permcache, tag)
-			taginfo.element = nil
-		}
-	}
-
-	var element *list.Element
-	// Now, remove cached permissions until we're within the limit
-	for totalCached > (MAX_CACHED >> 1) {
-		element = lruList.Back() // least recently used
-		lruList.Remove(element)
-		taginfo = element.Value.(*TagInfo)
-		delete(permcache, taginfo.name)
-		totalCached -= uint64(len(taginfo.permissions))
-		taginfo.element = nil // mark as discarded
-	}
 }
