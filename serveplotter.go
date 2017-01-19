@@ -189,17 +189,18 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not read encryption key file: %v", err)
 	}
+	mkey, err := ioutil.ReadFile(config.SessionMacKeyFile)
+	if err != nil {
+		log.Fatalf("Could not read MAC key file: %v", err)
+	}
+	if bytes.Equal(ekey, mkey) {
+		log.Fatalln("The session encryption and MAC keys are the same; to ensure that session state is stored securely on the client, please change them to be different")
+	}
 
 	err = setEncryptKey(ekey)
 	if err != nil {
 		log.Fatalf("Invalid encryption key: %v", err)
 	}
-
-	mkey, err := ioutil.ReadFile(config.SessionMacKeyFile)
-	if err != nil {
-		log.Fatalf("Coult not read MAC key file: %v", err)
-	}
-
 	err = setMACKey(mkey)
 	if err != nil {
 		log.Fatalf("Invalid MAC key: %v", err)
