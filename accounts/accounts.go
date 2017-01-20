@@ -26,6 +26,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// Package accounts implements tools to manage account information for Mr. Plotter.
+// Account information is stored in etcd, and so a Version 3 etcd client is needed
+// for most of the API functions.
+
 package accounts
 
 import (
@@ -43,6 +47,7 @@ var etcdprefix = ""
 
 var mp codec.Handle = &codec.MsgpackHandle{}
 
+// MrPlotterAccount abstracts account information for a single user.
 type MrPlotterAccount struct {
     Username string
     Tags map[string]struct{}
@@ -51,6 +56,7 @@ type MrPlotterAccount struct {
     retrievedRevision int64
 }
 
+// Sets the password for a user.
 func (acc *MrPlotterAccount) SetPassword(newPassword []byte) error {
     phash, err := bcrypt.GenerateFromPassword(newPassword, bcrypt.DefaultCost)
     if (err == nil) {
@@ -59,6 +65,7 @@ func (acc *MrPlotterAccount) SetPassword(newPassword []byte) error {
     return err
 }
 
+// Checks whether the provided password matches the user's password.
 func (acc *MrPlotterAccount) CheckPassword(password []byte) (bool, error) {
     err := bcrypt.CompareHashAndPassword(acc.PasswordHash, password)
     if err == nil {
@@ -94,6 +101,10 @@ func decodeAccount(encoded []byte) (*MrPlotterAccount, error) {
     return acc, nil
 }
 
+// Sets the prefix added to keys in the etcd database.
+// The keys used are of the form <prefix>mrplotter/accounts/<username>.
+// The prefix allows multiple configurations for Mr. Plotter to coexist in a
+// single etcd database system.
 func SetEtcdKeyPrefix(prefix string) {
     etcdprefix = prefix;
 }
@@ -106,6 +117,9 @@ func getUsernameFromEtcdKey(etcdKey string) string {
     return etcdKey[len(etcdprefix) + len(etcdpath):]
 }
 
+// Retrieves the account information for the specified user.
+// Setting the "Username" field in the returned struct renders it unsuitable
+// for use with the "UpsertAccountAtomically" function.
 func RetrieveAccount(ctx context.Context, etcdClient *etcd.Client, username string) (*MrPlotterAccount, error) {
     etcdKey := getEtcdKey(username)
     resp, err := etcdClient.Get(ctx, etcdKey)
@@ -127,6 +141,8 @@ func RetrieveAccount(ctx context.Context, etcdClient *etcd.Client, username stri
     return acc, nil
 }
 
+// Updates the account according to the provided account information, creating
+// a new user account if a user with that username does not exist.
 func UpsertAccount(ctx context.Context, etcdClient *etcd.Client, acc *MrPlotterAccount) error {
     encoded, err := encodeAccount(acc)
     if err != nil {
@@ -138,6 +154,20 @@ func UpsertAccount(ctx context.Context, etcdClient *etcd.Client, acc *MrPlotterA
     return err
 }
 
+// Same as UpsertAccount, but fails if the account was updated meanwhile. This
+// allows one to ensure that the read-modify-write operation required to update
+// account information can be done atomically. Returns true if the operation
+// succeeds, and returns false otherwise.
+//
+// The rules are as follows: if the MrPlotterAccount struct was created
+// directly, the operation fails if the account already exists in etcd. If the
+// MrPlotterAccount struct was returned by RetrieveAccount or
+// RetrieveMultipleAccounts, the operation fails if the data stored in etcd
+// was updated after the account information was retrieved. You should not
+// modify the "Username" field of a struct returned by RetrieveAccount or
+// RetrieveMultipleAccounts and then use it with this function. Setting the
+// "Username" field of a struct to be used with this function is only allowed
+// for structs that are created directly.
 func UpsertAccountAtomically(ctx context.Context, etcdClient *etcd.Client, acc *MrPlotterAccount) (bool, error) {
     encoded, err := encodeAccount(acc)
     if err != nil {
@@ -156,12 +186,17 @@ func UpsertAccountAtomically(ctx context.Context, etcdClient *etcd.Client, acc *
     }
 }
 
+// Deletes the account of the user with the provided username.
 func DeleteAccount(ctx context.Context, etcdClient *etcd.Client, username string) error {
     etcdKey := getEtcdKey(username)
     _, err := etcdClient.Delete(ctx, etcdKey)
     return err
 }
 
+// Retrieves the account information of all users whose username begins with
+// the provided prefix.
+// Setting the "Username" field in the returned struct renders it unsuitable
+// for use with the "UpsertAccountAtomically" function.
 func RetrieveMultipleAccounts(ctx context.Context, etcdClient *etcd.Client, usernameprefix string) ([]*MrPlotterAccount, error) {
     etcdKeyPrefix := getEtcdKey(usernameprefix)
     resp, err := etcdClient.Get(ctx, etcdKeyPrefix, etcd.WithPrefix())
@@ -182,6 +217,8 @@ func RetrieveMultipleAccounts(ctx context.Context, etcdClient *etcd.Client, user
     return accs, nil
 }
 
+// Deletes the accounts of all users whose username begins with the provided
+// prefix.
 func DeleteMultipleAccounts(ctx context.Context, etcdClient *etcd.Client, usernameprefix string) (int64, error) {
     etcdKeyPrefix := getEtcdKey(usernameprefix)
     resp, err := etcdClient.Delete(ctx, etcdKeyPrefix, etcd.WithPrefix())
