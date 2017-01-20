@@ -105,8 +105,13 @@ func decodeAccount(encoded []byte) (*MrPlotterAccount, error) {
 // The keys used are of the form <prefix>mrplotter/accounts/<username>.
 // The prefix allows multiple configurations for Mr. Plotter to coexist in a
 // single etcd database system.
+//
+// Modifying the prefix while an operation is in progress results in undefined
+// behavior. Furthermore, MrPlotterAccount structs returned by RetrieveAccount
+// or RetrieveMultipleAccounts must always be used with the same prefix with
+// which they were generated.
 func SetEtcdKeyPrefix(prefix string) {
-    etcdprefix = prefix;
+    etcdprefix = prefix
 }
 
 func getEtcdKey(username string) string {
