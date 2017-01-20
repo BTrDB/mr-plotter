@@ -23,6 +23,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -39,12 +40,11 @@ import (
 	"time"
 
 	"gopkg.in/btrdb.v4"
-
 	"gopkg.in/ini.v1"
-
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
+	etcd "github.com/coreos/etcd/clientv3"
 	httpHandlers "github.com/gorilla/handlers"
 	uuid "github.com/pborman/uuid"
 	ws "github.com/gorilla/websocket"
@@ -85,6 +85,7 @@ var br *DataRequester
 var mdServer string
 var permalinkConn *mgo.Collection
 var accountConn *mgo.Collection
+var etcdConn *etcd.Client
 var csvURL string
 var permalinklen int
 var permalinkdlen int
@@ -105,8 +106,8 @@ type Config struct {
 	LogHttpRequests bool
 	CompressHttpResponses bool
 	PlotterDir string
-	CertFile string
-	KeyFile string
+	HttpsCertFile string
+	HttpsKeyFile string
 
 	SessionEncryptKeyFile string
 	SessionMacKeyFile string
@@ -139,8 +140,8 @@ var configRequiredKeys = map[string]bool{
 	"log_http_requests": true,
 	"compress_http_responses": true,
 	"plotter_dir": true,
-	"cert_file": true,
-	"key_file": true,
+	"https_cert_file": true,
+	"https_key_file": true,
 
 	"session_encrypt_key_file": true,
 	"session_mac_key_file": true,
@@ -162,8 +163,20 @@ var configRequiredKeys = map[string]bool{
 	"db_bracket_timeout_seconds": true,
 }
 
+func getEtcdKeySafe(ctx context.Context, key string) []byte {
+	resp, err := etcdConn.Get(context.Background(), key)
+	if err != nil {
+		log.Fatalf("Could not check for keys in etcd: %v", err)
+	}
+	if len(resp.Kvs) == 0 {
+		return nil
+	}
+	return resp.Kvs[0].Value
+}
+
 func main() {
 	var config Config
+	var err error
 	var filename string
 
 	if len(os.Args) < 2 {
@@ -171,6 +184,23 @@ func main() {
 	} else {
 		filename = os.Args[1]
 	}
+
+	var etcdEndpoint string = os.Getenv("ETCD_ENDPOINT")
+	if len(etcdEndpoint) == 0 {
+		etcdEndpoint = "localhost:2379"
+		log.Printf("ETCD_ENDPOINT is not set; using %s", etcdEndpoint)
+	}
+
+	var etcdConfig etcd.Config = etcd.Config{Endpoints: []string{etcdEndpoint}}
+
+	log.Println("Connecting to etcd...")
+	etcdConn, err = etcd.New(etcdConfig)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+	defer etcdConn.Close()
+	log.Println("Successfully connected to etcd")
+
 
 	rawConfig, err := ini.Load(filename)
 	if err != nil {
@@ -191,23 +221,70 @@ func main() {
 		log.Fatalf("Could not map configuration file: %v", err)
 	}
 
-	ekey, err := ioutil.ReadFile(config.SessionEncryptKeyFile)
-	if err != nil {
-		log.Fatalf("Could not read encryption key file: %v", err)
+	var tlsCertificate tls.Certificate
+
+	if config.UseHttps {
+		var httpscert []byte = getEtcdKeySafe(context.Background(), "mrplotter/keys/https_certificate")
+		var httpskey []byte = getEtcdKeySafe(context.Background(), "mrplotter/keys/https_key")
+
+		if httpscert != nil {
+			log.Println("Found HTTPS certificate in etcd; overriding configuration file")
+		} else {
+			log.Println("HTTPS certificate not found in etcd; falling back to configuration file")
+			httpscert, err = ioutil.ReadFile(config.HttpsCertFile)
+			if err != nil {
+				log.Fatalf("Could not read HTTPS certificate file: %v", err)
+			}
+		}
+
+		if httpskey != nil {
+			log.Println("Found HTTPS key in etcd; overriding configuration file")
+		} else {
+			log.Println("HTTPS key not found in etcd; falling back to configuration file")
+			httpskey, err = ioutil.ReadFile(config.HttpsKeyFile)
+			if err != nil {
+				log.Fatalf("Could not read HTTPS certificate file: %v", err)
+			}
+		}
+
+		tlsCertificate, err = tls.X509KeyPair(httpscert, httpskey)
+		if err != nil {
+			log.Fatalf("Could not parse HTTPS certificate and key (must be PEM-encoded): %v", err)
+		}
 	}
-	mkey, err := ioutil.ReadFile(config.SessionMacKeyFile)
-	if err != nil {
-		log.Fatalf("Could not read MAC key file: %v", err)
+
+	var sessionencryptkey []byte = getEtcdKeySafe(context.Background(), "mrplotter/keys/session_encrypt_key")
+	var sessionmackey []byte = getEtcdKeySafe(context.Background(), "mrplotter/keys/session_mac_key")
+
+	if sessionencryptkey != nil {
+		log.Println("Found session encryption key in etcd; overriding configuration file")
+	} else {
+		log.Println("Session encryption key not found in etcd; falling back to configuration file")
+		sessionencryptkey, err = ioutil.ReadFile(config.SessionEncryptKeyFile)
+		if err != nil {
+			log.Fatalf("Could not read encryption key file: %v", err)
+		}
 	}
-	if bytes.Equal(ekey, mkey) {
+
+	if sessionmackey != nil {
+		log.Println("Found session MAC key in etcd; overriding configuration file")
+	} else {
+		log.Println("Session MAC key not found in etcd; falling back to configuration file")
+		sessionmackey, err = ioutil.ReadFile(config.SessionMacKeyFile)
+		if err != nil {
+			log.Fatalf("Could not read MAC key file: %v", err)
+		}
+	}
+
+	if bytes.Equal(sessionencryptkey, sessionmackey) {
 		log.Fatalln("The session encryption and MAC keys are the same; to ensure that session state is stored securely on the client, please change them to be different")
 	}
 
-	err = setEncryptKey(ekey)
+	err = setEncryptKey(sessionencryptkey)
 	if err != nil {
 		log.Fatalf("Invalid encryption key: %v", err)
 	}
-	err = setMACKey(mkey)
+	err = setMACKey(sessionmackey)
 	if err != nil {
 		log.Fatalf("Invalid MAC key: %v", err)
 	}
@@ -218,7 +295,7 @@ func main() {
 	csvURL = config.CsvUrl
 	csvMaxPoints = config.CsvMaxPointsPerStream
 
-	log.Printf("Connecting to MongoDB... ")
+	log.Println("Connecting to MongoDB...")
 	mongoConn, err := mgo.Dial(config.MongoServer)
 	if err != nil {
 		log.Fatalf("Error: %v\n", err)
@@ -229,7 +306,7 @@ func main() {
 	permalinkConn = plotterDBConn.C("permalinks")
 	accountConn = plotterDBConn.C("accounts")
 
-	log.Printf("Connecting to BTrDB cluster...")
+	log.Println("Connecting to BTrDB cluster...")
 	btrdbConn, err = btrdb.Connect(context.Background(), config.BtrdbEndpoints...)
 	if err != nil {
 		log.Fatalf("Error: %v\n", err)
@@ -280,9 +357,17 @@ func main() {
 
 	var portStrHTTP string = fmt.Sprintf(":%d", config.HttpPort)
 	var portStrHTTPS string = fmt.Sprintf(":%d", config.HttpsPort)
+
+	var mrPlotterServer *http.Server = &http.Server{Handler: mrPlotterHandler, TLSConfig: &tls.Config{Certificates: []tls.Certificate{tlsCertificate}}}
+	if config.UseHttps {
+		mrPlotterServer.Addr = portStrHTTPS
+	} else {
+		mrPlotterServer.Addr = portStrHTTP
+	}
+
 	if config.UseHttp && config.UseHttps {
 		go func () {
-				log.Fatal(http.ListenAndServeTLS(portStrHTTPS, config.CertFile, config.KeyFile, mrPlotterHandler))
+				log.Fatal(mrPlotterServer.ListenAndServeTLS("", ""))
 				os.Exit(1)
 			}()
 
@@ -299,11 +384,11 @@ func main() {
 			log.Fatal(http.ListenAndServe(portStrHTTP, mrPlotterHandler))
 		}
 	} else if config.UseHttps {
-		log.Fatal(http.ListenAndServeTLS(portStrHTTPS, config.CertFile, config.KeyFile, mrPlotterHandler))
+		log.Fatal(mrPlotterServer.ListenAndServeTLS("", ""))
 	} else if config.UseHttp {
-		log.Fatal(http.ListenAndServe(portStrHTTP, mrPlotterHandler))
+		log.Fatal(mrPlotterServer.ListenAndServe())
 	}
-	os.Exit(1);
+	os.Exit(1)
 }
 
 func logWaitingRequests(period time.Duration) {
