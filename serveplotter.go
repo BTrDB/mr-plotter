@@ -23,6 +23,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -41,8 +42,8 @@ import (
 
 	"gopkg.in/btrdb.v4"
 	"gopkg.in/ini.v1"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+
+	"github.com/SoftwareDefinedBuildings/mr-plotter/permalink"
 
 	etcd "github.com/coreos/etcd/clientv3"
 	httpHandlers "github.com/gorilla/handlers"
@@ -55,8 +56,6 @@ const (
 	MAX_REQSIZE int64 = (16 << 10) // 16 KiB
 	SUCCESS string = "Success"
 	ERROR_INVALID_TOKEN string = "Invalid token"
-
-	MONGO_ID_LEN int = 12
 )
 
 type CSVRequest struct {
@@ -84,14 +83,14 @@ var btrdbConn *btrdb.BTrDB
 var dr *DataRequester
 var br *DataRequester
 var mdServer string
-var permalinkConn *mgo.Collection
 var etcdConn *etcd.Client
 var csvURL string
 var permalinklen int
-var permalinkdlen int
 var csvMaxPoints int64
 var dataTimeout time.Duration
 var bracketTimeout time.Duration
+var permalinkNumBytes int
+var permalinkMaxTries int
 
 /* I don't order these elements from largest to smallest, so the int64s at the
    bottom may not be 8-byte aligned. That's OK, because I don't anticipate
@@ -119,8 +118,10 @@ type Config struct {
 	MaxBracketRequests uint32
 	MaxCachedTagPermissions uint64
 	MetadataServer string
-	MongoServer string
 	CsvUrl string
+
+	PermalinkNumBytes int
+	PermalinkMaxTries int
 
 	SessionExpirySeconds uint64
 	SessionPurgeIntervalSeconds int64
@@ -151,8 +152,10 @@ var configRequiredKeys = map[string]bool{
 	"max_bracket_requests": true,
 	"max_cached_tag_permissions": true,
 	"metadata_server": true,
-	"mongo_server": true,
 	"csv_url": true,
+
+	"permalink_num_bytes": true,
+	"permalink_max_tries": true,
 
 	"session_expiry_seconds": true,
 	"session_purge_interval_seconds": true,
@@ -295,16 +298,6 @@ func main() {
 	csvURL = config.CsvUrl
 	csvMaxPoints = config.CsvMaxPointsPerStream
 
-	log.Println("Connecting to MongoDB...")
-	mongoConn, err := mgo.Dial(config.MongoServer)
-	if err != nil {
-		log.Fatalf("Error: %v\n", err)
-	}
-	log.Println("Successfully connected to MongoDB")
-
-	plotterDBConn := mongoConn.DB("mr_plotter")
-	permalinkConn = plotterDBConn.C("permalinks")
-
 	log.Println("Connecting to BTrDB cluster...")
 	btrdbConn, err = btrdb.Connect(context.Background(), config.BtrdbEndpoints...)
 	if err != nil {
@@ -330,8 +323,9 @@ func main() {
 	go logWaitingRequests(time.Duration(config.OutstandingRequestLogInterval) * time.Second)
 	go logNumGoroutines(time.Duration(config.NumGoroutinesLogInterval) * time.Second)
 
-	permalinklen = base64.URLEncoding.EncodedLen(MONGO_ID_LEN)
-	permalinkdlen = base64.URLEncoding.DecodedLen(permalinklen)
+	permalinkMaxTries = config.PermalinkMaxTries
+	permalinkNumBytes = config.PermalinkNumBytes
+	permalinklen = base64.URLEncoding.EncodedLen(permalinkNumBytes)
 
 	http.Handle("/", http.FileServer(http.Dir(config.PlotterDir)))
 	http.HandleFunc("/dataws", datawsHandler)
@@ -797,6 +791,7 @@ func metadataHandler (w http.ResponseWriter, r *http.Request) {
 
 const PERMALINK_HELP string = "To create a permalink, send the data as a JSON document via a POST request. To retrieve a permalink, set a GET request, specifying \"id=<permalink identifier>\" in the URL."
 const PERMALINK_BAD_ID string = "not found"
+
 func permalinkHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" && r.Method != "POST" {
 		w.Header().Set("Allow", "GET POST")
@@ -805,9 +800,7 @@ func permalinkHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var err error
-	var jsonPermalink map[string]interface{}
-	var id bson.ObjectId
+	ctx := context.Background()
 
 	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	if r.Method == "GET" {
@@ -818,79 +811,69 @@ func permalinkHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		/* For backwards-compatibility with permalinks from the Meteor plotter, only look at the first 16 bytes. */
-		var idslice []byte = make([]byte, permalinkdlen)
-		_, err = base64.URLEncoding.Decode(idslice, []byte(id64str)[:permalinklen])
-
+		pdata, err := permalink.RetrievePermalinkData(ctx, etcdConn, id64str)
 		if err != nil {
-			w.Write([]byte(PERMALINK_HELP))
+			w.Write([]byte("Server error"))
 			return
-		}
-
-		id = bson.ObjectId(idslice)
-
-		if !id.Valid() {
+		} else if pdata == nil {
 			w.Write([]byte(PERMALINK_BAD_ID))
 			return
-		}
-
-		var query *mgo.Query = permalinkConn.FindId(id)
-
-		err = query.One(&jsonPermalink)
-		if err != nil {
-			w.Write([]byte(PERMALINK_BAD_ID))
-			return
-		}
-
-		// I could do this asynchronously, but I think this is good enough
-		err = permalinkConn.UpdateId(id, map[string]interface{}{
-			"$set": map[string]interface{}{
-				"lastAccessed": bson.Now(),
-			},
-		})
-
-		if err != nil {
-			// In the future I could try something like restarting the connection
-			log.Printf("Could not update permalink record: %v", err)
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-
-		var permalinkEncoder *json.Encoder = json.NewEncoder(w)
-		err = permalinkEncoder.Encode(jsonPermalink)
-
-		if err != nil {
-			log.Printf("Could not encode permlink data: %v", err)
-		}
+		w.Write(pdata)
 	} else {
-		var permalinkDecoder *json.Decoder = json.NewDecoder(r.Body)
+		var jsonPermalink map[string]interface{}
 
-		err = permalinkDecoder.Decode(&jsonPermalink)
+		jsonLiteral, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			w.Write([]byte(fmt.Sprintf("Error: received invalid JSON: %v", err)))
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(fmt.Sprintf("Could not read received POST payload: %v", err)))
+			return
+		}
+
+		err = json.Unmarshal(jsonLiteral, &jsonPermalink)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(fmt.Sprintf("Received invalid JSON: %v", err)))
 			return
 		}
 
 		err = validatePermalinkJSON(jsonPermalink)
 		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 			return
 		}
 
-		id = bson.NewObjectId()
-		jsonPermalink["_id"] = id
-		jsonPermalink["lastAccessed"] = bson.Now()
+		id := make([]byte, permalinkNumBytes)
+		id64buf := make([]byte, permalinklen)
 
-		err = permalinkConn.Insert(jsonPermalink)
-
-		if err == nil {
-			id64len := base64.URLEncoding.EncodedLen(len(id))
-			id64buf := make([]byte, id64len, id64len)
+		success := false
+		for trycount := 0; !success && trycount != permalinkMaxTries; trycount++ {
+			_, err = rand.Read(id)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(fmt.Sprintf("Could not generate new permalink ID: %v\n", err)))
+				return
+			}
 			base64.URLEncoding.Encode(id64buf, []byte(id))
+
+			success, err = permalink.InsertPermalinkData(ctx, etcdConn, string(id64buf), jsonLiteral)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(fmt.Sprintf("Could not insert permalink into database: %v", err)))
+				return
+			}
+		}
+
+		if success {
 			w.Write(id64buf)
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("Could not add permalink to database: %v", err)))
+			w.Write([]byte("Server error"))
+
+			log.Printf("Could not find a unique permalink ID in %d tries!", permalinkMaxTries)
 		}
 	}
 }
