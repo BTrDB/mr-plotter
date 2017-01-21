@@ -65,7 +65,9 @@ func (acc *MrPlotterAccount) SetPassword(newPassword []byte) error {
     return err
 }
 
-// Checks whether the provided password matches the user's password.
+// Checks whether the provided password matches the user's password. Returns
+// true if the provided password is correct, and false if it is not. If the
+// returned error is not nil, then the returned boolean should be ignored.
 func (acc *MrPlotterAccount) CheckPassword(password []byte) (bool, error) {
     err := bcrypt.CompareHashAndPassword(acc.PasswordHash, password)
     if err == nil {

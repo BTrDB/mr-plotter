@@ -24,6 +24,7 @@
 package main
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
@@ -36,10 +37,8 @@ import (
 	"log"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"github.com/SoftwareDefinedBuildings/mr-plotter/accounts"
+	etcd "github.com/coreos/etcd/clientv3"
 )
 
 var sessionExpirySeconds uint64
@@ -78,48 +77,42 @@ func setMACKey(key []byte) error {
 	return nil
 }
 
-func checkpassword(passwordConn *mgo.Collection, user string, password []byte) (userdoc map[string]interface{}, err error) {
-	userquery := bson.M{ "user": user }
-	err = passwordConn.Find(userquery).One(&userdoc)
+func checkpassword(ctx context.Context, etcdConn *etcd.Client, user string, password []byte) (*accounts.MrPlotterAccount, error) {
+	acc, err := accounts.RetrieveAccount(ctx, etcdConn, user)
 	if err != nil {
-		return
+		return nil, err
 	}
-	hashedpasswordbinary := userdoc["password"].(bson.Binary)
-	hashedpassword := hashedpasswordbinary.Data
 
-	err = bcrypt.CompareHashAndPassword(hashedpassword, password)
-	return
+	correct, err := acc.CheckPassword(password)
+	if err != nil {
+		return nil, err
+	}
+
+	if correct {
+		return acc, nil
+	} else {
+		return nil, nil
+	}
 }
 
 /* Writing to the returned slice results in undefined behavior.
    The returned slice is guaranteed to have a length of TOKEN_BYTE_LEN. */
-func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byte {
-	var userdoc map[string]interface{}
-	var loginsession *LoginSession
-	var err error
-
-	userdoc, err = checkpassword(passwordConn, user, password)
+func userlogin(ctx context.Context, etcdConn *etcd.Client, user string, password []byte) ([]byte, error) {
+	acc, err := checkpassword(ctx, etcdConn, user, password)
 	if err != nil {
-		return nil
+		return nil, err
+	} else if acc == nil {
+		/* Wrong password */
+		return nil, nil
 	}
 
-	tagintlist, ok := userdoc["tags"].([]interface{})
-	if !ok {
-		log.Println("Corrupt Mongo document: required key \"tags\" does not refer to an object")
-		return nil
-	}
-
-	taglist := make([]string, len(tagintlist))
-	for i := 0; i < len(taglist); i++ {
-		taglist[i], ok = tagintlist[i].(string)
-		if !ok {
-			log.Printf("Corrupt Mongo document: tag at index %d for user %s is not a string", i, user)
-			return nil
-		}
+	taglist := make([]string, len(acc.Tags))
+	for tag := range acc.Tags {
+		taglist = append(taglist, tag)
 	}
 
 	// Create a new session
-	loginsession = &LoginSession{
+	loginsession := &LoginSession{
 		Issued: time.Now().Unix(),
 		Tags: taglist,
 		User: user,
@@ -158,7 +151,7 @@ func userlogin(passwordConn *mgo.Collection, user string, password []byte) []byt
 	}
 	token = hmac_hash.Sum(token)
 
-	return token
+	return token, nil
 }
 
 func decodetoken(token []byte) []byte {
@@ -261,33 +254,39 @@ func usertags(token []byte) []string {
 	return loginsession.Tags
 }
 
-func userchangepassword(passwordConn *mgo.Collection, token []byte, oldpw []byte, newpw []byte) string {
+func userchangepassword(ctx context.Context, etcdConn *etcd.Client, token []byte, oldpw []byte, newpw []byte) (string) {
 	loginsession := getloginsession(token)
 	if loginsession == nil {
 		return ERROR_INVALID_TOKEN
 	}
 
-	var hash []byte
-	var err error
-
-	user := loginsession.User
-	_, err = checkpassword(passwordConn, user, oldpw)
-	if err != nil {
-		return "Bad password"
-	}
-
-	hash, err = bcrypt.GenerateFromPassword(newpw, bcrypt.DefaultCost)
+	acc, err := accounts.RetrieveAccount(ctx, etcdConn, loginsession.User)
 	if err != nil {
 		return "Server error"
 	}
 
-	updatepasssel := bson.M{ "user": user }
-	updatepasscom := bson.M{ "$set": bson.M{ "password": bson.Binary{ Kind: 0x80, Data: hash } } }
+	correct, err := acc.CheckPassword(oldpw)
+	if err != nil {
+		return "Server error"
+	}
 
-	err = passwordConn.Update(updatepasssel, updatepasscom)
-	if err == nil {
-		return "Success"
+	if !correct {
+		return "Incorrect password"
+	}
+
+	err = acc.SetPassword(newpw)
+	if err != nil {
+		return "Server error"
+	}
+
+	success, err := accounts.UpsertAccountAtomically(ctx, etcdConn, acc)
+	if err != nil {
+		return "Server error"
+	}
+
+	if success {
+		return SUCCESS
 	} else {
-		return "Server error"
+		return "Transaction failed; try again"
 	}
 }

@@ -53,6 +53,7 @@ import (
 const (
 	FORWARD_CHUNKSIZE int = (4 << 10) // 4 KiB
 	MAX_REQSIZE int64 = (16 << 10) // 16 KiB
+	SUCCESS string = "Success"
 	ERROR_INVALID_TOKEN string = "Invalid token"
 
 	MONGO_ID_LEN int = 12
@@ -84,7 +85,6 @@ var dr *DataRequester
 var br *DataRequester
 var mdServer string
 var permalinkConn *mgo.Collection
-var accountConn *mgo.Collection
 var etcdConn *etcd.Client
 var csvURL string
 var permalinklen int
@@ -304,7 +304,6 @@ func main() {
 
 	plotterDBConn := mongoConn.DB("mr_plotter")
 	permalinkConn = plotterDBConn.C("permalinks")
-	accountConn = plotterDBConn.C("accounts")
 
 	log.Println("Connecting to BTrDB cluster...")
 	btrdbConn, err = btrdb.Connect(context.Background(), config.BtrdbEndpoints...)
@@ -1078,12 +1077,19 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenarr := userlogin(accountConn, username, []byte(password))
-	if tokenarr != nil {
+	tokenarr, err := userlogin(context.TODO(), etcdConn, username, []byte(password))
+	if err != nil {
+		fmt.Printf("Could not verify login: %v\n")
+		// respond with a single space to indicate that there was a server error
+		// a space is not a valid base64 character, so it's not ambiguous
+		w.Write([]byte(" "))
+	} else if tokenarr != nil {
+		// login was successful, so respond with the token
 		token64buf := make([]byte, base64.StdEncoding.EncodedLen(len(tokenarr)))
 		base64.StdEncoding.Encode(token64buf, tokenarr)
 		w.Write(token64buf)
 	}
+	// else: invalid credentials, so respond with nothing
 }
 
 func parseToken(tokenencoded []byte) []byte {
@@ -1189,7 +1195,7 @@ func changepwHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	success := userchangepassword(accountConn, tokenslice, []byte(oldpassword), []byte(newpassword))
+	success := userchangepassword(context.TODO(), etcdConn, tokenslice, []byte(oldpassword), []byte(newpassword))
 	w.Write([]byte(success))
 }
 

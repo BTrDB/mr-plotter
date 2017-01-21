@@ -448,8 +448,12 @@ function login(self) {
     setLoginText(self, "Logging in...");
     self.requester.makeLoginRequest(username, password, function (token) {
             setButtonEnabled($loginButton, true);
-            if (token === "") {
-                loginmessage.innerHTML = "Invalid username or password";
+            if (token === "" || token === " ") {
+                if (token === "") {
+                    loginmessage.innerHTML = "Invalid username or password";
+                } else {
+                    loginmessage.innerHTML = "Server error"
+                }
                 restoreLoginText(self);
                 $loginButton.dropdown("toggle");
             } else {
@@ -460,7 +464,7 @@ function login(self) {
                 $loginList.find(".loginstate-loggedin").show();
             }
         }, function (error) {
-            loginmessage.innerHTML = "A server error has occurred";
+            loginmessage.innerHTML = "Could not contact server; check Internet connection";
             restoreLoginText(self);
             setButtonEnabled($loginButton, true);
             $loginButton.dropdown("toggle");
@@ -545,7 +549,7 @@ function changepw(self, event) {
             } else if (response === s3ui.ERROR_INVALID_TOKEN) {
                 sessionExpired(self);
                 return;
-            } else if (response === "Bad password") {
+            } else if (response === "Incorrect password") {
                 loginmessage.innerHTML = "Current password is incorrect";
                 showChangepwMenu(self);
             } else {
