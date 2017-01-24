@@ -40,17 +40,6 @@ const (
 	INVALID_TIME int64 = -0x8000000000000000
 )
 
-type semaphore chan struct{}
-
-func (s semaphore) P() {
-	<-s
-}
-
-func (s semaphore) V() {
-	var e struct{}
-	s <- e
-}
-
 func splitTime(time int64) (millis int64, nanos int32) {
 	millis = time / 1000000
 	nanos = int32(time % 1000000)
