@@ -41,6 +41,14 @@ import (
     etcd "github.com/coreos/etcd/clientv3"
 )
 
+// The "public" tag is used to specify streams viewable to all users, even those
+// who are not logged in.
+const PUBLIC_TAG = "public"
+
+// The "all" tag represents permissions to view all streams. It is stored
+// implicitly (i.e. not in etcd) and cannot be redefined.
+const ALL_TAG = "all"
+
 const accountpath string = "mrplotter/accounts/"
 const tagpath string = "mrplotter/tagdefs/"
 var etcdprefix string = ""

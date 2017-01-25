@@ -18,12 +18,13 @@
  * along with Mr. Plotter.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* Caches streams that users are permitted to see. */
+/* Caches permissions. */
 
 package main
 
 import (
 	"container/list"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -31,7 +32,10 @@ import (
 	"strings"
 	"sync"
 
-	uuid "github.com/pborman/uuid"
+	"gopkg.in/btrdb.v4"
+
+	"github.com/SoftwareDefinedBuildings/mr-plotter/accounts"
+	"github.com/pborman/uuid"
 )
 
 var max_cached uint64 // Maximum number of tag permissions that are cached
@@ -52,7 +56,7 @@ type TagPermission struct {
 
 // Maps TAG to a struct describing its permissions
 var permcache map[TagPermissionQuery]*TagPermission = make(map[TagPermissionQuery]*TagPermission)
-var defaulttags = []string{ "public" }
+var defaulttags = []string{ accounts.PUBLIC_TAG }
 var totalCached uint64 = 0
 
 // This is a bit coarse: I don't really need to lock the whole permcache if I'm just changing one entry
@@ -88,16 +92,29 @@ func pruneCacheIfNecessary() {
 	}
 }
 
-func hasPermission(session *LoginSession, uuidBytes uuid.UUID) bool {
+func hasPermission(ctx context.Context, session *LoginSession, uuidBytes uuid.UUID) bool {
 	var tags []string
+
+	/* First, check if the stream exists. */
+	var s *btrdb.Stream = btrdbConn.StreamFromUUID(uuidBytes)
+	if ok, err := s.Exists(ctx); !ok || err != nil {
+		/* We don't want to cache this result. That way, we don't have to worry
+		 * about invalidating the cache if a stream is created.
+		 */
+		return false
+	}
+
 	if session == nil {
 		tags = defaulttags
 	} else {
-		tags = session.Tags
+		if _, hasall := session.Tags[accounts.ALL_TAG]; hasall {
+			return true
+		}
+		tags = session.TagSlice()
 	}
 	uuidString := uuidBytes.String()
 	for _, tag := range tags {
-		if tagHasPermission(tag, uuidBytes, uuidString) {
+		if tagHasPermission(ctx, tag, uuidBytes, uuidString, s) {
 			return true
 		}
 	}
@@ -140,8 +157,8 @@ func checkforpermission(tag string, uuidString string) (bool, error) {
 	return hasPerm, nil
 }
 
-func tagHasPermission(tag string, uuidBytes uuid.UUID, uuidString string) bool {
-	var hasPerm bool
+func tagHasPermission(ctx context.Context, tag string, uuidBytes uuid.UUID, uuidString string, s *btrdb.Stream) bool {
+	var hasPerm bool = false
 	var err error
 
 	var query TagPermissionQuery = TagPermissionQuery{tagname: tag, uu: uuidBytes.Array()}
@@ -174,7 +191,26 @@ func tagHasPermission(tag string, uuidBytes uuid.UUID, uuidString string) bool {
 	permcacheLock.Unlock()
 
 	/* Make a request to the underlying database. */
-	hasPerm, err = checkforpermission(tag, uuidString)
+	if len(mdServer) == 0 {
+		// Query BTrDB
+		var collection string
+		collection, err = s.Collection(ctx)
+		if err == nil {
+			var tagdef *accounts.MrPlotterTagDef
+			tagdef, err = accounts.RetrieveTagDef(ctx, etcdConn, tag)
+			if err == nil {
+				for pfx := range tagdef.PathPrefix {
+					hasPerm = strings.HasPrefix(collection, pfx)
+					if hasPerm {
+						break
+					}
+				}
+			}
+		}
+	} else {
+		// Query the metadata server
+		hasPerm, err = checkforpermission(tag, uuidString)
+	}
 	if err != nil {
 		log.Printf("Request for tag permission failed: %v", err)
 		permcacheLock.Lock()

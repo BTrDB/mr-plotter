@@ -332,6 +332,9 @@ func main() {
 	http.HandleFunc("/data", dataHandler)
 	http.HandleFunc("/bracketws", bracketwsHandler)
 	http.HandleFunc("/bracket", bracketHandler)
+	http.HandleFunc("/treetop", treetopHandler)
+	http.HandleFunc("/treebranch", treebranchHandler)
+	http.HandleFunc("/treeleaf", treeleafHandler)
 	http.HandleFunc("/metadata", metadataHandler)
 	http.HandleFunc("/permalink", permalinkHandler)
 	http.HandleFunc("/csv", csvHandler)
@@ -542,13 +545,14 @@ func datawsHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-			if hasPermission(loginsession, uuidBytes) {
-				var ctx context.Context
-				var cancelfunc context.CancelFunc
-				ctx, cancelfunc = context.WithTimeout(context.Background(), dataTimeout)
+			var ctx context.Context
+			var cancelfunc context.CancelFunc
+			ctx, cancelfunc = context.WithTimeout(context.Background(), dataTimeout)
+			if hasPermission(ctx, loginsession, uuidBytes) {
 				dr.MakeDataRequest(ctx, uuidBytes, startTime, endTime, uint8(pw), &cw)
 				cancelfunc()
 			} else {
+				cancelfunc()
 				cw.GetWriter().Write([]byte("[]"))
 			}
 		}
@@ -601,13 +605,14 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		if hasPermission(loginsession, uuidBytes) {
-			var ctx context.Context
-			var cancelfunc context.CancelFunc
-			ctx, cancelfunc = context.WithTimeout(context.Background(), dataTimeout)
+		var ctx context.Context
+		var cancelfunc context.CancelFunc
+		ctx, cancelfunc = context.WithTimeout(context.Background(), dataTimeout)
+		if hasPermission(ctx, loginsession, uuidBytes) {
 			dr.MakeDataRequest(ctx, uuidBytes, startTime, endTime, uint8(pw), wrapper)
 			cancelfunc()
 		} else {
+			cancelfunc()
 			wrapper.GetWriter().Write([]byte("[]"))
 		}
 	}
@@ -648,14 +653,14 @@ func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			var viewable []uuid.UUID = uuids[:0]
-			for _, uuid := range uuids {
-				if hasPermission(loginsession, uuid) {
-					viewable = append(viewable, uuid)
-				}
-			}
 			var ctx context.Context
 			var cancelfunc context.CancelFunc
 			ctx, cancelfunc = context.WithTimeout(context.Background(), bracketTimeout)
+			for _, uuid := range uuids {
+				if hasPermission(ctx, loginsession, uuid) {
+					viewable = append(viewable, uuid)
+				}
+			}
 			br.MakeBracketRequest(ctx, uuids, &cw)
 			cancelfunc()
 		}
@@ -692,6 +697,7 @@ func bracketHandler (w http.ResponseWriter, r *http.Request) {
 	payload, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.Write([]byte(fmt.Sprintf("Could not read received POST payload: %v", err)))
+		return
 	}
 
 	wrapper := RespWrapper{w}
@@ -708,16 +714,17 @@ func bracketHandler (w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+		var ctx context.Context
+		var cancelfunc context.CancelFunc
+		ctx, cancelfunc = context.WithTimeout(context.Background(), dataTimeout)
+
 		var canview bool = true
 		for _, uuid := range uuids {
-			if !hasPermission(loginsession, uuid) {
+			if !hasPermission(ctx, loginsession, uuid) {
 				canview = false
 				break
 			}
 		}
-		var ctx context.Context
-		var cancelfunc context.CancelFunc
-		ctx, cancelfunc = context.WithTimeout(context.Background(), dataTimeout)
 		if canview {
 			br.MakeBracketRequest(ctx, uuids, wrapper)
 		} else {
@@ -727,66 +734,112 @@ func bracketHandler (w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func metadataHandler (w http.ResponseWriter, r *http.Request) {
+func onlyallowpost(w http.ResponseWriter, r *http.Request) bool {
 	if r.Method != "POST" {
 		w.Header().Set("Allow", "POST")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		w.Write([]byte("You must send a POST request to get data."))
-		return
+		return true
 	}
+	return false
+}
 
-	var n int
-
+func readfullbody(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
 	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
-	request, err := ioutil.ReadAll(r.Body) // should probably limit the size of this
+	request, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		w.Write([]byte("Could not read request."))
+		w.Write([]byte(fmt.Sprintf("Could not read received POST payload: %v", err)))
+		return nil, false
+	}
+	return request, true
+}
+
+
+func treetopHandler (w http.ResponseWriter, r *http.Request) {
+	if onlyallowpost(w, r) {
+		return
+	}
+	request, ok := readfullbody(w, r)
+	if !ok {
+		return
+	}
+	var ls *LoginSession = validateToken(string(request))
+	ctx, cancelfunc := context.WithTimeout(context.Background(), dataTimeout)
+	toplevel, err := treetopMetadata(ctx, etcdConn, btrdbConn, ls)
+	cancelfunc()
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("Error: %v\n", err)))
+		return
+	}
+	enc := json.NewEncoder(w)
+	err = enc.Encode(toplevel)
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("Error: %v\n", err)))
+	}
+}
+
+func mdDispatch(w http.ResponseWriter, r *http.Request, dispatch func (context.Context, *etcd.Client, *btrdb.BTrDB, *LoginSession, string) ([]byte, error)) {
+	if onlyallowpost(w, r) {
+		return
+	}
+	request, ok := readfullbody(w, r)
+	if !ok {
 		return
 	}
 
-	var tags string = "public"
 	semicolonindex := bytes.IndexByte(request, ';')
-	if semicolonindex != -1 {
-		tokenencoded := request[semicolonindex + 1:]
-		request = request[:semicolonindex + 1]
+	if semicolonindex == -1 {
+		w.Write([]byte("Bad request."))
+		return
+	}
+	tokenencoded := request[:semicolonindex]
+	request = request[semicolonindex + 1:]
 
-		tokenslice := make([]byte, base64.StdEncoding.DecodedLen(len(tokenencoded)))
-		n, err = base64.StdEncoding.Decode(tokenslice, tokenencoded)
-		if err == nil {
-			tokenslice = tokenslice[:n]
-			tagslice := usertags(tokenslice)
-			if tagslice != nil {
-				tags = strings.Join(tagslice, ",")
+	var ls *LoginSession = validateToken(string(tokenencoded))
+	ctx, cancelfunc := context.WithTimeout(context.Background(), dataTimeout)
+	toplevel, err := dispatch(ctx, etcdConn, btrdbConn, ls, string(request))
+	cancelfunc()
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("Error: %v\n", err)))
+		return
+	}
+	w.Write(toplevel)
+}
+
+func treebranchHandler(w http.ResponseWriter, r *http.Request) {
+	mdDispatch(w, r, func (ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, toplevel string) ([]byte, error) {
+		levels, err := treebranchMetadata(ctx, ec, bc, ls, toplevel)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(levels)
+	})
+}
+
+func treeleafHandler(w http.ResponseWriter, r *http.Request) {
+	mdDispatch(w, r, func (ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, path string) ([]byte, error) {
+		doc, err := treeleafMetadata(ctx, ec, bc, ls, path)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(doc)
+	})
+}
+
+func metadataHandler (w http.ResponseWriter, r *http.Request) {
+	mdDispatch(w, r, func (ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, uuids string) ([]byte, error) {
+		rv := make([]map[string]interface{}, 0)
+		uuidstrs := strings.Split(uuids, ",")
+		for _, uuidstr := range uuidstrs {
+			fmt.Println(uuidstr)
+			uu := uuid.Parse(uuidstr)
+			doc, err := uuidMetadata(ctx, ec, bc, ls, uu)
+			if err == nil {
+				rv = append(rv, doc)
 			}
 		}
-	}
-
-	mdReq, err := http.NewRequest("POST", fmt.Sprintf("%s?tags=%s", mdServer, tags), strings.NewReader(string(request)))
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("Could not perform HTTP request to metadata server: %v", err)))
-		return
-	}
-
-	mdReq.Header.Set("Content-Type", "text")
-	mdReq.Header.Set("Content-Length", fmt.Sprintf("%v", len(request)))
-	resp, err := http.DefaultClient.Do(mdReq)
-
-	if err != nil {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		w.Write([]byte(fmt.Sprintf("Could not forward request to metadata server: %v", err)))
-		return
-	}
-
-	var buffer []byte = make([]byte, FORWARD_CHUNKSIZE) // forward the response
-
-	var bytesRead int
-	var readErr error = nil
-	for readErr == nil {
-		bytesRead, readErr = resp.Body.Read(buffer)
-		w.Write(buffer[:bytesRead])
-	}
-	resp.Body.Close()
+		return json.Marshal(rv)
+	})
 }
 
 const PERMALINK_HELP string = "To create a permalink, send the data as a JSON document via a POST request. To retrieve a permalink, set a GET request, specifying \"id=<permalink identifier>\" in the URL."
@@ -952,6 +1005,10 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var ctx context.Context
+	var cancelfunc context.CancelFunc
+	ctx, cancelfunc = context.WithTimeout(context.Background(), dataTimeout)
+
 	for _, uuidstr := range jsonCSVReq.UUIDs {
 		uuidobj := uuid.Parse(uuidstr)
 		if uuidobj == nil {
@@ -959,12 +1016,17 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("Malformed UUID"))
 			return
 		}
-		if !hasPermission(loginsession, uuidobj) {
+
+		if !hasPermission(ctx, loginsession, uuidobj) {
+			cancelfunc()
 			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte("Insufficient permissions"))
 			return
 		}
 	}
+
+	// TODO actually use the context to cancel the HTTP request
+	cancelfunc()
 
 	// Don't send the token to BTrDB
 	jsonCSVReq.Token = ""

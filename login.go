@@ -48,8 +48,16 @@ var hmac_key []byte
 
 type LoginSession struct {
 	Issued int64
-	Tags []string
+	Tags map[string]struct{}
 	User string
+}
+
+func (loginsession *LoginSession) TagSlice() []string {
+	taglist := make([]string, len(loginsession.Tags))
+	for tag := range loginsession.Tags {
+		taglist = append(taglist, tag)
+	}
+	return taglist
 }
 
 func setSessionExpiry(seconds uint64) {
@@ -106,15 +114,10 @@ func userlogin(ctx context.Context, etcdConn *etcd.Client, user string, password
 		return nil, nil
 	}
 
-	taglist := make([]string, len(acc.Tags))
-	for tag := range acc.Tags {
-		taglist = append(taglist, tag)
-	}
-
 	// Create a new session
 	loginsession := &LoginSession{
 		Issued: time.Now().Unix(),
-		Tags: taglist,
+		Tags: acc.Tags,
 		User: user,
 	}
 
@@ -251,7 +254,7 @@ func usertags(token []byte) []string {
 		return nil
 	}
 
-	return loginsession.Tags
+	return loginsession.TagSlice()
 }
 
 func userchangepassword(ctx context.Context, etcdConn *etcd.Client, token []byte, oldpw []byte, newpw []byte) (string) {
