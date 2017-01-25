@@ -31,6 +31,14 @@ function init_streamtree(self) {
     self.idata.numLeaves = undefined;
 }
 
+function handleFailedLoad(description) {
+    if (description.length != 0) {
+        alert("Could not load node contents: " + description);
+    } else {
+        alert("Could not load node contents");
+    }
+}
+
 /* When a user logs in or logs out, we need to update the stream tree.
    Unlike updateStreamList, this maintains, to the best of its ability,
    which streams are selected. */
@@ -96,8 +104,8 @@ function updateStreamList(self) {
             core: {
                 data: function (obj, callback) {
                         if (obj.id == "#") {
-                            self.requester.makeMetadataRequest('select distinct Metadata/SourceName;', function (data) {
-                                    var sourceList = JSON.parse(data);
+                            self.requester.makeTreeTopRequest(function (data) {
+                                    var sourceList = data;
                                     var i;
                                     var rootID;
                                     for (i = 0; i < sourceList.length; i++) {
@@ -114,8 +122,11 @@ function updateStreamList(self) {
                                                         data: {
                                                                 toplevel: true,
                                                                 children: function (callback) {
-                                                                        self.requester.makeMetadataRequest('select distinct Path where Metadata/SourceName = "' + sourceName + '";', function (data) {
-                                                                                callback.call(this, pathsToTree(self, sourceName, JSON.parse(data)));
+                                                                        self.requester.makeTreeBranchRequest(sourceName, function (data) {
+                                                                                callback.call(this, pathsToTree(self, sourceName, data));
+                                                                            }, function (jqXHR) {
+                                                                                handleFailedLoad(jqXHR.responseText);
+                                                                                callback.call(this, []);
                                                                             });
                                                                     },
                                                                 child: false
@@ -125,6 +136,9 @@ function updateStreamList(self) {
                                             }(sourceList[i]);
                                     }
                                     callback(sourceList);
+                                }, function (jqXHR) {
+                                    handleFailedLoad(jqXHR.responseText);
+                                    callback([]);
                                 });
                         } else {
                             obj.data.children(callback);
@@ -175,7 +189,7 @@ function makeSelectHandler(self, streamTree, selectAllChildren) {
                                         streamTree.toggle_node(node);
                                     }
                                 } else {
-                                    alert("Could not load node contents (could not communicate with archiver)");
+                                    handleFailedLoad(status);
                                 }
                             });
                     }
@@ -271,12 +285,14 @@ function getContextMenu(self, node, callback) {
                         label: "Show Info",
                         action: function () {
                                 if (node.data.streamdata == undefined) {
-                                    self.requester.makeMetadataRequest('select * where Metadata/SourceName = "' + node.data.sourceName + '" and Path = "' + node.data.path + '";', function (data) {
+                                    self.requester.makeTreeLeafRequest(node.data.sourceName + node.data.path, function (data) {
                                              if (node.data.streamdata == undefined) {
-                                                 data = JSON.parse(data)[0];
+                                                 // Used to be data = JSON.parse(data)[0] but I removed the extra list around it
                                                  node.data.streamdata = data;
                                              }
                                              alert(s3ui.getInfo(node.data.streamdata, "\n", false));
+                                         }, function (jqXHR) {
+                                             handleFailedLoad(jqXHR.responseText);
                                          });
                                 } else {
                                     alert(s3ui.getInfo(node.data.streamdata, "\n", false));
@@ -324,22 +340,31 @@ function selectNode(self, tree, select, node) { // unfortunately there's no simp
         return result;
     } else if (node.data.selected != select) {
         node.data.selected = select;
-        if (node.data.streamdata == undefined) {
+        if (node.data.streamdata === undefined && select) {
             self.idata.pendingStreamRequests += 1;
-            self.requester.makeMetadataRequest('select * where Metadata/SourceName = "' + node.data.sourceName + '" and Path = "' + node.data.path + '";', function (data) {
+            self.requester.makeTreeLeafRequest(node.data.sourceName + node.data.path, function (data) {
                     self.idata.pendingStreamRequests -= 1;
                     if (node.data.selected == select) { // the box may have been unchecked in the meantime
                         if (node.data.streamdata == undefined) { // it might have been loaded in the meantime
-                            data = JSON.parse(data)[0];
+                            // Used to be data = JSON.parse(data)[0] but I removed the extra list around it
                             node.data.streamdata = data;
                         }
                         s3ui.toggleLegend(self, select, node.data.streamdata, true);
                     }
+                }, function (jqXHR) {
+                    self.idata.pendingStreamRequests -= 1;
+                    handleFailedLoad(jqXHR.responseText);
+                    tree.deselect_node(node);
                 });
             return true;
-        } else {
+        } else if (node.data.streamdata !== undefined) {
             s3ui.toggleLegend(self, select, node.data.streamdata, true);
             return false;
+        } else {
+            /* If the streamdata isn't loaded and we're deselecting, it's because
+             * the node failed to load. So we silently deselect it.
+             */
+            return true;
         }
     }
 }

@@ -371,9 +371,8 @@ function executePermalink(self, args, set_streams_only) {
     var streamObjs = [];
     var stream;
     var colors = [];
-    var noRequest = true;
     var uuidMap = {}; // Maps uuid to an index in the array
-    var query = 'select * where';
+    var uuids = []
     var toSelect = undefined;
     for (i = 0; i < streams.length; i++) {
         stream = streams[i];
@@ -388,20 +387,16 @@ function executePermalink(self, args, set_streams_only) {
             if (stream.selected) {
                 toSelect = stream.stream;
             }
-            if (!noRequest) {
-                query += ' or';
-            }
-            query += ' uuid = "' + stream.stream + '"';
-            noRequest = false;
+            uuids.push(stream.stream);
         }
     }
 
-    if (noRequest) {
+    if (uuids.length == 0) {
         setTimeout(function () { finishExecutingPermalink(self, streamObjs, colors, args, set_streams_only); }, 50);
     } else {
         query += ";"; // semicolon is needed to separate tag
-        self.requester.makeMetadataRequest(query, function (data) {
-                var receivedStreamObjs = JSON.parse(data);
+        self.requester.makeMetadataRequest(uuids, function (data) {
+                var receivedStreamObjs = data;
                 for (i = 0; i < receivedStreamObjs.length; i++) {
                     streamObjs[uuidMap[receivedStreamObjs[i].uuid]] = receivedStreamObjs[i];
                 }
@@ -412,6 +407,8 @@ function executePermalink(self, args, set_streams_only) {
                     }
                 }
                 finishExecutingPermalink(self, streamObjs, colors, args, toSelect, set_streams_only);
+            }, function (jqXHR) {
+                alert("Could not fetch metadata for permalink resolution: " + jqXHR.responseText);
             });
     }
 }

@@ -43,7 +43,8 @@ function init_axis(self) {
    STREAM is simply removed from FROMAXISID or added to TOAXISID.
    This updates the "Axes" box, but not the select menu in the "Legend" box. */
 function changeAxis(self, stream, fromAxisID, toAxisID, updateGraph) {
-    var unit = stream.Properties.UnitofMeasure;
+    // Used to be stream.Properties.UnitofMeasure but I changed the schema a bit
+    var unit = stream.UnitofMeasure;
     if (fromAxisID != null) {
         var streamList = self.idata.axisMap[fromAxisID].streams;
         for (var i = 0; i < streamList.length; i++) {
@@ -261,7 +262,8 @@ function updateYAxis (self, axisid) {
    If that is not possible either, it returns undefined. */
 function guessYAxis(self, stream) {
     var axis;
-    var unit = stream.Properties.UnitofMeasure;
+    // Used to be stream.Properties.UnitofMeasure but I changed the schema a bit
+    var unit = stream.UnitofMeasure;
     var backupIndex;
     var yAxes = self.idata.yAxes;
     for (var i = 0; i < yAxes.length; i++) {

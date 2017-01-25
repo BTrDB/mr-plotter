@@ -718,18 +718,13 @@ func bracketHandler (w http.ResponseWriter, r *http.Request) {
 		var cancelfunc context.CancelFunc
 		ctx, cancelfunc = context.WithTimeout(context.Background(), dataTimeout)
 
-		var canview bool = true
+		filtereduuids := uuids[:0]
 		for _, uuid := range uuids {
-			if !hasPermission(ctx, loginsession, uuid) {
-				canview = false
-				break
+			if hasPermission(ctx, loginsession, uuid) {
+				filtereduuids = append(filtereduuids, uuid)
 			}
 		}
-		if canview {
-			br.MakeBracketRequest(ctx, uuids, wrapper)
-		} else {
-			br.MakeBracketRequest(ctx, []uuid.UUID{}, wrapper)
-		}
+		br.MakeBracketRequest(ctx, filtereduuids, wrapper)
 		cancelfunc()
 	}
 }
@@ -763,7 +758,12 @@ func treetopHandler (w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var ls *LoginSession = validateToken(string(request))
+	var ls *LoginSession
+	if len(request) != 0 {
+		ls = validateToken(string(request))
+		w.Write([]byte(ERROR_INVALID_TOKEN))
+		return
+	}
 	ctx, cancelfunc := context.WithTimeout(context.Background(), dataTimeout)
 	toplevel, err := treetopMetadata(ctx, etcdConn, btrdbConn, ls)
 	cancelfunc()
@@ -795,7 +795,12 @@ func mdDispatch(w http.ResponseWriter, r *http.Request, dispatch func (context.C
 	tokenencoded := request[:semicolonindex]
 	request = request[semicolonindex + 1:]
 
-	var ls *LoginSession = validateToken(string(tokenencoded))
+	var ls *LoginSession
+	if len(tokenencoded) != 0 {
+		ls = validateToken(string(tokenencoded))
+		w.Write([]byte(ERROR_INVALID_TOKEN))
+		return
+	}
 	ctx, cancelfunc := context.WithTimeout(context.Background(), dataTimeout)
 	toplevel, err := dispatch(ctx, etcdConn, btrdbConn, ls, string(request))
 	cancelfunc()

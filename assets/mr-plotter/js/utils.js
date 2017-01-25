@@ -27,7 +27,8 @@ function formatPath(metadata) {
 
 function getFilepath(datum) {
     var rawpath = formatPath(datum);
-    var sourceName = datum.Metadata.SourceName;
+    // used to be datum.Metadata.SourceName but I simplified things a bit
+    var sourceName = datum.SourceName;
     return (sourceName == undefined ? '<no source name>' : sourceName) + rawpath;
 }
 

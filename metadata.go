@@ -179,13 +179,19 @@ func treebranchMetadata(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, l
             return nil, err
         }
 
+        dotidx := strings.IndexByte(coll, '.')
+        if dotidx == -1 {
+            dotidx = len(coll)
+        }
+        pathcoll := strings.Replace(coll[dotidx:], ".", "/", -1)
+
         for _, stream := range streams {
             /* Formulate the path for this stream. */
             pathfin, err := streamtoleafname(ctx, bc, stream)
             if err != nil {
                 return nil, err
             }
-            path := strings.Replace(coll, ".", "/", -1) + "/" + pathfin
+            path := pathcoll + "/" + pathfin
 
             /* Add path to return slice. */
             branches = append(branches, path)
@@ -247,14 +253,15 @@ func uuidMetadata(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Log
     if err != nil {
         doc = make(map[string]interface{})
     }
-    um, ok := doc["UnitOfMeasure"]
+    um, ok := doc["UnitofMeasure"]
     if !ok {
-        doc["UnitOfMeasure"] = "Unknown"
+        doc["UnitofMeasure"] = "Unknown"
     }
     if _, ok := um.(string); !ok {
-        doc["UnitOfMeasure"] = "Unknown"
+        doc["UnitofMeasure"] = "Unknown"
     }
     doc["Path"] = strings.Replace(collection, ".", "/", -1) + "/" + pathfin
+    doc["uuid"] = uu.String()
 
     return doc, nil
 }

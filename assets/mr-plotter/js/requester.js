@@ -144,14 +144,71 @@ Requester.prototype.makeChangePasswordRequest = function (old_password, new_pass
         });
     };
 
-Requester.prototype.makeMetadataRequest = function (query, success_callback, error_callback) {
+Requester.prototype.makeTreeTopRequest = function (success_callback, error_callback) {
+        var self = this;
+        return $.ajax({
+                type: "POST",
+                url: location.protocol + "//" + this.backend + "/treetop",
+                data: this.token,
+                success: success_callback,
+                dataType: "json",
+                error: function (jqXHR, textStatus, errorThrown) {
+                        self.checkErrorInvalidToken(jqXHR.responseText);
+                        if (error_callback !== undefined) {
+                            error_callback(jqXHR, textStatus, errorThrown)
+                        }
+                    }
+            });
+    };
+
+Requester.prototype.makeTreeBranchRequest = function (toplevel, success_callback, error_callback) {
+        var self = this;
+        return $.ajax({
+                type: "POST",
+                url: location.protocol + "//" + this.backend + "/treebranch",
+                data: this.token + ";" + toplevel,
+                success: success_callback,
+                dataType: "json",
+                error: function (jqXHR, textStatus, errorThrown) {
+                        self.checkErrorInvalidToken(jqXHR.responseText);
+                        if (error_callback !== undefined) {
+                            error_callback(jqXHR, textStatus, errorThrown)
+                        }
+                    }
+            });
+    };
+
+Requester.prototype.makeTreeLeafRequest = function (fullpath, success_callback, error_callback) {
+        var self = this;
+        return $.ajax({
+                type: "POST",
+                url: location.protocol + "//" + this.backend + "/treeleaf",
+                data: this.token + ";" + fullpath,
+                success: success_callback,
+                dataType: "json",
+                error: function (jqXHR, textStatus, errorThrown) {
+                        self.checkErrorInvalidToken(jqXHR.responseText);
+                        if (error_callback !== undefined) {
+                            error_callback(jqXHR, textStatus, errorThrown)
+                        }
+                    }
+            });
+    };
+
+Requester.prototype.makeMetadataRequest = function (uuidlist, success_callback, error_callback) {
+        var self = this;
         return $.ajax({
                 type: "POST",
                 url: location.protocol + "//" + this.backend + "/metadata",
-                data: query.concat(this.token),
+                data: this.token + ";" + uuidlist.join(),
                 success: success_callback,
-                dataType: "text",
-                error: error_callback == undefined ? function () {} : error_callback
+                dataType: "json",
+                error: function (jqXHR, textStatus, errorThrown) {
+                        self.checkErrorInvalidToken(jqXHR.responseText);
+                        if (error_callback !== undefined) {
+                            error_callback(jqXHR, textStatus, errorThrown)
+                        }
+                    }
             });
     };
 
