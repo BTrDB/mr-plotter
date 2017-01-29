@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mrplotter-bootstrap
+spec:
+  template:
+    metadata:
+      name: mrplotter-bootstrap
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: mrplotter-bootstrap
+        image: btrdb/mrplotter:latest
+        args: [ "init" ]
+        env:
+          - name: ETCD_ENDPOINT
+            value: http://etcd.sgs.svc.cluster.local:2379
+          - name: BTRDB_ENDPOINTS
+            value: http://btrdb-bootstrap.sgs.svc.cluster.local:4410

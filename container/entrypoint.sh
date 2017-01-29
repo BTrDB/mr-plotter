@@ -5,16 +5,27 @@
 
 # generate a new self signed cert
 
-openssl genrsa -des3 -passout pass:x -out server.pass.key 2048
-openssl rsa -passin pass:x -in server.pass.key -out server.key
-rm server.pass.key
-openssl req -new -key server.key -out server.csr \
-  -subj "/C=US/ST=CA/L=Berkeley/O=UCBerkeley/OU=EECS/CN=default.autocert.smartgrid.store"
-openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
-mv server.key $GOPATH/src/github.com/SoftwareDefinedBuildings/mr-plotter/defaultcert/key.pem
-mv server.crt $GOPATH/src/github.com/SoftwareDefinedBuildings/mr-plotter/defaultcert/cert.pem
+# Use version 3 API
+export ETCDCTL_API=3
 
-set -e
+# generate a new self signed cert
+set -ex
+
+if [[ $1 = "init" ]]
+then
+  openssl genrsa -des3 -passout pass:x -out server.pass.key 2048
+  openssl rsa -passin pass:x -in server.pass.key -out server.key
+  rm server.pass.key
+  openssl req -new -key server.key -out server.csr \
+    -subj "/C=US/ST=CA/L=Berkeley/O=UCBerkeley/OU=EECS/CN=default.autocert.smartgrid.store"
+  openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
+  cat server.crt | etcdctl --endpoints ${ETCD_ENDPOINT} put mrplotter/keys/https_certificate
+  cat server.key | etcdctl --endpoints ${ETCD_ENDPOINT} put mrplotter/keys/https_key
+  head -c 16 /dev/urandom | etcdctl --endpoints ${ETCD_ENDPOINT} put mrplotter/keys/session_encrypt_key
+  head -c 16 /dev/urandom | etcdctl --endpoints ${ETCD_ENDPOINT} put mrplotter/keys/session_mac_key
+  exit 0
+fi
 
 # run mr-plotter
-mr-plotter |& pp
+cd $GOPATH/bin
+mr-plotter $GOPATH/src/github.com/SoftwareDefinedBuildings/mr-plotter/plotter.ini |& pp
