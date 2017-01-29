@@ -147,7 +147,7 @@ var configRequiredKeys = map[string]bool{
 	"session_encrypt_key_file": true,
 	"session_mac_key_file": true,
 
-	"btrdb_endpoints": true,
+	"btrdb_endpoints": false,
 	"max_data_requests": true,
 	"max_bracket_requests": true,
 	"max_cached_tag_permissions": true,
@@ -212,8 +212,8 @@ func main() {
 
 	/* Validate the configuration file. */
 	defaultSect := rawConfig.Section("")
-	for requiredKey, _ := range configRequiredKeys {
-		if !defaultSect.HasKey(requiredKey) {
+	for requiredKey, required := range configRequiredKeys {
+		if required && !defaultSect.HasKey(requiredKey) {
 			log.Fatalf("Configuration file is missing required key \"%s\"", requiredKey)
 		}
 	}
@@ -222,6 +222,10 @@ func main() {
 	err = rawConfig.MapTo(&config)
 	if err != nil {
 		log.Fatalf("Could not map configuration file: %v", err)
+	}
+
+	if len(config.BtrdbEndpoints) == 0 {
+		config.BtrdbEndpoints = btrdb.EndpointsFromEnv()
 	}
 
 	var tlsCertificate tls.Certificate
