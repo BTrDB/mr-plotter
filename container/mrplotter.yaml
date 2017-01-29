@@ -1,63 +1,42 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: btrdbd
+  name: mrplotter
 spec:
-  replicas: 4
+  replicas: 2
   template:
     metadata:
       labels:
-        app: btrdbd
+        app: mrplotter
     spec:
       containers:
-      - name: btrdbd
-        image: btrdb/k8s:latest
+      - name: mrplotter
+        image: btrdb/mrplotter:latest
         env:
           - name: ETCD_ENDPOINT
             value: http://etcd.sgs.svc.cluster.local:2379
-          - name: CEPH_HOT_POOL
-            value: btrdb
-          - name: CEPH_DATA_POOL
-            value: btrdb
-          - name: MY_POD_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.name
-          - name: MY_POD_NAMESPACE
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
-          - name: MY_POD_IP
-            valueFrom:
-              fieldRef:
-                fieldPath: status.podIP
-        volumeMounts:
-          - name: ceph-keyring
-            mountPath: /etc/ceph/
-            readOnly: true
+          - name: BTRDB_ENDPOINTS
+            value: http://btrdb-bootstrap.sgs.svc.cluster.local:4410
         ports:
-        - containerPort: 4410
+        - containerPort: 443
           protocol: TCP
-        - containerPort: 9000
+        - containerPort: 80
           protocol: TCP
-      volumes:
-        - name: ceph-keyring
-          secret:
-            secretName: ceph-keyring
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: btrdbd
+  name: mrplotter
   labels:
-    app: btrdbd
+    app: mrplotter
 spec:
+  type: NodePort
   ports:
-  - port: 4410
-    targetPort: 4410
-    name: grpc
-  - port: 9000
-    targetPort: 9000
+  - port: 80
+    targetPort: 80
     name: http
+  - port: 443
+    targetPort: 443
+    name: https
   selector:
-    app: btrdbd
+    app: mrplotter
