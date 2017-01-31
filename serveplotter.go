@@ -43,6 +43,7 @@ import (
 	"gopkg.in/btrdb.v4"
 	"gopkg.in/ini.v1"
 
+	"github.com/SoftwareDefinedBuildings/mr-plotter/accounts"
 	"github.com/SoftwareDefinedBuildings/mr-plotter/permalink"
 
 	etcd "github.com/coreos/etcd/clientv3"
@@ -82,7 +83,6 @@ func (rw RespWrapper) GetWriter() io.Writer {
 var btrdbConn *btrdb.BTrDB
 var dr *DataRequester
 var br *DataRequester
-var mdServer string
 var etcdConn *etcd.Client
 var csvURL string
 var permalinklen int
@@ -117,7 +117,6 @@ type Config struct {
 	MaxDataRequests uint32
 	MaxBracketRequests uint32
 	MaxCachedTagPermissions uint64
-	MetadataServer string
 	CsvUrl string
 
 	PermalinkNumBytes int
@@ -151,7 +150,6 @@ var configRequiredKeys = map[string]bool{
 	"max_data_requests": true,
 	"max_bracket_requests": true,
 	"max_cached_tag_permissions": true,
-	"metadata_server": true,
 	"csv_url": true,
 
 	"permalink_num_bytes": true,
@@ -188,6 +186,10 @@ func main() {
 		filename = os.Args[1]
 	}
 
+	var etcdPrefix string = os.Getenv("MR_PLOTTER_ETCD_CONFIG")
+	accounts.SetEtcdKeyPrefix(etcdPrefix)
+	permalink.SetEtcdKeyPrefix(etcdPrefix)
+
 	var etcdEndpoint string = os.Getenv("ETCD_ENDPOINT")
 	if len(etcdEndpoint) == 0 {
 		etcdEndpoint = "localhost:2379"
@@ -202,8 +204,6 @@ func main() {
 		log.Fatalf("Error: %v", err)
 	}
 	defer etcdConn.Close()
-	log.Println("Successfully connected to etcd")
-
 
 	rawConfig, err := ini.Load(filename)
 	if err != nil {
@@ -298,7 +298,6 @@ func main() {
 
 	setTagPermissionCacheSize(config.MaxCachedTagPermissions)
 
-	mdServer = config.MetadataServer
 	csvURL = config.CsvUrl
 	csvMaxPoints = config.CsvMaxPointsPerStream
 
@@ -330,6 +329,8 @@ func main() {
 	permalinkMaxTries = config.PermalinkMaxTries
 	permalinkNumBytes = config.PermalinkNumBytes
 	permalinklen = base64.URLEncoding.EncodedLen(permalinkNumBytes)
+
+	go permCacheDaemon(context.Background(), etcdConn)
 
 	http.Handle("/", http.FileServer(http.Dir(config.PlotterDir)))
 	http.HandleFunc("/dataws", datawsHandler)

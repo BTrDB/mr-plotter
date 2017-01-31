@@ -25,15 +25,13 @@ package main
 import (
 	"container/list"
 	"context"
-	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"strings"
 	"sync"
 
 	"gopkg.in/btrdb.v4"
 
+	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/SoftwareDefinedBuildings/mr-plotter/accounts"
 	"github.com/pborman/uuid"
 )
@@ -62,13 +60,44 @@ var totalCached uint64 = 0
 // This is a bit coarse: I don't really need to lock the whole permcache if I'm just changing one entry
 // But hierarchical locking would be overkill here...
 var permcacheLock sync.Mutex = sync.Mutex{}
-var pruningCache bool = false // protected by permcacheLock
 
 // Use LRU policy: keep track of which tags are used most recently
 var lruList *list.List = list.New()
 var lruListLock sync.Mutex = sync.Mutex{}
 
 // Lock ordering is to always acquire the permcacheLock before the lruListLock
+
+func permCacheDaemon(ctx context.Context, ec *etcd.Client) {
+	permCachePrefix := accounts.GetTagEtcdPath()
+	watchchan := ec.Watch(ctx, permCachePrefix, etcd.WithPrefix())
+
+	// At some point we may want to consider using a data structure for the
+	// permission cache that is more efficient for this operation. For now,
+	// I'm going to leave it as is because changing tag definitions should
+	// be relatively rare.
+	for watchresp := range watchchan {
+		permcacheLock.Lock()
+		lruListLock.Lock()
+		err := watchresp.Err()
+		if err != nil {
+			log.Fatalf("Error watching tags: %v", err)
+		}
+		for _, event := range watchresp.Events {
+			key := string(event.Kv.Key)
+			for query, perm := range permcache {
+				if query.tagname == key {
+					delete(permcache, query)
+					lruList.Remove(perm.element)
+					totalCached -= 1
+				}
+			}
+		}
+		lruListLock.Unlock()
+		permcacheLock.Unlock()
+	}
+
+	log.Fatalln("Watch on tags was lost")
+}
 
 func setTagPermissionCacheSize(maxCached uint64) {
 	permcacheLock.Lock()
@@ -122,41 +151,6 @@ func hasPermission(ctx context.Context, session *LoginSession, uuidBytes uuid.UU
 	return false
 }
 
-func checkforpermission(tag string, uuidString string) (bool, error) {
-	var hasPerm bool
-
-	/* Ask the metadata server for the metadata of the corresponding stream. */
-	query := fmt.Sprintf("select * where uuid = \"%s\";", uuidString)
-	mdReq, err := http.NewRequest("POST", fmt.Sprintf("%s?tags=%s", mdServer, tag), strings.NewReader(query))
-	if err != nil {
-		return false, err
-	}
-
-	mdReq.Header.Set("Content-Type", "text")
-	mdReq.Header.Set("Content-Length", fmt.Sprintf("%v", len(query)))
-	resp, err := http.DefaultClient.Do(mdReq)
-
-	if err != nil {
-		return false, err
-	}
-
-	/* If the response is [] we lack permission; if it's longer we have permission. */
-	buf := make([]byte, 3)
-	n, err := io.ReadFull(resp.Body, buf)
-	resp.Body.Close()
-
-	if n == 3 && buf[0] == '[' {
-		hasPerm = true
-	} else if n == 2 && err == io.ErrUnexpectedEOF && buf[0] == '[' && buf[1] == ']' {
-		hasPerm = false
-	} else {
-		/* Server error. */
-		return false, fmt.Errorf("Metadata server error: %v %c %c %c", n, buf[0], buf[1], buf[2])
-	}
-
-	return hasPerm, nil
-}
-
 func tagHasPermission(ctx context.Context, tag string, uuidBytes uuid.UUID, uuidString string, s *btrdb.Stream) bool {
 	var hasPerm bool = false
 	var err error
@@ -191,25 +185,19 @@ func tagHasPermission(ctx context.Context, tag string, uuidBytes uuid.UUID, uuid
 	permcacheLock.Unlock()
 
 	/* Make a request to the underlying database. */
-	if len(mdServer) == 0 {
-		// Query BTrDB
-		var collection string
-		collection, err = s.Collection(ctx)
+	var collection string
+	collection, err = s.Collection(ctx)
+	if err == nil {
+		var tagdef *accounts.MrPlotterTagDef
+		tagdef, err = accounts.RetrieveTagDef(ctx, etcdConn, tag)
 		if err == nil {
-			var tagdef *accounts.MrPlotterTagDef
-			tagdef, err = accounts.RetrieveTagDef(ctx, etcdConn, tag)
-			if err == nil {
-				for pfx := range tagdef.PathPrefix {
-					hasPerm = strings.HasPrefix(collection, pfx)
-					if hasPerm {
-						break
-					}
+			for pfx := range tagdef.PathPrefix {
+				hasPerm = strings.HasPrefix(collection, pfx)
+				if hasPerm {
+					break
 				}
 			}
 		}
-	} else {
-		// Query the metadata server
-		hasPerm, err = checkforpermission(tag, uuidString)
 	}
 	if err != nil {
 		log.Printf("Request for tag permission failed: %v", err)

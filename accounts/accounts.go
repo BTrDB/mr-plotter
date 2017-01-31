@@ -166,6 +166,16 @@ func SetEtcdKeyPrefix(prefix string) {
     etcdprefix = prefix
 }
 
+// Gets the base path for account data in etcd.
+func GetAccountEtcdPath() string {
+    return fmt.Sprintf("%s%s", etcdprefix, accountpath)
+}
+
+// Gets the base path for tag definitions in etcd.
+func GetTagEtcdPath() string {
+    return fmt.Sprintf("%s%s", etcdprefix, tagpath)
+}
+
 func getEtcdKey(name string, typepath string) string {
     return fmt.Sprintf("%s%s%s", etcdprefix, typepath, name)
 }
