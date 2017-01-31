@@ -1133,7 +1133,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	tokenarr, err := userlogin(context.TODO(), etcdConn, username, []byte(password))
 	if err != nil {
-		fmt.Printf("Could not verify login: %v\n")
+		fmt.Printf("Could not verify login: %v\n", err)
 		// respond with a single space to indicate that there was a server error
 		// a space is not a valid base64 character, so it's not ambiguous
 		w.Write([]byte(" "))
