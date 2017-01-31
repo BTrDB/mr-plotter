@@ -233,13 +233,15 @@ function toggleEmbedMetadata() {
    before the tree is loaded. */
 function selectStreams(data_lst) {
      var node;
+     var srcpath;
      var source;
      var path;
      var streamTree = this.idata.streamTree;
      var loadingRootNodes = this.idata.loadingRootNodes;
      for (var i = 0; i < data_lst.length; i++) {
-         source = data_lst[i].Metadata.SourceName;
-         path = data_lst[i].Path;
+         srcpath = s3ui.splitPath(data_lst[i].Path);
+         source = srcpath[0];
+         path = srcpath[1];
          node = this.idata.leafNodes[source + path];
          if (node != undefined) {
              node = streamTree.get_node(node);
@@ -282,14 +284,15 @@ function deselectStreams(data_lst) {
     var streamTree = this.idata.streamTree;
     var initiallySelectedStreams = this.idata.initiallySelectedStreams;
     for (var i = 0; i < data_lst.length; i++) {
-        node = this.idata.leafNodes[data_lst[i].Metadata.SourceName + data_lst[i].Path];
+        node = this.idata.leafNodes[data_lst[i].Path];
         if (node != undefined) {
             node = streamTree.get_node(node);
         }
         if (node == undefined || node === false || node.data.streamdata == undefined) { // check if it has been *loaded* in the tree; if so, it's checked state is correct
             node = data_lst[i];
-            var sourceName = node.Metadata.SourceName;
-            var path = node.Path;
+            var snpath = s3ui.splitPath(node.Path);
+            var sourceName = snpath[0];
+            var path = snpath[1];
             if (initiallySelectedStreams.hasOwnProperty(sourceName) && initiallySelectedStreams[sourceName].hasOwnProperty(path)) {
                 initiallySelectedStreams[sourceName].count--;
                 if (initiallySelectedStreams[sourceName].count == 0) {

@@ -26,10 +26,15 @@ function formatPath(metadata) {
 }
 
 function getFilepath(datum) {
-    var rawpath = formatPath(datum);
-    // used to be datum.Metadata.SourceName but I simplified things a bit
-    var sourceName = datum.SourceName;
-    return (sourceName == undefined ? '<no source name>' : sourceName) + rawpath;
+    // used to incorporate datum.Metadata.SourceName but I simplified things a bit
+    return formatPath(datum);
+}
+
+function splitPath(path) {
+    parts = path.split("/", 1)
+    sourcename = parts
+    path = path.slice(sourcename.length)
+    return [sourcename, path]
 }
 
 function getInfo (datum, linebreak, escapeHTML) {
@@ -239,6 +244,7 @@ function getUnitString(unitDict) {
 
 s3ui.formatPath = formatPath;
 s3ui.getFilepath = getFilepath;
+s3ui.splitPath = splitPath;
 s3ui.getInfo = getInfo;
 s3ui.makeMenuMaker = makeMenuMaker;
 s3ui.binSearch = binSearch;
