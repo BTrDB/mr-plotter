@@ -48,24 +48,24 @@ import (
 
 	etcd "github.com/coreos/etcd/clientv3"
 	httpHandlers "github.com/gorilla/handlers"
-	uuid "github.com/pborman/uuid"
 	ws "github.com/gorilla/websocket"
+	uuid "github.com/pborman/uuid"
 )
 
 const (
-	FORWARD_CHUNKSIZE int = (4 << 10) // 4 KiB
-	MAX_REQSIZE int64 = (16 << 10) // 16 KiB
-	SUCCESS string = "Success"
+	FORWARD_CHUNKSIZE   int    = (4 << 10)  // 4 KiB
+	MAX_REQSIZE         int64  = (16 << 10) // 16 KiB
+	SUCCESS             string = "Success"
 	ERROR_INVALID_TOKEN string = "Invalid token"
 )
 
 type CSVRequest struct {
-	StartTime int64
-	EndTime int64
-	UUIDs []string `json:"UUIDS"`
-	Labels []string
+	StartTime  int64
+	EndTime    int64
+	UUIDs      []string `json:"UUIDS"`
+	Labels     []string
 	UnitofTime string
-	Token string `json:"_token,omitempty"`
+	Token      string `json:"_token,omitempty"`
 	PointWidth uint8
 }
 
@@ -97,71 +97,71 @@ var permalinkMaxTries int
    doing any atomic operations on these, and regular operations don't have to
    be particularly fast (I'm just parsing a config file, after all). */
 type Config struct {
-	HttpPort uint16
-	HttpsPort uint16
-	UseHttp bool
-	UseHttps bool
-	HttpsRedirect bool
-	LogHttpRequests bool
+	HttpPort              uint16
+	HttpsPort             uint16
+	UseHttp               bool
+	UseHttps              bool
+	HttpsRedirect         bool
+	LogHttpRequests       bool
 	CompressHttpResponses bool
-	PlotterDir string
-	HttpsCertFile string
-	HttpsKeyFile string
+	PlotterDir            string
+	HttpsCertFile         string
+	HttpsKeyFile          string
 
 	SessionEncryptKeyFile string
-	SessionMacKeyFile string
+	SessionMacKeyFile     string
 
-	BtrdbEndpoints []string
-	NumDataConn uint16
-	NumBracketConn uint16
-	MaxDataRequests uint32
-	MaxBracketRequests uint32
+	BtrdbEndpoints          []string
+	NumDataConn             uint16
+	NumBracketConn          uint16
+	MaxDataRequests         uint32
+	MaxBracketRequests      uint32
 	MaxCachedTagPermissions uint64
-	CsvUrl string
+	CsvUrl                  string
 
 	PermalinkNumBytes int
 	PermalinkMaxTries int
 
-	SessionExpirySeconds uint64
-	SessionPurgeIntervalSeconds int64
-	CsvMaxPointsPerStream int64
+	SessionExpirySeconds          uint64
+	SessionPurgeIntervalSeconds   int64
+	CsvMaxPointsPerStream         int64
 	OutstandingRequestLogInterval int64
-	NumGoroutinesLogInterval int64
-	DbDataTimeoutSeconds int64
-	DbBracketTimeoutSeconds int64
+	NumGoroutinesLogInterval      int64
+	DbDataTimeoutSeconds          int64
+	DbBracketTimeoutSeconds       int64
 }
 
 var configRequiredKeys = map[string]bool{
-	"http_port": true,
-	"https_port": true,
-	"use_http": true,
-	"use_https": true,
-	"https_redirect": true,
-	"log_http_requests": true,
+	"http_port":               true,
+	"https_port":              true,
+	"use_http":                true,
+	"use_https":               true,
+	"https_redirect":          true,
+	"log_http_requests":       true,
 	"compress_http_responses": true,
-	"plotter_dir": true,
-	"https_cert_file": true,
-	"https_key_file": true,
+	"plotter_dir":             true,
+	"https_cert_file":         true,
+	"https_key_file":          true,
 
 	"session_encrypt_key_file": true,
-	"session_mac_key_file": true,
+	"session_mac_key_file":     true,
 
-	"btrdb_endpoints": false,
-	"max_data_requests": true,
-	"max_bracket_requests": true,
+	"btrdb_endpoints":            false,
+	"max_data_requests":          true,
+	"max_bracket_requests":       true,
 	"max_cached_tag_permissions": true,
-	"csv_url": true,
+	"csv_url":                    true,
 
 	"permalink_num_bytes": true,
 	"permalink_max_tries": true,
 
-	"session_expiry_seconds": true,
-	"session_purge_interval_seconds": true,
-	"csv_max_points_per_stream": true,
+	"session_expiry_seconds":           true,
+	"session_purge_interval_seconds":   true,
+	"csv_max_points_per_stream":        true,
 	"outstanding_request_log_interval": true,
-	"num_goroutines_log_interval": true,
-	"db_data_timeout_seconds": true,
-	"db_bracket_timeout_seconds": true,
+	"num_goroutines_log_interval":      true,
+	"db_data_timeout_seconds":          true,
+	"db_bracket_timeout_seconds":       true,
 }
 
 func getEtcdKeySafe(ctx context.Context, key string) []byte {
@@ -180,6 +180,11 @@ func main() {
 	var err error
 	var filename string
 
+	if len(os.Args) == 2 && os.Args[1] == "-version" {
+		fmt.Printf("%d.%d.%d\n", VersionMajor, VersionMinor, VersionPatch)
+		os.Exit(0)
+	}
+	fmt.Printf("starting Mr Plotter version %d.%d.%d\n", VersionMajor, VersionMinor, VersionPatch)
 	if len(os.Args) < 2 {
 		filename = "plotter.ini"
 	} else {
@@ -367,18 +372,18 @@ func main() {
 	}
 
 	if config.UseHttp && config.UseHttps {
-		go func () {
-				log.Fatal(mrPlotterServer.ListenAndServeTLS("", ""))
-				os.Exit(1)
-			}()
+		go func() {
+			log.Fatal(mrPlotterServer.ListenAndServeTLS("", ""))
+			os.Exit(1)
+		}()
 
 		if config.HttpsRedirect {
-			var redirect http.Handler = http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
-					var url *url.URL = r.URL
-					url.Scheme = "https"
-					url.Host = r.Host + portStrHTTPS
-					http.Redirect(w, r, url.String(), http.StatusFound)
-				})
+			var redirect http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var url *url.URL = r.URL
+				url.Scheme = "https"
+				url.Host = r.Host + portStrHTTPS
+				http.Redirect(w, r, url.String(), http.StatusFound)
+			})
 			var loggedRedirect http.Handler = httpHandlers.CompressHandler(httpHandlers.CombinedLoggingHandler(os.Stdout, redirect))
 			log.Fatal(http.ListenAndServe(portStrHTTP, loggedRedirect))
 		} else {
@@ -487,7 +492,7 @@ func parseBracketRequest(request string, writ Writable, expectExtra bool) (uuids
 	}
 
 	if expectExtra {
-		extra = args[numUUIDs + 1]
+		extra = args[numUUIDs+1]
 	}
 
 	uuids = make([]uuid.UUID, numUUIDs)
@@ -527,7 +532,7 @@ func datawsHandler(w http.ResponseWriter, r *http.Request) {
 
 	cw := ConnWrapper{
 		Writing: &sync.Mutex{},
-		Conn: websocket,
+		Conn:    websocket,
 	}
 
 	websocket.SetReadLimit(MAX_REQSIZE)
@@ -634,7 +639,7 @@ func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
 
 	cw := ConnWrapper{
 		Writing: &sync.Mutex{},
-		Conn: websocket,
+		Conn:    websocket,
 	}
 
 	websocket.SetReadLimit(MAX_REQSIZE)
@@ -690,7 +695,7 @@ func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func bracketHandler (w http.ResponseWriter, r *http.Request) {
+func bracketHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.Header().Set("Allow", "POST")
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -754,8 +759,7 @@ func readfullbody(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
 	return request, true
 }
 
-
-func treetopHandler (w http.ResponseWriter, r *http.Request) {
+func treetopHandler(w http.ResponseWriter, r *http.Request) {
 	if onlyallowpost(w, r) {
 		return
 	}
@@ -783,7 +787,7 @@ func treetopHandler (w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func mdDispatch(w http.ResponseWriter, r *http.Request, dispatch func (context.Context, *etcd.Client, *btrdb.BTrDB, *LoginSession, string) ([]byte, error)) {
+func mdDispatch(w http.ResponseWriter, r *http.Request, dispatch func(context.Context, *etcd.Client, *btrdb.BTrDB, *LoginSession, string) ([]byte, error)) {
 	if onlyallowpost(w, r) {
 		return
 	}
@@ -798,7 +802,7 @@ func mdDispatch(w http.ResponseWriter, r *http.Request, dispatch func (context.C
 		return
 	}
 	tokenencoded := request[:semicolonindex]
-	request = request[semicolonindex + 1:]
+	request = request[semicolonindex+1:]
 
 	var ls *LoginSession
 	if len(tokenencoded) != 0 {
@@ -817,7 +821,7 @@ func mdDispatch(w http.ResponseWriter, r *http.Request, dispatch func (context.C
 }
 
 func treebranchHandler(w http.ResponseWriter, r *http.Request) {
-	mdDispatch(w, r, func (ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, toplevel string) ([]byte, error) {
+	mdDispatch(w, r, func(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, toplevel string) ([]byte, error) {
 		levels, err := treebranchMetadata(ctx, ec, bc, ls, toplevel)
 		if err != nil {
 			return nil, err
@@ -827,7 +831,7 @@ func treebranchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func treeleafHandler(w http.ResponseWriter, r *http.Request) {
-	mdDispatch(w, r, func (ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, path string) ([]byte, error) {
+	mdDispatch(w, r, func(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, path string) ([]byte, error) {
 		doc, err := treeleafMetadata(ctx, ec, bc, ls, path)
 		if err != nil {
 			return nil, err
@@ -836,8 +840,8 @@ func treeleafHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func metadataHandler (w http.ResponseWriter, r *http.Request) {
-	mdDispatch(w, r, func (ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, uuids string) ([]byte, error) {
+func metadataHandler(w http.ResponseWriter, r *http.Request) {
+	mdDispatch(w, r, func(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, uuids string) ([]byte, error) {
 		rv := make([]map[string]interface{}, 0)
 		uuidstrs := strings.Split(uuids, ",")
 		for _, uuidstr := range uuidstrs {
@@ -995,7 +999,7 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var pps int64 = deltaT >> jsonCSVReq.PointWidth
-	if deltaT & ((1 << jsonCSVReq.PointWidth) - 1) != 0 {
+	if deltaT&((1<<jsonCSVReq.PointWidth)-1) != 0 {
 		pps += 1
 	}
 	if pps > csvMaxPoints {
