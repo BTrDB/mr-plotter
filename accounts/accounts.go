@@ -32,13 +32,13 @@
 package accounts
 
 import (
-    "context"
-    "fmt"
+	"context"
+	"fmt"
 
-    "golang.org/x/crypto/bcrypt"
+	"golang.org/x/crypto/bcrypt"
 
-    "github.com/ugorji/go/codec"
-    etcd "github.com/coreos/etcd/clientv3"
+	etcd "github.com/coreos/etcd/clientv3"
+	"github.com/ugorji/go/codec"
 )
 
 // The "public" tag is used to specify streams viewable to all users, even those
@@ -51,106 +51,107 @@ const ALL_TAG = "all"
 
 const accountpath string = "mrplotter/accounts/"
 const tagpath string = "mrplotter/tagdefs/"
+
 var etcdprefix string = ""
 
 var mp codec.Handle = &codec.MsgpackHandle{}
 
 // MrPlotterAccount abstracts account information for a single user.
 type MrPlotterAccount struct {
-    Username string
-    Tags map[string]struct{}
-    PasswordHash []byte
+	Username     string
+	Tags         map[string]struct{}
+	PasswordHash []byte
 
-    retrievedRevision int64
+	retrievedRevision int64
 }
 
 // MrPlotterTagDef abstracts a mapping from a Tag to set of collection prefixes.
 type MrPlotterTagDef struct {
-    Tag string
-    PathPrefix map[string]struct{}
+	Tag        string
+	PathPrefix map[string]struct{}
 
-    retrievedRevision int64
+	retrievedRevision int64
 }
 
 // Can be used to abstract a MrPlotterAccount or MrPlotterTagDef
 type MrPlotterEtcdToken interface {
-    getEtcdKey() string
-    setRetrievedRevision(rev int64)
-    getRetrievedRevision() int64
+	getEtcdKey() string
+	setRetrievedRevision(rev int64)
+	getRetrievedRevision() int64
 
-    getTypePath() string
+	getTypePath() string
 }
 
 func (acc *MrPlotterAccount) getEtcdKey() string {
-    return getEtcdKey(acc.Username, accountpath)
+	return getEtcdKey(acc.Username, accountpath)
 }
 
 func (acc *MrPlotterAccount) setRetrievedRevision(rev int64) {
-    acc.retrievedRevision = rev
+	acc.retrievedRevision = rev
 }
 
 func (acc *MrPlotterAccount) getRetrievedRevision() int64 {
-    return acc.retrievedRevision
+	return acc.retrievedRevision
 }
 
 func (acc *MrPlotterAccount) getTypePath() string {
-    return accountpath
+	return accountpath
 }
 
 // Sets the password for a user.
 func (acc *MrPlotterAccount) SetPassword(newPassword []byte) error {
-    phash, err := bcrypt.GenerateFromPassword(newPassword, bcrypt.DefaultCost)
-    if (err == nil) {
-        acc.PasswordHash = phash
-    }
-    return err
+	phash, err := bcrypt.GenerateFromPassword(newPassword, bcrypt.DefaultCost)
+	if err == nil {
+		acc.PasswordHash = phash
+	}
+	return err
 }
 
 // Checks whether the provided password matches the user's password. Returns
 // true if the provided password is correct, and false if it is not. If the
 // returned error is not nil, then the returned boolean should be ignored.
 func (acc *MrPlotterAccount) CheckPassword(password []byte) (bool, error) {
-    err := bcrypt.CompareHashAndPassword(acc.PasswordHash, password)
-    if err == nil {
-        return true, nil
-    } else if err == bcrypt.ErrMismatchedHashAndPassword {
-        return false, nil
-    } else {
-        return false, err
-    }
+	err := bcrypt.CompareHashAndPassword(acc.PasswordHash, password)
+	if err == nil {
+		return true, nil
+	} else if err == bcrypt.ErrMismatchedHashAndPassword {
+		return false, nil
+	} else {
+		return false, err
+	}
 }
 
 func (tdef *MrPlotterTagDef) getEtcdKey() string {
-    return getEtcdKey(tdef.Tag, tagpath)
+	return getEtcdKey(tdef.Tag, tagpath)
 }
 
 func (tdef *MrPlotterTagDef) setRetrievedRevision(rev int64) {
-    tdef.retrievedRevision = rev
+	tdef.retrievedRevision = rev
 }
 
 func (tdef *MrPlotterTagDef) getRetrievedRevision() int64 {
-    return tdef.retrievedRevision
+	return tdef.retrievedRevision
 }
 
 func (tdef *MrPlotterTagDef) getTypePath() string {
-    return tagpath
+	return tagpath
 }
 
 func encodeToken(tok MrPlotterEtcdToken) ([]byte, error) {
-    var encoded []byte
+	var encoded []byte
 
-    encoder := codec.NewEncoderBytes(&encoded, mp)
-    err := encoder.Encode(tok)
-    if err != nil {
-        return nil, err
-    }
+	encoder := codec.NewEncoderBytes(&encoded, mp)
+	err := encoder.Encode(tok)
+	if err != nil {
+		return nil, err
+	}
 
-    return encoded, nil
+	return encoded, nil
 }
 
 func decodeToken(encoded []byte, into interface{}) error {
-    decoder := codec.NewDecoderBytes(encoded, mp)
-    return decoder.Decode(into)
+	decoder := codec.NewDecoderBytes(encoded, mp)
+	return decoder.Decode(into)
 }
 
 // Sets the prefix added to keys in the etcd database.
@@ -163,85 +164,103 @@ func decodeToken(encoded []byte, into interface{}) error {
 // or RetrieveMultipleAccounts must always be used with the same prefix with
 // which they were generated.
 func SetEtcdKeyPrefix(prefix string) {
-    etcdprefix = prefix
+	etcdprefix = prefix
 }
 
 // Gets the base path for account data in etcd.
 func GetAccountEtcdPath() string {
-    return fmt.Sprintf("%s%s", etcdprefix, accountpath)
+	return fmt.Sprintf("%s%s", etcdprefix, accountpath)
 }
 
 // Gets the base path for tag definitions in etcd.
 func GetTagEtcdPath() string {
-    return fmt.Sprintf("%s%s", etcdprefix, tagpath)
+	return fmt.Sprintf("%s%s", etcdprefix, tagpath)
 }
 
 func getEtcdKey(name string, typepath string) string {
-    return fmt.Sprintf("%s%s%s", etcdprefix, typepath, name)
+	return fmt.Sprintf("%s%s%s", etcdprefix, typepath, name)
 }
 
 func getNameFromEtcdKey(etcdKey string, typepath string) string {
-    return etcdKey[len(etcdprefix) + len(typepath):]
+	return etcdKey[len(etcdprefix)+len(typepath):]
 }
 
 func retrieveToken(ctx context.Context, etcdClient *etcd.Client, username string, retrieveInto MrPlotterEtcdToken) error {
-    etcdKey := getEtcdKey(username, retrieveInto.getTypePath())
-    resp, err := etcdClient.Get(ctx, etcdKey)
-    if err != nil {
-        return err
-    }
+	etcdKey := getEtcdKey(username, retrieveInto.getTypePath())
+	resp, err := etcdClient.Get(ctx, etcdKey)
+	if err != nil {
+		return err
+	}
 
-    /* No token with that name exists. */
-    if len(resp.Kvs) == 0 {
-        return nil
-    }
+	/* No token with that name exists. */
+	if len(resp.Kvs) == 0 {
+		return nil
+	}
 
-    err = decodeToken(resp.Kvs[0].Value, retrieveInto)
-    if err != nil {
-        return err
-    }
+	err = decodeToken(resp.Kvs[0].Value, retrieveInto)
+	if err != nil {
+		return err
+	}
 
-    retrieveInto.setRetrievedRevision(resp.Kvs[0].ModRevision)
-    return nil
+	retrieveInto.setRetrievedRevision(resp.Kvs[0].ModRevision)
+	return nil
 }
 
 // Retrieves the account information for the specified user.
 // Setting the "Username" field in the returned struct renders it unsuitable
 // for use with the "UpsertAccountAtomically" function.
 func RetrieveAccount(ctx context.Context, etcdClient *etcd.Client, username string) (acc *MrPlotterAccount, err error) {
-    acc = &MrPlotterAccount{}
-    err = retrieveToken(ctx, etcdClient, username, acc)
-    return
+	acc = &MrPlotterAccount{}
+	err = retrieveToken(ctx, etcdClient, username, acc)
+	return
 }
 
 // Retrieves the tag definition for the specified tag.
 // Setting the "Tag" field in the returned struct renders it unsuitable
 // for use with the "UpsertTagDefAtomically" function.
 func RetrieveTagDef(ctx context.Context, etcdClient *etcd.Client, tag string) (tdef *MrPlotterTagDef, err error) {
-    tdef = &MrPlotterTagDef{}
-    err = retrieveToken(ctx, etcdClient, tag, tdef)
-    return
+	tdef = &MrPlotterTagDef{}
+	err = retrieveToken(ctx, etcdClient, tag, tdef)
+	return
 }
 
 func upsertToken(ctx context.Context, etcdClient *etcd.Client, tok MrPlotterEtcdToken) error {
-    encoded, err := encodeToken(tok)
-    if err != nil {
-        return err
-    }
+	encoded, err := encodeToken(tok)
+	if err != nil {
+		return err
+	}
 
-    etcdKey := tok.getEtcdKey()
-    _, err = etcdClient.Put(ctx, etcdKey, string(encoded))
-    return err
+	etcdKey := tok.getEtcdKey()
+	_, err = etcdClient.Put(ctx, etcdKey, string(encoded))
+	return err
 }
 
 // Updates the account according to the provided account information, creating
 // a new user account if a user with that username does not exist.
 func UpsertAccount(ctx context.Context, etcdClient *etcd.Client, acc *MrPlotterAccount) error {
-    return upsertToken(ctx, etcdClient, acc)
+	return upsertToken(ctx, etcdClient, acc)
 }
 
 func UpsertTagDef(ctx context.Context, etcdClient *etcd.Client, tdef *MrPlotterTagDef) error {
-    return upsertToken(ctx, etcdClient, tdef)
+	return upsertToken(ctx, etcdClient, tdef)
+}
+
+func upsertTokenAtomically(ctx context.Context, etcdClient *etcd.Client, tok MrPlotterEtcdToken) (bool, error) {
+	encoded, err := encodeToken(tok)
+	if err != nil {
+		return false, err
+	}
+
+	etcdKey := tok.getEtcdKey()
+	resp, err := etcdClient.Txn(ctx).
+		If(etcd.Compare(etcd.ModRevision(etcdKey), "=", tok.getRetrievedRevision())).
+		Then(etcd.OpPut(etcdKey, string(encoded))).
+		Commit()
+	if resp != nil {
+		return resp.Succeeded, err
+	} else {
+		return false, err
+	}
 }
 
 // Same as UpsertAccount, but fails if the account was updated meanwhile. This
@@ -258,44 +277,27 @@ func UpsertTagDef(ctx context.Context, etcdClient *etcd.Client, tdef *MrPlotterT
 // RetrieveMultipleAccounts and then use it with this function. Setting the
 // "Username" field of a struct to be used with this function is only allowed
 // for structs that are created directly.
-func upsertTokenAtomically(ctx context.Context, etcdClient *etcd.Client, tok MrPlotterEtcdToken) (bool, error) {
-    encoded, err := encodeToken(tok)
-    if err != nil {
-        return false, err
-    }
-
-    etcdKey := tok.getEtcdKey()
-    resp, err := etcdClient.Txn(ctx).
-        If(etcd.Compare(etcd.ModRevision(etcdKey), "=", tok.getRetrievedRevision())).
-        Then(etcd.OpPut(etcdKey, string(encoded))).
-        Commit()
-    if resp != nil {
-        return resp.Succeeded, err
-    } else {
-        return false, err
-    }
-}
-
 func UpsertAccountAtomically(ctx context.Context, etcdClient *etcd.Client, acc *MrPlotterAccount) (bool, error) {
-    return upsertTokenAtomically(ctx, etcdClient, acc)
+	return upsertTokenAtomically(ctx, etcdClient, acc)
 }
 
+// Same as UpsertAccountAtomically, but for Tag Definitions.
 func UpsertTagDefAtomically(ctx context.Context, etcdClient *etcd.Client, tdef *MrPlotterTagDef) (bool, error) {
-    return upsertTokenAtomically(ctx, etcdClient, tdef)
+	return upsertTokenAtomically(ctx, etcdClient, tdef)
 }
 
 // Deletes the account of the user with the provided username.
 func DeleteAccount(ctx context.Context, etcdClient *etcd.Client, username string) error {
-    etcdKey := getEtcdKey(username, accountpath)
-    _, err := etcdClient.Delete(ctx, etcdKey)
-    return err
+	etcdKey := getEtcdKey(username, accountpath)
+	_, err := etcdClient.Delete(ctx, etcdKey)
+	return err
 }
 
 // Deletes the tag definition with the provided name
 func DeleteTagDef(ctx context.Context, etcdClient *etcd.Client, tag string) error {
-    etcdKey := getEtcdKey(tag, tagpath)
-    _, err := etcdClient.Delete(ctx, etcdKey)
-    return err
+	etcdKey := getEtcdKey(tag, tagpath)
+	_, err := etcdClient.Delete(ctx, etcdKey)
+	return err
 }
 
 // Retrieves the account information of all users whose username begins with
@@ -305,25 +307,25 @@ func DeleteTagDef(ctx context.Context, etcdClient *etcd.Client, tag string) erro
 // Setting the "Username" field in the returned struct renders it unsuitable
 // for use with the "UpsertAccountAtomically" function.
 func RetrieveMultipleAccounts(ctx context.Context, etcdClient *etcd.Client, usernameprefix string) ([]*MrPlotterAccount, error) {
-    etcdKeyPrefix := getEtcdKey(usernameprefix, accountpath)
-    resp, err := etcdClient.Get(ctx, etcdKeyPrefix, etcd.WithPrefix())
-    if err != nil {
-        return nil, err
-    }
+	etcdKeyPrefix := getEtcdKey(usernameprefix, accountpath)
+	resp, err := etcdClient.Get(ctx, etcdKeyPrefix, etcd.WithPrefix())
+	if err != nil {
+		return nil, err
+	}
 
-    accs := make([]*MrPlotterAccount, 0, len(resp.Kvs))
-    var acc *MrPlotterAccount
-    for _, kv := range resp.Kvs {
-        acc = nil
-        err := decodeToken(kv.Value, &acc)
-        if err != nil {
-            acc = &MrPlotterAccount{Username: getNameFromEtcdKey(string(kv.Key), accountpath)}
-        }
-        acc.setRetrievedRevision(kv.ModRevision)
-        accs = append(accs, acc)
-    }
+	accs := make([]*MrPlotterAccount, 0, len(resp.Kvs))
+	var acc *MrPlotterAccount
+	for _, kv := range resp.Kvs {
+		acc = nil
+		err := decodeToken(kv.Value, &acc)
+		if err != nil {
+			acc = &MrPlotterAccount{Username: getNameFromEtcdKey(string(kv.Key), accountpath)}
+		}
+		acc.setRetrievedRevision(kv.ModRevision)
+		accs = append(accs, acc)
+	}
 
-    return accs, nil
+	return accs, nil
 }
 
 // Retrieves the account information of all users whose username begins with
@@ -333,43 +335,44 @@ func RetrieveMultipleAccounts(ctx context.Context, etcdClient *etcd.Client, user
 // Setting the "Username" field in the returned struct renders it unsuitable
 // for use with the "UpsertAccountAtomically" function.
 func RetrieveMultipleTagDefs(ctx context.Context, etcdClient *etcd.Client, tagprefix string) ([]*MrPlotterTagDef, error) {
-    etcdKeyPrefix := getEtcdKey(tagprefix, tagpath)
-    resp, err := etcdClient.Get(ctx, etcdKeyPrefix, etcd.WithPrefix())
-    if err != nil {
-        return nil, err
-    }
+	etcdKeyPrefix := getEtcdKey(tagprefix, tagpath)
+	resp, err := etcdClient.Get(ctx, etcdKeyPrefix, etcd.WithPrefix())
+	if err != nil {
+		return nil, err
+	}
 
-    tdefs := make([]*MrPlotterTagDef, 0, len(resp.Kvs))
-    var tdef *MrPlotterTagDef
-    for _, kv := range resp.Kvs {
-        err := decodeToken(kv.Value, &tdef)
-        if err != nil {
-            tdef = &MrPlotterTagDef{Tag: getNameFromEtcdKey(string(kv.Key), tagpath)}
-        }
-        tdef.setRetrievedRevision(kv.ModRevision)
-        tdefs = append(tdefs, tdef)
-    }
+	tdefs := make([]*MrPlotterTagDef, 0, len(resp.Kvs))
+	var tdef *MrPlotterTagDef
+	for _, kv := range resp.Kvs {
+		tdef = nil
+		err := decodeToken(kv.Value, &tdef)
+		if err != nil {
+			tdef = &MrPlotterTagDef{Tag: getNameFromEtcdKey(string(kv.Key), tagpath)}
+		}
+		tdef.setRetrievedRevision(kv.ModRevision)
+		tdefs = append(tdefs, tdef)
+	}
 
-    return tdefs, nil
+	return tdefs, nil
 }
 
 func deleteMultipleTokens(ctx context.Context, etcdClient *etcd.Client, prefix string, typepath string) (int64, error) {
-    etcdKeyPrefix := getEtcdKey(prefix, typepath)
-    resp, err := etcdClient.Delete(ctx, etcdKeyPrefix, etcd.WithPrefix())
-    if resp != nil {
-        return resp.Deleted, err
-    } else {
-        return 0, err
-    }
+	etcdKeyPrefix := getEtcdKey(prefix, typepath)
+	resp, err := etcdClient.Delete(ctx, etcdKeyPrefix, etcd.WithPrefix())
+	if resp != nil {
+		return resp.Deleted, err
+	} else {
+		return 0, err
+	}
 }
 
 // Deletes the accounts of all users whose username begins with the provided
 // prefix.
 func DeleteMultipleAccounts(ctx context.Context, etcdClient *etcd.Client, usernameprefix string) (int64, error) {
-    return deleteMultipleTokens(ctx, etcdClient, usernameprefix, accountpath)
+	return deleteMultipleTokens(ctx, etcdClient, usernameprefix, accountpath)
 }
 
 // Deletes all tag definitions beginning with the given prefix.
 func DeleteMultipleTagDefs(ctx context.Context, etcdClient *etcd.Client, tagprefix string) (int64, error) {
-    return deleteMultipleTokens(ctx, etcdClient, tagprefix, tagpath)
+	return deleteMultipleTokens(ctx, etcdClient, tagprefix, tagpath)
 }
