@@ -515,6 +515,7 @@ func parseBracketRequest(request string, writ Writable, expectExtra bool) (uuids
 
 func validateToken(token string) *LoginSession {
 	tokenslice, err := base64.StdEncoding.DecodeString(token)
+	log.Printf("tokenslice: %v, token: %s, err: %v\n", tokenslice, token, err)
 	if err != nil {
 		return nil
 	}

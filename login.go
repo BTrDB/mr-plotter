@@ -236,6 +236,8 @@ func getloginsession(token []byte) *LoginSession {
 		return nil
 	}
 
+	log.Println("Success!")
+
 	return loginsession
 }
 
