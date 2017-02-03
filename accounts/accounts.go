@@ -149,7 +149,10 @@ func getNameFromEtcdKey(etcdKey string, typepath string) string {
 // for use with the "UpsertAccountAtomically" function.
 func RetrieveAccount(ctx context.Context, etcdClient *etcd.Client, username string) (acc *MrPlotterAccount, err error) {
 	acc = &MrPlotterAccount{}
-	err = etcdstruct.RetrieveEtcdStruct(ctx, etcdClient, getEtcdKey(username, accountpath), acc)
+	exists, err := etcdstruct.RetrieveEtcdStruct(ctx, etcdClient, getEtcdKey(username, accountpath), acc)
+	if !exists {
+		acc = nil
+	}
 	return
 }
 
@@ -158,7 +161,10 @@ func RetrieveAccount(ctx context.Context, etcdClient *etcd.Client, username stri
 // for use with the "UpsertTagDefAtomically" function.
 func RetrieveTagDef(ctx context.Context, etcdClient *etcd.Client, tag string) (tdef *MrPlotterTagDef, err error) {
 	tdef = &MrPlotterTagDef{}
-	err = etcdstruct.RetrieveEtcdStruct(ctx, etcdClient, getEtcdKey(tag, tagpath), tdef)
+	exists, err := etcdstruct.RetrieveEtcdStruct(ctx, etcdClient, getEtcdKey(tag, tagpath), tdef)
+	if !exists {
+		tdef = nil
+	}
 	return
 }
 
