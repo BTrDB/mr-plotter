@@ -128,7 +128,7 @@ func userlogin(ctx context.Context, etcdConn *etcd.Client, user string, password
 		log.Fatalf("Could not JSON-encode login session: %v", err)
 	}
 	var blocksize int = aes_encrypt_cipher.BlockSize()
-	var paddinglen int = blocksize - (len(plaintext) % blocksize)
+	var paddinglen int = (blocksize - (len(plaintext) % blocksize)) % blocksize
 	var padding []byte = make([]byte, paddinglen)
 	plaintext = append(plaintext, padding...)
 
@@ -194,7 +194,7 @@ func decodetoken(token []byte) []byte {
 }
 
 func stolenkeys() {
-	log.Fatalf("THE MAC KEY HAS BEEN STOLEN, AND THE ENCRYPT KEY PROBABLY TOO. CHANGE THE KEYS AND RESTART THIS PROGRAM.")
+	log.Println("THE MAC KEY HAS BEEN STOLEN, AND THE ENCRYPT KEY PROBABLY TOO. CHANGE THE KEYS AND RESTART THIS PROGRAM.")
 }
 
 func getloginsession(token []byte) *LoginSession {
@@ -210,11 +210,7 @@ func getloginsession(token []byte) *LoginSession {
 		}
 	}
 
-	fmt.Printf("plaintext is %v\n", plaintext)
-
 	if len(plaintext)-i-1 >= aes_encrypt_cipher.BlockSize() {
-		fmt.Printf("plaintext is %v\n", plaintext)
-		fmt.Printf("in string form %s\n", string(plaintext))
 		log.Println("Invalid padding on token is correctly MAC'ed")
 		stolenkeys()
 		return nil
