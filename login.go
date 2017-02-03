@@ -31,9 +31,9 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"encoding/json"
+	"fmt"
 	"hash"
 	"io"
-	"fmt"
 	"log"
 	"time"
 
@@ -48,8 +48,8 @@ var hmac_key []byte
 
 type LoginSession struct {
 	Issued int64
-	Tags map[string]struct{}
-	User string
+	Tags   map[string]struct{}
+	User   string
 }
 
 func (loginsession *LoginSession) TagSlice() []string {
@@ -117,8 +117,8 @@ func userlogin(ctx context.Context, etcdConn *etcd.Client, user string, password
 	// Create a new session
 	loginsession := &LoginSession{
 		Issued: time.Now().Unix(),
-		Tags: acc.Tags,
-		User: user,
+		Tags:   acc.Tags,
+		User:   user,
 	}
 
 	// Construct the JSON plaintext for this login session
@@ -136,7 +136,7 @@ func userlogin(ctx context.Context, etcdConn *etcd.Client, user string, password
 	// The token consists of the IV, ciphertext, and HMAC concatenated
 	var hmac_hash hash.Hash = hmac.New(sha512.New, hmac_key)
 	var macsize int = hmac_hash.Size()
-	var token []byte = make([]byte, blocksize + len(plaintext), blocksize + len(plaintext) + macsize)
+	var token []byte = make([]byte, blocksize+len(plaintext), blocksize+len(plaintext)+macsize)
 	var iv []byte = token[:blocksize]
 	var ciphertext []byte = token[blocksize:]
 
@@ -163,13 +163,13 @@ func decodetoken(token []byte) []byte {
 	var blocksize int = aes_encrypt_cipher.BlockSize()
 	var macsize int = hmac_hash.Size()
 
-	if len(token) <= blocksize + macsize {
+	if len(token) <= blocksize+macsize {
 		return nil
 	}
 
 	var iv []byte = token[:blocksize]
-	var ciphertext []byte = token[blocksize:len(token) - macsize]
-	var mac []byte = token[len(token) - macsize:]
+	var ciphertext []byte = token[blocksize : len(token)-macsize]
+	var mac []byte = token[len(token)-macsize:]
 
 	if (len(ciphertext) % blocksize) != 0 {
 		return nil
@@ -210,13 +210,17 @@ func getloginsession(token []byte) *LoginSession {
 		}
 	}
 
-	if len(plaintext) - i - 1 >= aes_encrypt_cipher.BlockSize() {
+	fmt.Printf("plaintext is %v\n", plaintext)
+
+	if len(plaintext)-i-1 >= aes_encrypt_cipher.BlockSize() {
+		fmt.Printf("plaintext is %v\n", plaintext)
+		fmt.Printf("in string form %s\n", string(plaintext))
 		log.Println("Invalid padding on token is correctly MAC'ed")
 		stolenkeys()
 		return nil
 	}
 
-	var rawjson []byte = plaintext[:i + 1]
+	var rawjson []byte = plaintext[:i+1]
 	var loginsession *LoginSession
 	var err error = json.Unmarshal(rawjson, &loginsession)
 	if err != nil {
@@ -231,8 +235,8 @@ func getloginsession(token []byte) *LoginSession {
 	}
 
 	var now int64 = time.Now().Unix()
-	if uint64(now - loginsession.Issued) >= sessionExpirySeconds {
-		log.Printf("Session expired: (issued at %v, expired at %v, now is %v)", loginsession.Issued, loginsession.Issued + int64(sessionExpirySeconds), now)
+	if uint64(now-loginsession.Issued) >= sessionExpirySeconds {
+		log.Printf("Session expired: (issued at %v, expired at %v, now is %v)", loginsession.Issued, loginsession.Issued+int64(sessionExpirySeconds), now)
 		return nil
 	}
 
@@ -257,7 +261,7 @@ func usertags(token []byte) []string {
 	return loginsession.TagSlice()
 }
 
-func userchangepassword(ctx context.Context, etcdConn *etcd.Client, token []byte, oldpw []byte, newpw []byte) (string) {
+func userchangepassword(ctx context.Context, etcdConn *etcd.Client, token []byte, oldpw []byte, newpw []byte) string {
 	loginsession := getloginsession(token)
 	if loginsession == nil {
 		return ERROR_INVALID_TOKEN
