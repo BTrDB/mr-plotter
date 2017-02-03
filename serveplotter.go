@@ -809,8 +809,10 @@ func mdDispatch(w http.ResponseWriter, r *http.Request, dispatch func(context.Co
 	var ls *LoginSession
 	if len(tokenencoded) != 0 {
 		ls = validateToken(string(tokenencoded))
-		w.Write([]byte(ERROR_INVALID_TOKEN))
-		return
+		if ls == nil {
+			w.Write([]byte(ERROR_INVALID_TOKEN))
+			return
+		}
 	}
 	ctx, cancelfunc := context.WithTimeout(context.Background(), dataTimeout)
 	toplevel, err := dispatch(ctx, etcdConn, btrdbConn, ls, string(request))
