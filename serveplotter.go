@@ -515,7 +515,6 @@ func parseBracketRequest(request string, writ Writable, expectExtra bool) (uuids
 
 func validateToken(token string) *LoginSession {
 	tokenslice, err := base64.StdEncoding.DecodeString(token)
-	log.Printf("tokenslice: %v, token: %s, err: %v\n", tokenslice, token, err)
 	if err != nil {
 		return nil
 	}
@@ -771,8 +770,10 @@ func treetopHandler(w http.ResponseWriter, r *http.Request) {
 	var ls *LoginSession
 	if len(request) != 0 {
 		ls = validateToken(string(request))
-		w.Write([]byte(ERROR_INVALID_TOKEN))
-		return
+		if ls == nil {
+			w.Write([]byte(ERROR_INVALID_TOKEN))
+			return
+		}
 	}
 	ctx, cancelfunc := context.WithTimeout(context.Background(), dataTimeout)
 	toplevel, err := treetopMetadata(ctx, etcdConn, btrdbConn, ls)
