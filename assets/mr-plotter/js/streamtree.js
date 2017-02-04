@@ -90,7 +90,6 @@ function updateStreamList(self) {
             selectNode(self, streamTree, false, data.node);
             s3ui.applySettings(self, false);
         });
-
     streamTreeDiv.on("click", ".jstree-checkbox", function (event) {
             var id = event.target.parentNode.parentNode.getAttribute("id");
             var node = streamTree.get_node(id);
@@ -176,7 +175,7 @@ function updateStreamList(self) {
 }
 
 function needToLoad(node) {
-    return (node.id.lastIndexOf("root_", 0) === 0 || node.id.lastIndexOf("other_", 0) == 0) && node.children.length == 0;
+    return node.id != undefined && (node.id.lastIndexOf("root_", 0) === 0 || node.id.lastIndexOf("other_", 0) == 0) && node.children.length == 0;
 }
 
 /* If SELECTALLCHILDREN is true, selects all the children. If not, simply expands the node. */
