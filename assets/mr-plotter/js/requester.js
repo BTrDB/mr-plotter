@@ -178,11 +178,28 @@ Requester.prototype.makeTreeBranchRequest = function (toplevel, success_callback
             });
     };
 
-Requester.prototype.makeTreeLeafRequest = function (fullpath, success_callback, error_callback) {
+    Requester.prototype.makeTreeLeafRequest = function (branchpath, success_callback, error_callback) {
+            var self = this;
+            return $.ajax({
+                    type: "POST",
+                    url: location.protocol + "//" + this.backend + "/treeleaf",
+                    data: this.token + ";" + branchpath,
+                    success: success_callback,
+                    dataType: "json",
+                    error: function (jqXHR, textStatus, errorThrown) {
+                            self.checkErrorInvalidToken(jqXHR.responseText);
+                            if (error_callback !== undefined) {
+                                error_callback(jqXHR, textStatus, errorThrown)
+                            }
+                        }
+                });
+        };
+
+Requester.prototype.makeMetadataFromLeafRequest = function (fullpath, success_callback, error_callback) {
         var self = this;
         return $.ajax({
                 type: "POST",
-                url: location.protocol + "//" + this.backend + "/treeleaf",
+                url: location.protocol + "//" + this.backend + "/metadataleaf",
                 data: this.token + ";" + fullpath,
                 success: success_callback,
                 dataType: "json",
@@ -195,11 +212,11 @@ Requester.prototype.makeTreeLeafRequest = function (fullpath, success_callback, 
             });
     };
 
-Requester.prototype.makeMetadataRequest = function (uuidlist, success_callback, error_callback) {
+Requester.prototype.makeMetadataFromUUIDRequest = function (uuidlist, success_callback, error_callback) {
         var self = this;
         return $.ajax({
                 type: "POST",
-                url: location.protocol + "//" + this.backend + "/metadata",
+                url: location.protocol + "//" + this.backend + "/metadatauuid",
                 data: this.token + ";" + uuidlist.join(),
                 success: success_callback,
                 dataType: "json",

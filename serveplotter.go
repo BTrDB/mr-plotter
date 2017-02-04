@@ -345,7 +345,8 @@ func main() {
 	http.HandleFunc("/treetop", treetopHandler)
 	http.HandleFunc("/treebranch", treebranchHandler)
 	http.HandleFunc("/treeleaf", treeleafHandler)
-	http.HandleFunc("/metadata", metadataHandler)
+	http.HandleFunc("/metadataleaf", metadataleafHandler)
+	http.HandleFunc("/metadatauuid", metadatauuidHandler)
 	http.HandleFunc("/permalink", permalinkHandler)
 	http.HandleFunc("/csv", csvHandler)
 	http.HandleFunc("/login", loginHandler)
@@ -776,7 +777,7 @@ func treetopHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	ctx, cancelfunc := context.WithTimeout(context.Background(), dataTimeout)
-	toplevel, err := treetopMetadata(ctx, etcdConn, btrdbConn, ls)
+	toplevel, err := treetopPaths(ctx, etcdConn, btrdbConn, ls)
 	cancelfunc()
 	if err != nil {
 		w.Write([]byte(fmt.Sprintf("Error: %v\n", err)))
@@ -824,6 +825,7 @@ func mdDispatch(w http.ResponseWriter, r *http.Request, dispatch func(context.Co
 	w.Write(toplevel)
 }
 
+/*
 func treebranchHandler(w http.ResponseWriter, r *http.Request) {
 	mdDispatch(w, r, func(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, toplevel string) ([]byte, error) {
 		levels, err := treebranchMetadata(ctx, ec, bc, ls, toplevel)
@@ -833,8 +835,29 @@ func treebranchHandler(w http.ResponseWriter, r *http.Request) {
 		return json.Marshal(levels)
 	})
 }
+*/
+
+func treebranchHandler(w http.ResponseWriter, r *http.Request) {
+	mdDispatch(w, r, func(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, toplevel string) ([]byte, error) {
+		levels, err := treebranchPaths(ctx, ec, bc, ls, toplevel)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(levels)
+	})
+}
 
 func treeleafHandler(w http.ResponseWriter, r *http.Request) {
+	mdDispatch(w, r, func(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, branch string) ([]byte, error) {
+		levels, err := treeleafPaths(ctx, ec, bc, ls, branch)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(levels)
+	})
+}
+
+func metadataleafHandler(w http.ResponseWriter, r *http.Request) {
 	mdDispatch(w, r, func(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, path string) ([]byte, error) {
 		doc, err := treeleafMetadata(ctx, ec, bc, ls, path)
 		if err != nil {
@@ -844,12 +867,11 @@ func treeleafHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func metadataHandler(w http.ResponseWriter, r *http.Request) {
+func metadatauuidHandler(w http.ResponseWriter, r *http.Request) {
 	mdDispatch(w, r, func(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, uuids string) ([]byte, error) {
 		rv := make([]map[string]interface{}, 0)
 		uuidstrs := strings.Split(uuids, ",")
 		for _, uuidstr := range uuidstrs {
-			fmt.Println(uuidstr)
 			uu := uuid.Parse(uuidstr)
 			doc, err := uuidMetadata(ctx, ec, bc, ls, uu)
 			if err == nil {
@@ -860,8 +882,8 @@ func metadataHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-const PERMALINK_HELP string = "To create a permalink, send the data as a JSON document via a POST request. To retrieve a permalink, set a GET request, specifying \"id=<permalink identifier>\" in the URL."
-const PERMALINK_BAD_ID string = "not found"
+const PERMALINK_HELP = "To create a permalink, send the data as a JSON document via a POST request. To retrieve a permalink, set a GET request, specifying \"id=<permalink identifier>\" in the URL."
+const PERMALINK_BAD_ID = "not found"
 
 func permalinkHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" && r.Method != "POST" {

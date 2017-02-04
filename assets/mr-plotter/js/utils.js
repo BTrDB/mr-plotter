@@ -31,10 +31,10 @@ function getFilepath(datum) {
 }
 
 function splitPath(path) {
-    parts = path.split("/", 1)
-    sourcename = parts
-    path = path.slice(sourcename.length)
-    return [sourcename, path]
+    var parts = path.split("/", 1);
+    var sourcename = parts[0];
+    var path = path.slice(sourcename.length);
+    return [sourcename, path];
 }
 
 function getInfo (datum, linebreak, escapeHTML) {

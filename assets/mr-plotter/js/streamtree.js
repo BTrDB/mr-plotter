@@ -123,7 +123,16 @@ function updateStreamList(self) {
                                                                 toplevel: true,
                                                                 children: function (callback) {
                                                                         self.requester.makeTreeBranchRequest(sourceName, function (data) {
-                                                                                callback.call(this, pathsToTree(self, sourceName, data));
+                                                                                callback.call(this, pathsToTree(self, sourceName, data, function (treebranch) {
+                                                                                        return function (callback) {
+                                                                                                self.requester.makeTreeLeafRequest(treebranch, function (data) {
+                                                                                                        callback.call(this, pathsToTree(self, treebranch, data, null));
+                                                                                                    }, function (jqXHR) {
+                                                                                                        handleFailedLoad(jqXHR.responseText);
+                                                                                                        callback.call(this, []);
+                                                                                                    });
+                                                                                            };
+                                                                                    }));
                                                                             }, function (jqXHR) {
                                                                                 handleFailedLoad(jqXHR.responseText);
                                                                                 callback.call(this, []);
@@ -213,11 +222,16 @@ function makeSelectHandler(self, streamTree, selectAllChildren) {
 // The following functions are useful for the tree for selecting streams
 
 /* Converts a list of paths into a tree (i.e. a nested object
-   structure that will work with jsTree). Returns the nested tree structure
-   and an object mapping uuid to node in a 2-element array.
-   OFFSET is the number of base directories to ignore in the path. It defaults
-   to 0. */
-function pathsToTree(self, sourceName, streamList) {
+ * structure that will work with jsTree). Returns the nested tree structure
+ * and an object mapping uuid to node in a 2-element array.
+ *
+ * If LOADNEXT is null or undefined, then the terminating elements of the
+ * provided paths are assumed to be streams. Otherwise, it must be a function
+ * that takes a path as its sole argument and returns a function suitable
+ * for loading additional data past the terminating elements of the provided
+ * paths.
+ */
+function pathsToTree(self, pathPrefix, streamList, loadNext) {
     var rootNodes = []; // An array of root nodes
     var rootCache = {}; // A map of names of sources to the corresponding object
 
@@ -228,17 +242,32 @@ function pathsToTree(self, sourceName, streamList) {
     var levelName;
     var childNode;
     for (var i = 0; i < streamList.length; i++) {
+        /* For each path we got back, parse the path. */
         path = streamList[i];
         hierarchy = path.split("/");
+        /* The paths come with a leading slash ("/") that we need to ignore,
+         * hence the call to splice below.
+         */
         hierarchy.splice(0, 1);
         currNodes = rootNodes;
         currCache = rootCache;
         for (var j = 0; j < hierarchy.length; j++) {
             levelName = hierarchy[j];
+            /* For each level of the path (except for the root), we need to add
+             * that node to the list of its parent's children.
+             */
             if (currCache.hasOwnProperty(levelName)) {
+                /* We hit this case when we have two paths like a/b/c and
+                 * a/b/d. When we look at the second path, b is already a child
+                 * of a, so we just want to use b. We do NOT want to create a
+                 * new node for b and add d as a child of that new node.
+                 */
                 currNodes = currCache[levelName].children;
                 currCache = currCache[levelName].childCache;
             } else {
+                /* Construct the node entry corresponding to this level of the
+                 * path in question and add it to the parent node.
+                 */
                 childNode = {
                     text: s3ui.escapeHTMLEntities(levelName),
                     children: [],
@@ -250,24 +279,35 @@ function pathsToTree(self, sourceName, streamList) {
                 currNodes = childNode.children;
                 currCache = childNode.childCache;
                 if (j == hierarchy.length - 1) {
-                    childNode.id = "leaf_" + self.idata.numLeaves++;
-                    self.idata.leafNodes[sourceName + path] = childNode.id;
-                    childNode.data.path = path;
-                    childNode.icon = false;
-                    childNode.data.selected = false;
-                    childNode.data.sourceName = sourceName;
-                    childNode.data.child = true;
-                    var initiallySelectedStreams = self.idata.initiallySelectedStreams;
-                    if (initiallySelectedStreams.hasOwnProperty(sourceName) && initiallySelectedStreams[sourceName].hasOwnProperty(path)) {
-                        childNode.data.streamdata = initiallySelectedStreams[sourceName][path];
-                        initiallySelectedStreams[sourceName].count--;
-                        if (initiallySelectedStreams[sourceName].count == 0) {
-                            delete initiallySelectedStreams[sourceName];
-                        } else {
-                            delete initiallySelectedStreams[sourceName][path];
+                    var fullPath = pathPrefix + path;
+                    if (loadNext == null) {
+                        /* This is a node representing a stream: a leaf in the stream tree. */
+                        var parts = s3ui.splitPath(fullPath);
+                        var sourceName = parts[0];
+                        var path = parts[1];
+                        childNode.id = "leaf_" + self.idata.numLeaves++;
+                        self.idata.leafNodes[fullPath] = childNode.id;
+                        childNode.data.path = path;
+                        childNode.icon = false;
+                        childNode.data.selected = false;
+                        childNode.data.sourceName = sourceName;
+                        childNode.data.child = true;
+                        var initiallySelectedStreams = self.idata.initiallySelectedStreams;
+                        if (initiallySelectedStreams.hasOwnProperty(sourceName) && initiallySelectedStreams[sourceName].hasOwnProperty(path)) {
+                            childNode.data.streamdata = initiallySelectedStreams[sourceName][path];
+                            initiallySelectedStreams[sourceName].count--;
+                            if (initiallySelectedStreams[sourceName].count == 0) {
+                                delete initiallySelectedStreams[sourceName];
+                            } else {
+                                delete initiallySelectedStreams[sourceName][path];
+                            }
+                            childNode.data.selected = true;
+                            childNode.state = { selected: true };
                         }
-                        childNode.data.selected = true;
-                        childNode.state = { selected: true };
+                    } else {
+                        /* We need to load more data when this node is expanded... */
+                        childNode.data.children = loadNext(fullPath);
+                        childNode.children = true;
                     }
                 }
             }
@@ -285,7 +325,7 @@ function getContextMenu(self, node, callback) {
                         label: "Show Info",
                         action: function () {
                                 if (node.data.streamdata == undefined) {
-                                    self.requester.makeTreeLeafRequest(node.data.sourceName + node.data.path, function (data) {
+                                    self.requester.makeMetadataFromLeafRequest(node.data.sourceName + node.data.path, function (data) {
                                              if (node.data.streamdata == undefined) {
                                                  // Used to be data = JSON.parse(data)[0] but I removed the extra list around it
                                                  node.data.streamdata = data;
@@ -342,7 +382,7 @@ function selectNode(self, tree, select, node) { // unfortunately there's no simp
         node.data.selected = select;
         if (node.data.streamdata === undefined && select) {
             self.idata.pendingStreamRequests += 1;
-            self.requester.makeTreeLeafRequest(node.data.sourceName + node.data.path, function (data) {
+            self.requester.makeMetadataFromLeafRequest(node.data.sourceName + node.data.path, function (data) {
                     self.idata.pendingStreamRequests -= 1;
                     if (node.data.selected == select) { // the box may have been unchecked in the meantime
                         if (node.data.streamdata == undefined) { // it might have been loaded in the meantime

@@ -397,7 +397,7 @@ function executePermalink(self, args, set_streams_only) {
     if (uuids.length == 0) {
         setTimeout(function () { finishExecutingPermalink(self, streamObjs, colors, args, set_streams_only); }, 50);
     } else {
-        self.requester.makeMetadataRequest(uuids, function (data) {
+        self.requester.makeMetadataFromUUIDRequest(uuids, function (data) {
                 var receivedStreamObjs = data;
                 for (i = 0; i < receivedStreamObjs.length; i++) {
                     streamObjs[uuidMap[receivedStreamObjs[i].uuid]] = receivedStreamObjs[i];
