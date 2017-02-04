@@ -74,9 +74,16 @@ function updateStreamList(self) {
     self.idata.$streamTreeDiv = streamTreeDiv;
 
     streamTreeDiv.on("loaded.jstree", function (event, data) {
-            for (var i = self.idata.mayHaveSelectedLeaves.length - 1; i >= 0; i--) {
-                streamTree.load_node(self.idata.mayHaveSelectedLeaves[i]);
+            var i = self.idata.mayHaveSelectedLeaves.length - 1;
+            function expandNextPath() {
+                if (i >= 0) {
+                    expandPath(self, self.idata.mayHaveSelectedLeaves[i], function () {
+                            i--;
+                            expandNextPath();
+                        });
+                }
             }
+            expandNextPath();
         });
     streamTreeDiv.on("select_node.jstree", function (event, data) {
             if (self.idata.internallyIgnoreSelects) {
@@ -114,7 +121,11 @@ function updateStreamList(self) {
                                         self.idata.rootNodes[sourceList[i]] = rootID;
                                         sourceList[i] = function (sourceName) {
                                                 if (self.idata.initiallySelectedStreams.hasOwnProperty(sourceName)) {
-                                                    self.idata.mayHaveSelectedLeaves.push(rootID);
+                                                    var paths = Object.keys(self.idata.initiallySelectedStreams[sourceName]);
+                                                    for (var j = 0; j !== paths.length; j++) {
+                                                        var path = paths[j];
+                                                        self.idata.mayHaveSelectedLeaves.push(sourceName + path);
+                                                    }
                                                 }
                                                 return {
                                                         id: rootID,
@@ -242,6 +253,40 @@ function makeSelectHandler(self, streamTree, selectAllChildren) {
 
 // The following functions are useful for the tree for selecting streams
 
+function expandPath(self, fullpath, ondone) {
+    var streamTree = self.idata.streamTree;
+    var pathparts = fullpath.split("/");
+    var i = 0;
+    var node = streamTree.get_node(self.idata.rootNodes[pathparts[i]]);
+    var expandnode = function() {
+            if (i == pathparts.length - 1) {
+                // This is the leaf, we don't need to expand it
+                ondone();
+                return;
+            }
+            if (needToLoad(node)) {
+                if (!self.idata.loadingRootNodes[node.id]) {
+                    self.idata.loadingRootNodes[node.id] = true;
+                    streamTree.load_node(node, function (node, status) {
+                            self.idata.loadingRootNodes[node.id] = false;
+                            expandnode();
+                        });
+                }
+            } else {
+                for (var j = 0; j !== node.children.length; j++) {
+                    var child = streamTree.get_node(node.children[j]);
+                    if (child.text === pathparts[i + 1]) {
+                        i++;
+                        node = child;
+                        setTimeout(expandnode, 0);
+                        return;
+                    }
+                }
+            }
+        };
+    expandnode();
+}
+
 /* Converts a list of paths into a tree (i.e. a nested object
  * structure that will work with jsTree). Returns the nested tree structure
  * and an object mapping uuid to node in a 2-element array.
@@ -316,11 +361,9 @@ function pathsToTree(self, pathPrefix, streamList, loadNext) {
                         var initiallySelectedStreams = self.idata.initiallySelectedStreams;
                         if (initiallySelectedStreams.hasOwnProperty(sourceName) && initiallySelectedStreams[sourceName].hasOwnProperty(path)) {
                             childNode.data.streamdata = initiallySelectedStreams[sourceName][path];
-                            initiallySelectedStreams[sourceName].count--;
-                            if (initiallySelectedStreams[sourceName].count == 0) {
+                            delete initiallySelectedStreams[sourceName][path];
+                            if (Object.keys(initiallySelectedStreams[sourceName]).length == 0) {
                                 delete initiallySelectedStreams[sourceName];
-                            } else {
-                                delete initiallySelectedStreams[sourceName][path];
                             }
                             childNode.data.selected = true;
                             childNode.state = { selected: true };

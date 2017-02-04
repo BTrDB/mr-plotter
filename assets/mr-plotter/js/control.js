@@ -249,10 +249,9 @@ function selectStreams(data_lst) {
          if (node == undefined || node === false) { // check if it appears in the tree. if not ...
              if (this.idata.initiallySelectedStreams.hasOwnProperty(source)) {
                  var entry = this.idata.initiallySelectedStreams[source];
-                 entry.count++;
                  entry[path] = data_lst[i];
              } else {
-                 var newObj = { count: 1 };
+                 var newObj = {};
                  newObj[path] = data_lst[i];
                  this.idata.initiallySelectedStreams[source] = newObj;
              }
@@ -294,11 +293,9 @@ function deselectStreams(data_lst) {
             var sourceName = snpath[0];
             var path = snpath[1];
             if (initiallySelectedStreams.hasOwnProperty(sourceName) && initiallySelectedStreams[sourceName].hasOwnProperty(path)) {
-                initiallySelectedStreams[sourceName].count--;
-                if (initiallySelectedStreams[sourceName].count == 0) {
+                delete initiallySelectedStreams[sourceName][path];
+                if (Object.keys(initiallySelectedStreams[sourceName]).length == 0) {
                     delete initiallySelectedStreams[sourceName];
-                } else {
-                    delete initiallySelectedStreams[sourceName][path];
                 }
             }
             s3ui.toggleLegend(this, false, node, false);
