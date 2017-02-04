@@ -219,18 +219,12 @@ function makeSelectHandler(self, streamTree, selectAllChildren) {
                                     }
                                 });
                         }
+                    } else if (node.children.length == 0) {
+                        streamTree.old_select_node(node, suppress_event, prevent_open); // if it's a leaf, select it
                     } else if (selectAllChildren) {
-                        if (node.children.length == 0) {
-                            streamTree.old_select_node(node, suppress_event, prevent_open); // if it's a leaf, select it
-                        } else {
-                            handler(node.children, suppress_event, true, true);
-                        }
+                        handler(node.children, suppress_event, true, true);
                     } else {
-                        if (node.children.length == 0) {
-                            streamTree.old_select_node(node, suppress_event, prevent_open); // if it's a leaf, select it
-                        } else {
-                            streamTree.toggle_node(node);
-                        }
+                        streamTree.toggle_node(node);
                     }
                 };
             for (var i = 0; i < nodes.length; i++) {
