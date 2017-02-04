@@ -193,7 +193,7 @@ function makeSelectHandler(self, streamTree, selectAllChildren) {
             var dorecursiveselection = function (streamCount) {
                     if (streamCount !== undefined) {
                         if (streamCount > MAX_NODE_COUNT) {
-                            if (!confirm("This action will select more than " + MAX_NODE_COUNT + " streams, potentially causing stability and rendering problems. Continue?")) {
+                            if (!confirm("This action will select more than " + MAX_NODE_COUNT + " streams, potentially causing instability and rendering problems. Continue?")) {
                                 return
                             }
                         } else if (streamCount > NOTICE_NODE_COUNT) {
@@ -210,7 +210,7 @@ function makeSelectHandler(self, streamTree, selectAllChildren) {
                                     if (status) {
                                         if (selectAllChildren) {
                                             if (!streamTree.is_selected(node)) {
-                                                handler(node, undefined, undefined, true);
+                                                handler(node, suppress_event, true, true);
                                             }
                                         } else {
                                             streamTree.toggle_node(node);
@@ -221,19 +221,16 @@ function makeSelectHandler(self, streamTree, selectAllChildren) {
                                 });
                         }
                     } else if (selectAllChildren) {
-                        //streamTree.old_select_node(node, suppress_event, prevent_open);
                         if (node.children.length == 0) {
                             streamTree.old_select_node(node, suppress_event, prevent_open); // if it's a leaf, select it
                         } else {
-                            //streamTree.toggle_node(node);
-                            handler(node.children, undefined, undefined, true);
+                            handler(node.children, suppress_event, true, true);
                         }
                     } else {
                         if (node.children.length == 0) {
                             streamTree.old_select_node(node, suppress_event, prevent_open); // if it's a leaf, select it
                         } else {
-                            //streamTree.toggle_node(node);
-                            handler(node.children, undefined, undefined, true);
+                            streamTree.toggle_node(node);
                         }
                     }
                 };
@@ -439,18 +436,6 @@ function selectNode(self, tree, select, node) { // unfortunately there's no simp
             return true;
         }
     }
-}
-
-/* Counts the total number of unselected streams in a node. */
-function countUnselectedStreams (tree, node) {
-    if (node.data.child) {
-        return node.data.selected ? 0 : 1;
-    }
-    var count = 0;
-    for (var i = 0; i < node.children.length; i++) {
-        count += countUnselectedStreams(tree, tree.get_node(node.children[i]));
-    }
-    return count;
 }
 
 /* Counts the total number of unselected streams in a node, making data
