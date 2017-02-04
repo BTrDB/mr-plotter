@@ -28,6 +28,7 @@ function init_streamtree(self) {
     self.idata.internallyIgnoreSelects = false;
     self.idata.initiallySelectedStreams = {}; // Maps the source name of a stream to an object that maps path to stream object, if it has not yet been found in the tree
     self.idata.mayHaveSelectedLeaves = undefined; // An array of IDs of root nodes whose children may be initially selected
+    self.idata.numOtherLoadables = undefined;
     self.idata.numLeaves = undefined;
 }
 
@@ -54,6 +55,7 @@ function updateStreamList(self) {
     self.idata.rootNodes = {};
     self.idata.leafNodes = {};
     self.idata.loadingRootNodes = {};
+    self.idata.numOtherLoadables = 0;
     self.idata.numLeaves = 0;
     self.idata.mayHaveSelectedLeaves = [];
 
@@ -184,7 +186,7 @@ function makeSelectHandler(self, streamTree, selectAllChildren) {
             for (var i = 0; i < nodes.length; i++) {
                 node = streamTree.get_node(nodes[i]);
                 streamCount = countUnselectedStreams(streamTree, node);
-                if (node.data.toplevel && node.children.length == 0) {
+                if ((node.id.lastIndexOf("root_", 0) === 0 || node.id.lastIndexOf("other_", 0) == 0) && node.children.length == 0) {
                     if (!self.idata.loadingRootNodes[node.id]) {
                         self.idata.loadingRootNodes[node.id] = true;
                         streamTree.load_node(node, function (node, status) {
@@ -203,14 +205,21 @@ function makeSelectHandler(self, streamTree, selectAllChildren) {
                             });
                     }
                 } else if (selectAllChildren) {
-                    if (streamCount <= 5 || confirm("About to select " + streamCount + " streams. Continue?")) {
-                        streamTree.old_select_node(node, suppress_event, prevent_open);
+                    if (true || streamCount <= 5 || confirm("About to select " + streamCount + " streams. Continue?")) {
+                        //streamTree.old_select_node(node, suppress_event, prevent_open);
+                        if (node.children.length == 0) {
+                            streamTree.old_select_node(node, suppress_event, prevent_open); // if it's a leaf, select it
+                        } else {
+                            //streamTree.toggle_node(node);
+                            handler(node.children);
+                        }
                     }
                 } else {
                     if (node.children.length == 0) {
                         streamTree.old_select_node(node, suppress_event, prevent_open); // if it's a leaf, select it
                     } else {
-                        streamTree.toggle_node(node);
+                        //streamTree.toggle_node(node);
+                        handler(node.children);
                     }
                 }
             }
@@ -306,6 +315,7 @@ function pathsToTree(self, pathPrefix, streamList, loadNext) {
                         }
                     } else {
                         /* We need to load more data when this node is expanded... */
+                        childNode.id = "other_" + self.idata.numOtherLoadables++;
                         childNode.data.children = loadNext(fullPath);
                         childNode.children = true;
                     }
