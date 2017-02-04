@@ -175,52 +175,74 @@ function updateStreamList(self) {
     streamTree.checkbox_select_node = makeSelectHandler(self, streamTree, true); // select all children when checkbox is clicked, but just expand if text is clicked
 }
 
+function needToLoad(node) {
+    return (node.id.lastIndexOf("root_", 0) === 0 || node.id.lastIndexOf("other_", 0) == 0) && node.children.length == 0;
+}
+
 /* If SELECTALLCHILDREN is true, selects all the children. If not, simply expands the node. */
 function makeSelectHandler(self, streamTree, selectAllChildren) {
-    handler = function (nodes, suppress_event, prevent_open) {
+    var MAX_NODE_COUNT = 50;
+    var NOTICE_NODE_COUNT = 5;
+    var handler = function (nodes, suppress_event, prevent_open, skipCountPrompt) {
+            skipCountPrompt = skipCountPrompt || false;
             if (nodes.length == undefined) {
                 nodes = [nodes];
             }
             var node;
             var streamCount;
-            for (var i = 0; i < nodes.length; i++) {
-                node = streamTree.get_node(nodes[i]);
-                streamCount = countUnselectedStreams(streamTree, node);
-                if ((node.id.lastIndexOf("root_", 0) === 0 || node.id.lastIndexOf("other_", 0) == 0) && node.children.length == 0) {
-                    if (!self.idata.loadingRootNodes[node.id]) {
-                        self.idata.loadingRootNodes[node.id] = true;
-                        streamTree.load_node(node, function (node, status) {
-                                self.idata.loadingRootNodes[node.id] = false;
-                                if (status) {
-                                    if (selectAllChildren) {
-                                        if (!streamTree.is_selected(node)) {
-                                            handler(node);
+            var dorecursiveselection = function (streamCount) {
+                    if (streamCount !== undefined) {
+                        if (streamCount > MAX_NODE_COUNT) {
+                            if (!confirm("This action will select more than " + MAX_NODE_COUNT + " streams, potentially causing stability and rendering problems. Continue?")) {
+                                return
+                            }
+                        } else if (streamCount > NOTICE_NODE_COUNT) {
+                            if (!confirm("About to select " + streamCount + " streams. Continue?")) {
+                                return
+                            }
+                        }
+                    }
+                    if (needToLoad(node)) {
+                        if (!self.idata.loadingRootNodes[node.id]) {
+                            self.idata.loadingRootNodes[node.id] = true;
+                            streamTree.load_node(node, function (node, status) {
+                                    self.idata.loadingRootNodes[node.id] = false;
+                                    if (status) {
+                                        if (selectAllChildren) {
+                                            if (!streamTree.is_selected(node)) {
+                                                handler(node, undefined, undefined, true);
+                                            }
+                                        } else {
+                                            streamTree.toggle_node(node);
                                         }
                                     } else {
-                                        streamTree.toggle_node(node);
+                                        handleFailedLoad(status);
                                     }
-                                } else {
-                                    handleFailedLoad(status);
-                                }
-                            });
-                    }
-                } else if (selectAllChildren) {
-                    if (true || streamCount <= 5 || confirm("About to select " + streamCount + " streams. Continue?")) {
+                                });
+                        }
+                    } else if (selectAllChildren) {
                         //streamTree.old_select_node(node, suppress_event, prevent_open);
                         if (node.children.length == 0) {
                             streamTree.old_select_node(node, suppress_event, prevent_open); // if it's a leaf, select it
                         } else {
                             //streamTree.toggle_node(node);
-                            handler(node.children);
+                            handler(node.children, undefined, undefined, true);
+                        }
+                    } else {
+                        if (node.children.length == 0) {
+                            streamTree.old_select_node(node, suppress_event, prevent_open); // if it's a leaf, select it
+                        } else {
+                            //streamTree.toggle_node(node);
+                            handler(node.children, undefined, undefined, true);
                         }
                     }
+                };
+            for (var i = 0; i < nodes.length; i++) {
+                node = streamTree.get_node(nodes[i]);
+                if (skipCountPrompt) {
+                    dorecursiveselection(undefined);
                 } else {
-                    if (node.children.length == 0) {
-                        streamTree.old_select_node(node, suppress_event, prevent_open); // if it's a leaf, select it
-                    } else {
-                        //streamTree.toggle_node(node);
-                        handler(node.children);
-                    }
+                    countUnselectedStreamsAsync(streamTree, node, MAX_NODE_COUNT + 1, dorecursiveselection);
                 }
             }
         };
@@ -429,6 +451,44 @@ function countUnselectedStreams (tree, node) {
         count += countUnselectedStreams(tree, tree.get_node(node.children[i]));
     }
     return count;
+}
+
+/* Counts the total number of unselected streams in a node, making data
+ * requests where necessary to load nodes, until the count reaches a set
+ * maximum.
+ */
+function countUnselectedStreamsAsync(tree, node, maximum, callback) {
+    if (node.data.child) {
+        callback(node.data.selected ? 0 : 1);
+        return
+    }
+
+    var count = 0;
+    if (needToLoad(node)) {
+        tree.load_node(node, function (loadednode, status) {
+                if (status) {
+                    countUnselectedStreamsAsync(tree, node, maximum, callback);
+                } else {
+                    handleFailedLoad(status);
+                }
+            });
+    } else {
+        var total = 0;
+        var i = 0;
+        var countChildrenFromI = function () {
+                countUnselectedStreamsAsync(tree, tree.get_node(node.children[i]), maximum, function (count) {
+                        total += count;
+                        i++;
+                        if (i >= node.children.length || total >= maximum) {
+                            callback(total);
+                        } else {
+                            /* Use setTimeout to avoid unbounded stack growth. */
+                            setTimeout(countChildrenFromI, 0);
+                        }
+                    });
+            };
+        countChildrenFromI();
+    }
 }
 
 s3ui.init_streamtree = init_streamtree;
