@@ -25,6 +25,11 @@ then
   exit 0
 fi
 
-# run mr-plotter
+# Update the Javascript code so that the latest version is used
+MR_PLOTTER_REPO=$GOPATH/src/github.com/SoftwareDefinedBuildings/mr-plotter
+cd $MR_PLOTTER_REPO
+git pull origin v4
+
+# Run mr-plotter
 cd $GOPATH/bin
-mr-plotter $GOPATH/src/github.com/SoftwareDefinedBuildings/mr-plotter/plotter.ini |& pp
+mr-plotter $MR_PLOTTER_REPO/plotter.ini |& pp
