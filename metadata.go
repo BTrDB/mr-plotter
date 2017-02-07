@@ -84,8 +84,12 @@ func getprefixes(ctx context.Context, ec *etcd.Client, ls *LoginSession) (map[st
 			if err != nil {
 				return nil, false, err
 			}
-			for pfx := range tagdef.PathPrefix {
-				prefixes[pfx] = struct{}{}
+
+			// Tags that are not defined do not grant any permissions
+			if tagdef != nil {
+				for pfx := range tagdef.PathPrefix {
+					prefixes[pfx] = struct{}{}
+				}
 			}
 		}
 	}
