@@ -216,19 +216,15 @@ func updateTLSConfig(config *Config) {
 		var httpscert = h.Cert
 		var httpskey = h.Key
 
-		if httpscert != nil {
+		if httpscert != nil && httpskey != nil {
 			log.Println("Found HTTPS certificate in etcd; overriding configuration file")
+			log.Println("Found HTTPS key in etcd; overriding configuration file")
 		} else {
 			log.Println("HTTPS certificate not found in etcd; falling back to configuration file")
 			httpscert, err = ioutil.ReadFile(config.HttpsCertFile)
 			if err != nil {
 				log.Fatalf("Could not read HTTPS certificate file: %v", err)
 			}
-		}
-
-		if httpskey != nil {
-			log.Println("Found HTTPS key in etcd; overriding configuration file")
-		} else {
 			log.Println("HTTPS key not found in etcd; falling back to configuration file")
 			httpskey, err = ioutil.ReadFile(config.HttpsKeyFile)
 			if err != nil {
