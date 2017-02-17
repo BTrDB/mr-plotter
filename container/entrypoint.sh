@@ -18,8 +18,7 @@ then
   openssl req -new -key server.key -out server.csr \
     -subj "/C=US/ST=CA/L=Berkeley/O=UCBerkeley/OU=EECS/CN=default.autocert.smartgrid.store"
   openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
-  cat server.crt | etcdctl --endpoints ${ETCD_ENDPOINT} put mrplotter/keys/https_certificate
-  cat server.key | etcdctl --endpoints ${ETCD_ENDPOINT} put mrplotter/keys/https_key
+  hardcodecert server.crt server.key
   head -c 16 /dev/urandom | etcdctl --endpoints ${ETCD_ENDPOINT} put mrplotter/keys/session_encrypt_key
   head -c 16 /dev/urandom | etcdctl --endpoints ${ETCD_ENDPOINT} put mrplotter/keys/session_mac_key
   exit 0
