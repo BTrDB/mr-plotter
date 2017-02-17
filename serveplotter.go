@@ -213,12 +213,14 @@ func updateTLSConfig(config *Config) {
 		if err != nil {
 			log.Fatalf("Could not retrieve hardcoded TLS certificate from etcd: %v", err)
 		}
-		var httpscert = h.Cert
-		var httpskey = h.Key
+		var httpscert []byte
+		var httpskey []byte
 
-		if httpscert != nil && httpskey != nil {
+		if h != nil {
 			log.Println("Found HTTPS certificate in etcd; overriding configuration file")
 			log.Println("Found HTTPS key in etcd; overriding configuration file")
+			httpscert = h.Cert
+			httpskey = h.Key
 		} else {
 			log.Println("HTTPS certificate not found in etcd; falling back to configuration file")
 			httpscert, err = ioutil.ReadFile(config.HttpsCertFile)
