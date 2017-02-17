@@ -19,8 +19,9 @@ then
     -subj "/C=US/ST=CA/L=Berkeley/O=UCBerkeley/OU=EECS/CN=default.autocert.smartgrid.store"
   openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
   hardcodecert server.crt server.key
-  head -c 16 /dev/urandom | etcdctl --endpoints ${ETCD_ENDPOINT} put mrplotter/keys/session_encrypt_key
-  head -c 16 /dev/urandom | etcdctl --endpoints ${ETCD_ENDPOINT} put mrplotter/keys/session_mac_key
+  head -c 16 /dev/urandom > encrypt_key
+  head -c 16 /dev/urandom > mac_key
+  setsessionkeys encrypt_key mac_key
   exit 0
 fi
 
