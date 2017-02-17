@@ -264,7 +264,7 @@ func uuidMetadata(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Log
 		return nil, err
 	}
 
-	var doc map[string]interface{}
+	var doc = map[string]interface{}{}
 	for k, v := range ann {
 		doc[k] = v
 	}

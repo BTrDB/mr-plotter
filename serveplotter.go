@@ -327,22 +327,20 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not get session keys from etcd: %v", err)
 	}
-	var sessionencryptkey = sessionkeys.EncryptKey
-	var sessionmackey = sessionkeys.MACKey
+	var sessionencryptkey []byte
+	var sessionmackey []byte
 
-	if sessionencryptkey != nil {
+	if sessionkeys != nil {
 		log.Println("Found session encryption key in etcd; overriding configuration file")
+		log.Println("Found session MAC key in etcd; overriding configuration file")
+		sessionencryptkey = sessionkeys.EncryptKey
+		sessionmackey = sessionkeys.MACKey
 	} else {
 		log.Println("Session encryption key not found in etcd; falling back to configuration file")
 		sessionencryptkey, err = ioutil.ReadFile(config.SessionEncryptKeyFile)
 		if err != nil {
 			log.Fatalf("Could not read encryption key file: %v", err)
 		}
-	}
-
-	if sessionmackey != nil {
-		log.Println("Found session MAC key in etcd; overriding configuration file")
-	} else {
 		log.Println("Session MAC key not found in etcd; falling back to configuration file")
 		sessionmackey, err = ioutil.ReadFile(config.SessionMacKeyFile)
 		if err != nil {
