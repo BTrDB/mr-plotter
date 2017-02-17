@@ -129,5 +129,8 @@ func queryPrefixes(ctx context.Context, key interface{}) (interface{}, uint64, e
 	if err != nil {
 		return nil, 0, err
 	}
+	if tagdef == nil {
+		return map[string]struct{}{}, 0, nil
+	}
 	return tagdef.PathPrefix, uint64(len(tagdef.PathPrefix)), nil
 }
