@@ -104,6 +104,14 @@ func getHttpsCertKey(ctx context.Context, etcdClient *etcd.Client, key string) (
 	}
 }
 
+func SetCertificateSource(ctx context.Context, etcdClient *etcd.Client, hostname string) error {
+	return putHttpsCertKey(ctx, etcdClient, "hostname", hostname)
+}
+
+func GetCertificateSource(ctx context.Context, etcdClient *etcd.Client) (string, error) {
+	return getHttpsCertKey(ctx, etcdClient, "hostname")
+}
+
 func SetAutocertHostname(ctx context.Context, etcdClient *etcd.Client, hostname string) error {
 	return putHttpsCertKey(ctx, etcdClient, "hostname", hostname)
 }

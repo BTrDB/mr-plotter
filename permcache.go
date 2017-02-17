@@ -40,7 +40,7 @@ type TagPermissionQuery struct {
 	uu      uuid.Array
 }
 
-var defaulttags = []string{accounts.PUBLIC_TAG}
+var defaulttags = []string{accounts.PublicTag}
 var permcache = reqcache.NewLRUCache(1024, queryPermission, nil)
 var prefixcache = reqcache.NewLRUCache(1024, queryPrefixes, nil)
 
@@ -82,9 +82,6 @@ func hasPermission(ctx context.Context, session *LoginSession, uuidBytes uuid.UU
 	if session == nil {
 		tags = defaulttags
 	} else {
-		if _, hasall := session.Tags[accounts.ALL_TAG]; hasall {
-			return true
-		}
 		tags = session.TagSlice()
 	}
 	uuidString := uuidBytes.String()

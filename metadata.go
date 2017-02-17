@@ -24,7 +24,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"sort"
 	"strings"
@@ -36,7 +35,7 @@ import (
 	"github.com/pborman/uuid"
 )
 
-var defaulttagset = map[string]struct{}{accounts.PUBLIC_TAG: struct{}{}}
+var defaulttagset = map[string]struct{}{accounts.PublicTag: struct{}{}}
 
 func streamtoleafname(ctx context.Context, s *btrdb.Stream) (string, error) {
 	tags, err := s.Tags(ctx)
@@ -44,61 +43,62 @@ func streamtoleafname(ctx context.Context, s *btrdb.Stream) (string, error) {
 		return "", err
 	}
 
-	kvs := make([]string, len(tags))
-	i := 0
-	for key, value := range tags {
-		kvs[i] = key + "=" + value
-		i++
+	name, ok := tags["name"]
+	if ok {
+		return name, nil
 	}
 
-	return strings.Join(kvs, ","), nil
+	return "$" + s.UUID().String(), nil
 }
 
-func leafnametotags(leafname string) map[string]string {
-	streamtags := make(map[string]string)
-	kvs := strings.Split(leafname, ",")
-	for _, kv := range kvs {
-		strings := strings.SplitN(kv, "=", 2)
-		if len(strings) == 2 {
-			streamtags[strings[0]] = strings[1]
-		} else {
-			/* This should never happen, but act reasonably if it does. */
-			streamtags[kv] = ""
+func leafnametostream(ctx context.Context, bc *btrdb.BTrDB, collection string, leafname string) (*btrdb.Stream, error) {
+	if len(leafname) != 0 && leafname[0] == '$' {
+		uuidstr := leafname[1:]
+		uu := uuid.Parse(uuidstr)
+		s := bc.StreamFromUUID(uu)
+		ex, err := s.Exists(ctx)
+		if err != nil {
+			return nil, err
 		}
+		if !ex {
+			return nil, nil
+		}
+		return s, nil
 	}
-	return streamtags
+	matching, err := bc.LookupStreams(ctx, collection, false, map[string]*string{"name": &leafname}, nil)
+	if err != nil {
+		return nil, err
+	}
+	if len(matching) == 0 {
+		return nil, nil
+	}
+	return matching[0], nil
 }
 
-func getprefixes(ctx context.Context, ec *etcd.Client, ls *LoginSession) (map[string]struct{}, bool, error) {
-	var hasall bool
+func getprefixes(ctx context.Context, ec *etcd.Client, ls *LoginSession) (map[string]struct{}, error) {
 	var tagset map[string]struct{}
 	if ls == nil {
-		hasall = false
 		tagset = defaulttagset
 	} else {
-		_, hasall = ls.Tags[accounts.ALL_TAG]
 		tagset = ls.Tags
 	}
 
-	var prefixes map[string]struct{}
-	if !hasall {
-		prefixes = make(map[string]struct{})
-		for tagname := range tagset {
-			tagdef, err := accounts.RetrieveTagDef(ctx, ec, tagname)
-			if err != nil {
-				return nil, false, err
-			}
+	prefixes := make(map[string]struct{})
+	for tagname := range tagset {
+		tagdef, err := accounts.RetrieveTagDef(ctx, ec, tagname)
+		if err != nil {
+			return nil, err
+		}
 
-			// Tags that are not defined do not grant any permissions
-			if tagdef != nil {
-				for pfx := range tagdef.PathPrefix {
-					prefixes[pfx] = struct{}{}
-				}
+		// Tags that are not defined do not grant any permissions
+		if tagdef != nil {
+			for pfx := range tagdef.PathPrefix {
+				prefixes[pfx] = struct{}{}
 			}
 		}
 	}
 
-	return prefixes, hasall, nil
+	return prefixes, nil
 }
 
 /* Returns a sorted slice of top level elements in the stream tree. */
@@ -108,7 +108,7 @@ func treetopPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Log
 		return nil, err
 	}
 
-	prefixes, hasall, err := getprefixes(ctx, ec, ls)
+	prefixes, err := getprefixes(ctx, ec, ls)
 	if err != nil {
 		return nil, err
 	}
@@ -118,17 +118,15 @@ func treetopPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Log
 		var toplevel string
 
 		/* Skip this collection if the user doesn't have permission. */
-		if !hasall {
-			haspermission := false
-			for pfx := range prefixes {
-				if strings.HasPrefix(coll, pfx) {
-					haspermission = true
-					break
-				}
+		haspermission := false
+		for pfx := range prefixes {
+			if strings.HasPrefix(coll, pfx) {
+				haspermission = true
+				break
 			}
-			if !haspermission {
-				continue
-			}
+		}
+		if !haspermission {
+			continue
 		}
 
 		/* Extract the top-level element from the collection name. */
@@ -161,7 +159,7 @@ func treebranchPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *
 		return nil, err
 	}
 
-	prefixes, hasall, err := getprefixes(ctx, ec, ls)
+	prefixes, err := getprefixes(ctx, ec, ls)
 	if err != nil {
 		return nil, err
 	}
@@ -169,17 +167,15 @@ func treebranchPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *
 	branches := make([]string, 0, len(collections))
 	for _, coll := range collections {
 		/* Skip this collection if the user doesn't have permission. */
-		if !hasall {
-			haspermission := false
-			for pfx := range prefixes {
-				if strings.HasPrefix(coll, pfx) {
-					haspermission = true
-					break
-				}
+		haspermission := false
+		for pfx := range prefixes {
+			if strings.HasPrefix(coll, pfx) {
+				haspermission = true
+				break
 			}
-			if !haspermission {
-				continue
-			}
+		}
+		if !haspermission {
+			continue
 		}
 
 		dotidx := strings.IndexByte(coll, '.')
@@ -200,7 +196,7 @@ func treeleafPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Lo
 	coll := strings.Replace(branchpath, "/", ".", -1)
 
 	/* Get the streams in the collection. */
-	streams, err := bc.ListAllStreams(ctx, coll)
+	streams, err := bc.LookupStreams(ctx, coll, false, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -229,11 +225,12 @@ func treeleafMetadata(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls 
 	}
 	leafname := path[div+1:]
 	collection := strings.Replace(path[:div], "/", ".", -1)
-	streamtags := leafnametotags(leafname)
-
-	s, err := bc.LookupStream(ctx, collection, streamtags)
+	s, err := leafnametostream(ctx, bc, collection, leafname)
 	if err != nil {
 		return nil, err
+	}
+	if s == nil {
+		return nil, errors.New("Stream does not exist")
 	}
 
 	uu := s.UUID()
@@ -253,7 +250,7 @@ func uuidMetadata(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Log
 		return nil, errors.New("Need permission")
 	}
 
-	ann, _, err := s.Annotation(ctx)
+	ann, _, err := s.Annotations(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -268,9 +265,8 @@ func uuidMetadata(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Log
 	}
 
 	var doc map[string]interface{}
-	err = json.Unmarshal(ann, &doc)
-	if err != nil {
-		doc = make(map[string]interface{})
+	for k, v := range ann {
+		doc[k] = v
 	}
 	um, ok := doc["UnitofMeasure"]
 	if !ok {

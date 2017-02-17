@@ -30,13 +30,13 @@ import (
 
 	"gopkg.in/btrdb.v4"
 
-	uuid "github.com/pborman/uuid"
 	ws "github.com/gorilla/websocket"
+	uuid "github.com/pborman/uuid"
 )
 
 const (
-	QUASAR_LOW int64 = 1 - (16 << 56)
-	QUASAR_HIGH int64 = (48 << 56) - 1
+	QUASAR_LOW   int64 = 1 - (16 << 56)
+	QUASAR_HIGH  int64 = (48 << 56) - 1
 	INVALID_TIME int64 = -0x8000000000000000
 )
 
@@ -55,8 +55,8 @@ type Writable interface {
 }
 
 type ConnWrapper struct {
-	Writing *sync.Mutex
-	Conn *ws.Conn
+	Writing    *sync.Mutex
+	Conn       *ws.Conn
 	CurrWriter io.WriteCloser
 }
 
@@ -72,32 +72,32 @@ func (cw *ConnWrapper) GetWriter() io.Writer {
 	}
 }
 
-/** DataRequester encapsulates a series of connections used for obtaining data
-	from QUASAR. */
+// DataRequester encapsulates a series of connections used for obtaining data
+// from QUASAR.
 type DataRequester struct {
-	totalWaiting uint64
-	pending uint32
-	maxPending uint32
-	pendingLock *sync.Mutex
+	totalWaiting   uint64
+	pending        uint32
+	maxPending     uint32
+	pendingLock    *sync.Mutex
 	pendingCondVar *sync.Cond
-	stateLock *sync.RWMutex
-	alive bool
+	stateLock      *sync.RWMutex
+	alive          bool
 
 	btrdb *btrdb.BTrDB
 }
 
-/** Creates a new DataRequester object.
-	btrdbConn - established connection to a BTrDB cluster.
-	maxPending - a limit on the maximum number of pending requests. */
+// NewDataRequester creates a new DataRequester object.
+// btrdbConn - established connection to a BTrDB cluster.
+// maxPending - a limit on the maximum number of pending requests. */
 func NewDataRequester(btrdbConn *btrdb.BTrDB, maxPending uint32) *DataRequester {
 	pendingLock := &sync.Mutex{}
 	var dr *DataRequester = &DataRequester{
-		totalWaiting: 0,
-		pending: 0,
-		maxPending: maxPending,
-		pendingLock: pendingLock,
+		totalWaiting:   0,
+		pending:        0,
+		maxPending:     maxPending,
+		pendingLock:    pendingLock,
 		pendingCondVar: sync.NewCond(pendingLock),
-		btrdb: btrdbConn,
+		btrdb:          btrdbConn,
 	}
 
 	return dr
@@ -124,7 +124,7 @@ func (dr *DataRequester) MakeDataRequest(ctx context.Context, uuidBytes uuid.UUI
 
 	var w io.Writer
 
-	var stream *btrdb.Stream = dr.btrdb.StreamFromUUID(uuidBytes)
+	var stream = dr.btrdb.StreamFromUUID(uuidBytes)
 
 	var exists bool
 	var err error
@@ -195,7 +195,7 @@ func (dr *DataRequester) MakeBracketRequest(ctx context.Context, uuids []uuid.UU
 		var seconditer bool = ((i & 1) != 0)
 
 		if !seconditer {
-			stream = dr.btrdb.StreamFromUUID(uuids[i >> 1])
+			stream = dr.btrdb.StreamFromUUID(uuids[i>>1])
 
 			var exists bool
 			var err error
@@ -214,7 +214,7 @@ func (dr *DataRequester) MakeBracketRequest(ctx context.Context, uuids []uuid.UU
 			var rawpoint btrdb.RawPoint
 			var e error
 			var ref int64
-			if (high) {
+			if high {
 				ref = QUASAR_HIGH
 			} else {
 				ref = QUASAR_LOW
@@ -235,32 +235,32 @@ func (dr *DataRequester) MakeBracketRequest(ctx context.Context, uuids []uuid.UU
 
 	// For final processing once all responses are received
 	var (
-		boundary int64
-		lNanos int32
-		lMillis int64
-		rNanos int32
-		rMillis int64
-		lowest int64 = QUASAR_HIGH
-		highest int64 = QUASAR_LOW
-		trailchar rune = ','
-		w io.Writer = writ.GetWriter()
+		boundary  int64
+		lNanos    int32
+		lMillis   int64
+		rNanos    int32
+		rMillis   int64
+		lowest    int64     = QUASAR_HIGH
+		highest   int64     = QUASAR_LOW
+		trailchar rune      = ','
+		w         io.Writer = writ.GetWriter()
 	)
 
 	w.Write([]byte("{\"Brackets\": ["))
 
 	for i = 0; i < len(uuids); i++ {
-		boundary = boundarySlice[i << 1]
+		boundary = boundarySlice[i<<1]
 		if boundary != INVALID_TIME && boundary < lowest {
 			lowest = boundary
 		}
 		lMillis, lNanos = splitTime(boundary)
-		boundary = boundarySlice[(i << 1) + 1]
+		boundary = boundarySlice[(i<<1)+1]
 		if boundary != INVALID_TIME && boundary > highest {
 			highest = boundary
 		}
 		rMillis, rNanos = splitTime(boundary)
-		if i == len(uuids) - 1 {
-			trailchar = ']';
+		if i == len(uuids)-1 {
+			trailchar = ']'
 		}
 		w.Write([]byte(fmt.Sprintf("[[%v,%v],[%v,%v]]%c", lMillis, lNanos, rMillis, rNanos, trailchar)))
 	}

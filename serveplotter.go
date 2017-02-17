@@ -182,24 +182,31 @@ var mrPlotterTLSConfig = &tls.Config{}
 
 func updateTLSConfig(config *Config) {
 	/* First, check if an autocert hostname is specified, and use it if so. */
-	autocertHostname, err := keys.GetAutocertHostname(context.Background(), etcdConn)
+	certSource, err := keys.GetCertificateSource(context.Background(), etcdConn)
 	if err != nil {
-		log.Fatalf("Could not check for autocert hostname in etcd: %v", err)
+		log.Fatalf("Could not check for certificate source in etcd: %v", err)
 	}
-	if autocertHostname != "" {
-		/* Set up autocert. */
-		var email string
-		email, err = keys.GetAutocertEmail(context.Background(), etcdConn)
+	if certSource == "autocert" {
+		autocertHostname, err := keys.GetAutocertHostname(context.Background(), etcdConn)
 		if err != nil {
-			log.Fatalf("Could not check for autocert contact email in etcd: %v", err)
+			log.Fatalf("Could not check for autocert hostname in etcd: %v", err)
 		}
-		m := autocert.Manager{
-			Prompt:     autocert.AcceptTOS,
-			Cache:      autocert.DirCache("autocert_cache"),
-			HostPolicy: autocert.HostWhitelist(autocertHostname),
-			Email:      email,
+		if autocertHostname != "" {
+			/* Set up autocert. */
+			var email string
+			email, err = keys.GetAutocertEmail(context.Background(), etcdConn)
+			if err != nil {
+				log.Fatalf("Could not check for autocert contact email in etcd: %v", err)
+			}
+			m := autocert.Manager{
+				Prompt:     autocert.AcceptTOS,
+				Cache:      autocert.DirCache("autocert_cache"),
+				HostPolicy: autocert.HostWhitelist(autocertHostname),
+				Email:      email,
+			}
+			mrPlotterTLSConfig.GetCertificate = m.GetCertificate
+			return
 		}
-		mrPlotterTLSConfig.GetCertificate = m.GetCertificate
 	} else {
 		/* Just read the keys and use them. */
 		h, err := keys.RetrieveHardcodedTLSCertificate(context.Background(), etcdConn)
