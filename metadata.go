@@ -59,8 +59,12 @@ func leafnametotags(leafname string) map[string]string {
 	kvs := strings.Split(leafname, ",")
 	for _, kv := range kvs {
 		strings := strings.SplitN(kv, "=", 2)
-		// TODO check if len(strings) == 2 and handle error otherwise
-		streamtags[strings[0]] = strings[1]
+		if len(strings) == 2 {
+			streamtags[strings[0]] = strings[1]
+		} else {
+			/* This should never happen, but act reasonably if it does. */
+			streamtags[kv] = ""
+		}
 	}
 	return streamtags
 }
@@ -149,64 +153,6 @@ func treetopPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Log
 
 	return treetop, nil
 }
-
-// func treebranchMetadata(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, toplevel string) ([]string, error) {
-// 	collprefix := toplevel + "."
-// 	collections, err := bc.ListCollections(ctx, collprefix)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	prefixes, hasall, err := getprefixes(ctx, ec, ls)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	branches := make([]string, 0, len(collections))
-// 	for _, coll := range collections {
-// 		/* Skip this collection if the user doesn't have permission. */
-// 		if !hasall {
-// 			haspermission := false
-// 			for pfx := range prefixes {
-// 				if strings.HasPrefix(coll, pfx) {
-// 					haspermission = true
-// 					break
-// 				}
-// 			}
-// 			if !haspermission {
-// 				continue
-// 			}
-// 		}
-//
-// 		/* Get the streams in the collection. */
-// 		streams, err := bc.ListAllStreams(ctx, coll)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-//
-// 		dotidx := strings.IndexByte(coll, '.')
-// 		if dotidx == -1 {
-// 			dotidx = len(coll)
-// 		}
-// 		pathcoll := strings.Replace(coll[dotidx:], ".", "/", -1)
-//
-// 		for _, stream := range streams {
-// 			/* Formulate the path for this stream. */
-// 			pathfin, err := streamtoleafname(ctx, stream)
-// 			if err != nil {
-// 				return nil, err
-// 			}
-// 			path := pathcoll + "/" + pathfin
-//
-// 			/* Add path to return slice. */
-// 			branches = append(branches, path)
-// 		}
-// 	}
-//
-// 	sort.Strings(branches)
-//
-// 	return branches, nil
-// }
 
 func treebranchPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, toplevel string) ([]string, error) {
 	collprefix := toplevel + "."

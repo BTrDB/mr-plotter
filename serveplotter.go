@@ -40,10 +40,13 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/crypto/acme/autocert"
+
 	"gopkg.in/btrdb.v4"
 	"gopkg.in/ini.v1"
 
 	"github.com/SoftwareDefinedBuildings/mr-plotter/accounts"
+	"github.com/SoftwareDefinedBuildings/mr-plotter/keys"
 	"github.com/SoftwareDefinedBuildings/mr-plotter/permalink"
 
 	etcd "github.com/coreos/etcd/clientv3"
@@ -175,6 +178,68 @@ func getEtcdKeySafe(ctx context.Context, key string) []byte {
 	return resp.Kvs[0].Value
 }
 
+var mrPlotterTLSConfig = &tls.Config{}
+
+func updateTLSConfig(config *Config) {
+	/* First, check if an autocert hostname is specified, and use it if so. */
+	autocertHostname, err := keys.GetAutocertHostname(context.Background(), etcdConn)
+	if err != nil {
+		log.Fatalf("Could not check for autocert hostname in etcd: %v", err)
+	}
+	if autocertHostname != "" {
+		/* Set up autocert. */
+		var email string
+		email, err = keys.GetAutocertEmail(context.Background(), etcdConn)
+		if err != nil {
+			log.Fatalf("Could not check for autocert contact email in etcd: %v", err)
+		}
+		m := autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			Cache:      autocert.DirCache("autocert_cache"),
+			HostPolicy: autocert.HostWhitelist(autocertHostname),
+			Email:      email,
+		}
+		mrPlotterTLSConfig.GetCertificate = m.GetCertificate
+	} else {
+		/* Just read the keys and use them. */
+		h, err := keys.RetrieveHardcodedTLSCertificate(context.Background(), etcdConn)
+		if err != nil {
+			log.Fatalf("Could not retrieve hardcoded TLS certificate from etcd: %v", err)
+		}
+		var httpscert = h.Cert
+		var httpskey = h.Key
+
+		if httpscert != nil {
+			log.Println("Found HTTPS certificate in etcd; overriding configuration file")
+		} else {
+			log.Println("HTTPS certificate not found in etcd; falling back to configuration file")
+			httpscert, err = ioutil.ReadFile(config.HttpsCertFile)
+			if err != nil {
+				log.Fatalf("Could not read HTTPS certificate file: %v", err)
+			}
+		}
+
+		if httpskey != nil {
+			log.Println("Found HTTPS key in etcd; overriding configuration file")
+		} else {
+			log.Println("HTTPS key not found in etcd; falling back to configuration file")
+			httpskey, err = ioutil.ReadFile(config.HttpsKeyFile)
+			if err != nil {
+				log.Fatalf("Could not read HTTPS certificate file: %v", err)
+			}
+		}
+
+		var tlsCertificate tls.Certificate
+		tlsCertificate, err = tls.X509KeyPair(httpscert, httpskey)
+		if err != nil {
+			log.Fatalf("Could not parse HTTPS certificate and key (must be PEM-encoded): %v", err)
+		}
+		mrPlotterTLSConfig.GetCertificate = func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+			return &tlsCertificate, nil
+		}
+	}
+}
+
 func main() {
 	var config Config
 	var err error
@@ -191,17 +256,18 @@ func main() {
 		filename = os.Args[1]
 	}
 
-	var etcdPrefix string = os.Getenv("MR_PLOTTER_ETCD_CONFIG")
+	var etcdPrefix = os.Getenv("MR_PLOTTER_ETCD_CONFIG")
 	accounts.SetEtcdKeyPrefix(etcdPrefix)
+	keys.SetEtcdKeyPrefix(etcdPrefix)
 	permalink.SetEtcdKeyPrefix(etcdPrefix)
 
-	var etcdEndpoint string = os.Getenv("ETCD_ENDPOINT")
+	var etcdEndpoint = os.Getenv("ETCD_ENDPOINT")
 	if len(etcdEndpoint) == 0 {
 		etcdEndpoint = "localhost:2379"
 		log.Printf("ETCD_ENDPOINT is not set; using %s", etcdEndpoint)
 	}
 
-	var etcdConfig etcd.Config = etcd.Config{Endpoints: []string{etcdEndpoint}}
+	var etcdConfig = etcd.Config{Endpoints: []string{etcdEndpoint}}
 
 	log.Println("Connecting to etcd...")
 	etcdConn, err = etcd.New(etcdConfig)
@@ -233,40 +299,33 @@ func main() {
 		config.BtrdbEndpoints = btrdb.EndpointsFromEnv()
 	}
 
-	var tlsCertificate tls.Certificate
-
 	if config.UseHttps {
-		var httpscert []byte = getEtcdKeySafe(context.Background(), "mrplotter/keys/https_certificate")
-		var httpskey []byte = getEtcdKeySafe(context.Background(), "mrplotter/keys/https_key")
-
-		if httpscert != nil {
-			log.Println("Found HTTPS certificate in etcd; overriding configuration file")
-		} else {
-			log.Println("HTTPS certificate not found in etcd; falling back to configuration file")
-			httpscert, err = ioutil.ReadFile(config.HttpsCertFile)
-			if err != nil {
-				log.Fatalf("Could not read HTTPS certificate file: %v", err)
+		start := make(chan struct{}, 1)
+		go func() {
+			httpsCertPrefix := accounts.GetTagEtcdPath()
+			watchchan := etcdConn.Watch(context.Background(), httpsCertPrefix)
+			<-start
+			for watchresp := range watchchan {
+				err2 := watchresp.Err()
+				if err2 != nil {
+					log.Fatalf("Error watching https certificates: %v", err2)
+				}
+				updateTLSConfig(&config)
 			}
-		}
 
-		if httpskey != nil {
-			log.Println("Found HTTPS key in etcd; overriding configuration file")
-		} else {
-			log.Println("HTTPS key not found in etcd; falling back to configuration file")
-			httpskey, err = ioutil.ReadFile(config.HttpsKeyFile)
-			if err != nil {
-				log.Fatalf("Could not read HTTPS certificate file: %v", err)
-			}
-		}
-
-		tlsCertificate, err = tls.X509KeyPair(httpscert, httpskey)
-		if err != nil {
-			log.Fatalf("Could not parse HTTPS certificate and key (must be PEM-encoded): %v", err)
-		}
+			log.Fatalln("Watch on tags was lost")
+		}()
+		updateTLSConfig(&config)
+		start <- struct{}{}
 	}
 
-	var sessionencryptkey []byte = getEtcdKeySafe(context.Background(), "mrplotter/keys/session_encrypt_key")
-	var sessionmackey []byte = getEtcdKeySafe(context.Background(), "mrplotter/keys/session_mac_key")
+	var sessionkeys *keys.SessionKeys
+	sessionkeys, err = keys.RetrieveSessionKeys(context.Background(), etcdConn)
+	if err != nil {
+		log.Fatalf("Could not get session keys from etcd: %v", err)
+	}
+	var sessionencryptkey = sessionkeys.EncryptKey
+	var sessionmackey = sessionkeys.MACKey
 
 	if sessionencryptkey != nil {
 		log.Println("Found session encryption key in etcd; overriding configuration file")
@@ -362,10 +421,10 @@ func main() {
 		mrPlotterHandler = httpHandlers.CompressHandler(mrPlotterHandler)
 	}
 
-	var portStrHTTP string = fmt.Sprintf(":%d", config.HttpPort)
-	var portStrHTTPS string = fmt.Sprintf(":%d", config.HttpsPort)
+	var portStrHTTP = fmt.Sprintf(":%d", config.HttpPort)
+	var portStrHTTPS = fmt.Sprintf(":%d", config.HttpsPort)
 
-	var mrPlotterServer *http.Server = &http.Server{Handler: mrPlotterHandler, TLSConfig: &tls.Config{Certificates: []tls.Certificate{tlsCertificate}}}
+	var mrPlotterServer = &http.Server{Handler: mrPlotterHandler, TLSConfig: mrPlotterTLSConfig}
 	if config.UseHttps {
 		mrPlotterServer.Addr = portStrHTTPS
 	} else {
@@ -385,7 +444,7 @@ func main() {
 				url.Host = r.Host + portStrHTTPS
 				http.Redirect(w, r, url.String(), http.StatusFound)
 			})
-			var loggedRedirect http.Handler = httpHandlers.CompressHandler(httpHandlers.CombinedLoggingHandler(os.Stdout, redirect))
+			var loggedRedirect = httpHandlers.CompressHandler(httpHandlers.CombinedLoggingHandler(os.Stdout, redirect))
 			log.Fatal(http.ListenAndServe(portStrHTTP, loggedRedirect))
 		} else {
 			log.Fatal(http.ListenAndServe(portStrHTTP, mrPlotterHandler))

@@ -29,17 +29,18 @@
 package permalink
 
 import (
-    "context"
-    "fmt"
+	"context"
+	"fmt"
 
-    etcd "github.com/coreos/etcd/clientv3"
+	etcd "github.com/coreos/etcd/clientv3"
 )
 
 const etcdpath string = "mrplotter/permalinks/"
+
 var etcdprefix = ""
 
 func getPermalinkEtcdKey(plnk string) string {
-    return fmt.Sprintf("%s%s%s", etcdprefix, etcdpath, plnk)
+	return fmt.Sprintf("%s%s%s", etcdprefix, etcdpath, plnk)
 }
 
 // Sets the prefix added to keys in the etcd database.
@@ -47,43 +48,43 @@ func getPermalinkEtcdKey(plnk string) string {
 // The prefix allows separate deployments of Mr. Plotter to coexist in a
 // single etcd database system.
 func SetEtcdKeyPrefix(prefix string) {
-     etcdprefix = prefix
+	etcdprefix = prefix
 }
 
-// Retries the data for a permalink, given its ID.
+// Retrieves the data for a permalink, given its ID.
 func RetrievePermalinkData(ctx context.Context, etcdClient *etcd.Client, id string) ([]byte, error) {
-    etcdKey := getPermalinkEtcdKey(id)
-    presp, err := etcdClient.Get(context.TODO(), etcdKey)
-    if err != nil {
-        return nil, err
-    }
+	etcdKey := getPermalinkEtcdKey(id)
+	presp, err := etcdClient.Get(ctx, etcdKey)
+	if err != nil {
+		return nil, err
+	}
 
-    if len(presp.Kvs) == 0 {
-        return nil, nil
-    } else {
-        return presp.Kvs[0].Value, nil
-    }
+	if len(presp.Kvs) == 0 {
+		return nil, nil
+	} else {
+		return presp.Kvs[0].Value, nil
+	}
 }
 
 // Updates the data for a permalink, creating it if it does not exist.
 func UpsertPermalinkData(ctx context.Context, etcdClient *etcd.Client, id string, data []byte) error {
-    etcdKey := getPermalinkEtcdKey(id)
-    _, err := etcdClient.Put(ctx, etcdKey, string(data))
-    return err
+	etcdKey := getPermalinkEtcdKey(id)
+	_, err := etcdClient.Put(ctx, etcdKey, string(data))
+	return err
 }
 
 // Same as UpdatePermalinkData, but fails if the permalink already exists in
 // the database. Returns true on success and false on failure.
 func InsertPermalinkData(ctx context.Context, etcdClient *etcd.Client, id string, data []byte) (bool, error) {
-    etcdKey := getPermalinkEtcdKey(id)
-    resp, err := etcdClient.Txn(ctx).
-        If(etcd.Compare(etcd.ModRevision(etcdKey), "=", 0)).
-        Then(etcd.OpPut(etcdKey, string(data))).
-        Commit()
+	etcdKey := getPermalinkEtcdKey(id)
+	resp, err := etcdClient.Txn(ctx).
+		If(etcd.Compare(etcd.ModRevision(etcdKey), "=", 0)).
+		Then(etcd.OpPut(etcdKey, string(data))).
+		Commit()
 
-    if resp != nil {
-        return resp.Succeeded, err
-    } else {
-        return false, err
-    }
+	if resp != nil {
+		return resp.Succeeded, err
+	} else {
+		return false, err
+	}
 }

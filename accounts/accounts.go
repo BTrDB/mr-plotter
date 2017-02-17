@@ -27,7 +27,7 @@
  */
 
 // Package accounts implements tools to manage account information for Mr. Plotter.
-// Account information is stored in etcd, and so a Version 3 etcd client is needed
+// Account information is stored in etcd, so a Version 3 etcd client is needed
 // for most of the API functions.
 package accounts
 

@@ -23,49 +23,26 @@
 package main
 
 import (
-	"container/list"
 	"context"
 	"log"
 	"strings"
-	"sync"
 
 	"gopkg.in/btrdb.v4"
 
-	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/SoftwareDefinedBuildings/mr-plotter/accounts"
+	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/pborman/uuid"
+	"github.com/samkumar/reqcache"
 )
-
-var max_cached uint64 // Maximum number of tag permissions that are cached
 
 type TagPermissionQuery struct {
 	tagname string
-	uu uuid.Array
+	uu      uuid.Array
 }
 
-type TagPermission struct {
-	query TagPermissionQuery
-	hasPermission bool
-	queryPending bool
-	requestFailed bool
-	queryPendingCond *sync.Cond
-	element *list.Element
-}
-
-// Maps TAG to a struct describing its permissions
-var permcache map[TagPermissionQuery]*TagPermission = make(map[TagPermissionQuery]*TagPermission)
-var defaulttags = []string{ accounts.PUBLIC_TAG }
-var totalCached uint64 = 0
-
-// This is a bit coarse: I don't really need to lock the whole permcache if I'm just changing one entry
-// But hierarchical locking would be overkill here...
-var permcacheLock sync.Mutex = sync.Mutex{}
-
-// Use LRU policy: keep track of which tags are used most recently
-var lruList *list.List = list.New()
-var lruListLock sync.Mutex = sync.Mutex{}
-
-// Lock ordering is to always acquire the permcacheLock before the lruListLock
+var defaulttags = []string{accounts.PUBLIC_TAG}
+var permcache = reqcache.NewLRUCache(1024, queryPermission, nil)
+var prefixcache = reqcache.NewLRUCache(1024, queryPrefixes, nil)
 
 func permCacheDaemon(ctx context.Context, ec *etcd.Client) {
 	permCachePrefix := accounts.GetTagEtcdPath()
@@ -76,56 +53,25 @@ func permCacheDaemon(ctx context.Context, ec *etcd.Client) {
 	// I'm going to leave it as is because changing tag definitions should
 	// be relatively rare.
 	for watchresp := range watchchan {
-		permcacheLock.Lock()
-		lruListLock.Lock()
 		err := watchresp.Err()
 		if err != nil {
 			log.Fatalf("Error watching tags: %v", err)
 		}
-		for _, event := range watchresp.Events {
-			key := string(event.Kv.Key)
-			for query, perm := range permcache {
-				if query.tagname == key {
-					delete(permcache, query)
-					lruList.Remove(perm.element)
-					totalCached -= 1
-				}
-			}
-		}
-		lruListLock.Unlock()
-		permcacheLock.Unlock()
+		permcache.Invalidate()
 	}
 
 	log.Fatalln("Watch on tags was lost")
 }
 
-func setTagPermissionCacheSize(maxCached uint64) {
-	permcacheLock.Lock()
-	lruListLock.Lock()
-	max_cached = maxCached
-	pruneCacheIfNecessary()
-	lruListLock.Unlock()
-	permcacheLock.Unlock()
-}
-
-// the permcacheLock and lruListLock must be held when this function executes
-func pruneCacheIfNecessary() {
-	var element *list.Element
-	var taginfo *TagPermission
-	for totalCached > max_cached {
-		element = lruList.Back() // least recently used
-		lruList.Remove(element)
-		taginfo = element.Value.(*TagPermission)
-		delete(permcache, taginfo.query)
-		totalCached -= 1
-	}
+func setTagPermissionCacheSize(newMaxCached uint64) {
+	permcache.SetCapacity(newMaxCached)
 }
 
 func hasPermission(ctx context.Context, session *LoginSession, uuidBytes uuid.UUID) bool {
 	var tags []string
 
 	/* First, check if the stream exists. */
-	var s *btrdb.Stream = btrdbConn.StreamFromUUID(uuidBytes)
+	s := btrdbConn.StreamFromUUID(uuidBytes)
 	if ok, err := s.Exists(ctx); !ok || err != nil {
 		/* We don't want to cache this result. That way, we don't have to worry
 		 * about invalidating the cache if a stream is created.
@@ -152,78 +98,39 @@ func hasPermission(ctx context.Context, session *LoginSession, uuidBytes uuid.UU
 }
 
 func tagHasPermission(ctx context.Context, tag string, uuidBytes uuid.UUID, uuidString string, s *btrdb.Stream) bool {
-	var hasPerm bool = false
-	var err error
-
-	var query TagPermissionQuery = TagPermissionQuery{tagname: tag, uu: uuidBytes.Array()}
-
-	permcacheLock.Lock()
-	taginfo, ok := permcache[query]
-	if ok {
-		/* Wait for the result if it's still pending. */
-		for taginfo.queryPending {
-			taginfo.queryPendingCond.Wait()
-		}
-		if taginfo.requestFailed {
-			/* The request for the data failed, so just return false. */
-			/* Alternatively, we could work out a way to try again for this request,
-			 * but I think it's a bad idea. */
-			return false
-		}
-		/* Cache hit. */
-		lruListLock.Lock()
-		lruList.MoveToFront(taginfo.element) // most recently used
-		lruListLock.Unlock()
-		hasPerm = taginfo.hasPermission
-		permcacheLock.Unlock()
-		return hasPerm
-	}
-
-	/* Cache Miss: never seen this query */
-	taginfo = &TagPermission{ query: query, queryPending: true, requestFailed: false, queryPendingCond: sync.NewCond(&permcacheLock) }
-	permcache[query] = taginfo
-	permcacheLock.Unlock()
-
-	/* Make a request to the underlying database. */
-	var collection string
-	collection, err = s.Collection(ctx)
-	if err == nil {
-		var tagdef *accounts.MrPlotterTagDef
-		tagdef, err = accounts.RetrieveTagDef(ctx, etcdConn, tag)
-		if err == nil {
-			for pfx := range tagdef.PathPrefix {
-				hasPerm = strings.HasPrefix(collection, pfx)
-				if hasPerm {
-					break
-				}
-			}
-		}
-	}
+	query := TagPermissionQuery{tagname: tag, uu: uuidBytes.Array()}
+	hasPerm, err := permcache.Get(ctx, query)
 	if err != nil {
-		log.Printf("Request for tag permission failed: %v", err)
-		permcacheLock.Lock()
-		delete(permcache, taginfo.query)
-		taginfo.queryPending = false
-		taginfo.requestFailed = true
-		taginfo.queryPendingCond.Broadcast()
-		permcacheLock.Unlock()
+		log.Printf("Could not request tag data: %v", err)
 		return false
 	}
+	return hasPerm.(bool)
+}
 
-	/* If we didn't return early due to some kind of error, cache the result and return it. */
-	permcacheLock.Lock()
-	taginfo.hasPermission = hasPerm
-	taginfo.queryPending = false
-	taginfo.queryPendingCond.Broadcast()
+func queryPermission(ctx context.Context, key interface{}) (interface{}, uint64, error) {
+	query := key.(TagPermissionQuery)
+	s := btrdbConn.StreamFromUUID(query.uu.UUID())
+	coll, err := s.Collection(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	prefixes, err := prefixcache.Get(ctx, query.tagname)
+	if err != nil {
+		return nil, 0, err
+	}
+	for pfx := range prefixes.(map[string]struct{}) {
+		if strings.HasPrefix(coll, pfx) {
+			return true, 1, nil
+		}
+	}
+	return false, 1, nil
+}
 
-	/* Actually add this to the LRU list. Maybe this should happen before we make the query to get the permission? */
-	lruListLock.Lock()
-	taginfo.element = lruList.PushFront(taginfo)
-	totalCached += 1
-	pruneCacheIfNecessary()
-	lruListLock.Unlock()
-
-	permcacheLock.Unlock()
-
-	return hasPerm
+func queryPrefixes(ctx context.Context, key interface{}) (interface{}, uint64, error) {
+	tag := key.(string)
+	tagdef, err := accounts.RetrieveTagDef(ctx, etcdConn, tag)
+	if err != nil {
+		return nil, 0, err
+	}
+	return tagdef.PathPrefix, uint64(len(tagdef.PathPrefix)), nil
 }

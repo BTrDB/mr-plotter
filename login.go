@@ -32,7 +32,6 @@ import (
 	"crypto/sha512"
 	"encoding/json"
 	"fmt"
-	"hash"
 	"io"
 	"log"
 	"time"
@@ -65,7 +64,7 @@ func setSessionExpiry(seconds uint64) {
 }
 
 func setEncryptKey(key []byte) error {
-	var keylen int = len(key)
+	var keylen = len(key)
 	if keylen != 16 && keylen != 24 && keylen != 32 {
 		return fmt.Errorf("Key length is invalid: must be 16, 24, or 32 bytes (got %d bytes)", keylen)
 	}
@@ -127,25 +126,25 @@ func userlogin(ctx context.Context, etcdConn *etcd.Client, user string, password
 	if err != nil {
 		log.Fatalf("Could not JSON-encode login session: %v", err)
 	}
-	var blocksize int = aes_encrypt_cipher.BlockSize()
-	var paddinglen int = (blocksize - (len(plaintext) % blocksize)) % blocksize
-	var padding []byte = make([]byte, paddinglen)
+	var blocksize = aes_encrypt_cipher.BlockSize()
+	var paddinglen = (blocksize - (len(plaintext) % blocksize)) % blocksize
+	var padding = make([]byte, paddinglen)
 	plaintext = append(plaintext, padding...)
 
 	// Encrypt and MAC the plaintext to get the token
 	// The token consists of the IV, ciphertext, and HMAC concatenated
-	var hmac_hash hash.Hash = hmac.New(sha512.New, hmac_key)
-	var macsize int = hmac_hash.Size()
-	var token []byte = make([]byte, blocksize+len(plaintext), blocksize+len(plaintext)+macsize)
-	var iv []byte = token[:blocksize]
-	var ciphertext []byte = token[blocksize:]
+	var hmac_hash = hmac.New(sha512.New, hmac_key)
+	var macsize = hmac_hash.Size()
+	var token = make([]byte, blocksize+len(plaintext), blocksize+len(plaintext)+macsize)
+	var iv = token[:blocksize]
+	var ciphertext = token[blocksize:]
 
 	_, err = io.ReadFull(rand.Reader, iv)
 	if err != nil {
 		log.Fatalf("Could not generate IV: %v", err)
 	}
 
-	var encrypter cipher.BlockMode = cipher.NewCBCEncrypter(aes_encrypt_cipher, iv)
+	var encrypter = cipher.NewCBCEncrypter(aes_encrypt_cipher, iv)
 	encrypter.CryptBlocks(ciphertext, plaintext)
 
 	_, err = hmac_hash.Write(plaintext)
@@ -158,32 +157,32 @@ func userlogin(ctx context.Context, etcdConn *etcd.Client, user string, password
 }
 
 func decodetoken(token []byte) []byte {
-	var hmac_hash hash.Hash = hmac.New(sha512.New, hmac_key)
+	var hmac_hash = hmac.New(sha512.New, hmac_key)
 
-	var blocksize int = aes_encrypt_cipher.BlockSize()
-	var macsize int = hmac_hash.Size()
+	var blocksize = aes_encrypt_cipher.BlockSize()
+	var macsize = hmac_hash.Size()
 
 	if len(token) <= blocksize+macsize {
 		return nil
 	}
 
-	var iv []byte = token[:blocksize]
-	var ciphertext []byte = token[blocksize : len(token)-macsize]
-	var mac []byte = token[len(token)-macsize:]
+	var iv = token[:blocksize]
+	var ciphertext = token[blocksize : len(token)-macsize]
+	var mac = token[len(token)-macsize:]
 
 	if (len(ciphertext) % blocksize) != 0 {
 		return nil
 	}
 
-	var plaintext []byte = make([]byte, len(ciphertext))
-	var decrypter cipher.BlockMode = cipher.NewCBCDecrypter(aes_encrypt_cipher, iv)
+	var plaintext = make([]byte, len(ciphertext))
+	var decrypter = cipher.NewCBCDecrypter(aes_encrypt_cipher, iv)
 	decrypter.CryptBlocks(plaintext, ciphertext)
 
 	_, err := hmac_hash.Write(plaintext)
 	if err != nil {
 		log.Fatalf("Could not compute HMAC of plaintext token: %v", err)
 	}
-	var computedmac []byte = hmac_hash.Sum(make([]byte, 0, macsize))
+	var computedmac = hmac_hash.Sum(make([]byte, 0, macsize))
 
 	if !hmac.Equal(computedmac, mac) {
 		log.Printf("Invalid MAC detected: someone is trying to forge a token!")
@@ -198,7 +197,7 @@ func stolenkeys() {
 }
 
 func getloginsession(token []byte) *LoginSession {
-	var plaintext []byte = decodetoken(token)
+	var plaintext = decodetoken(token)
 	if plaintext == nil {
 		return nil
 	}
@@ -216,9 +215,9 @@ func getloginsession(token []byte) *LoginSession {
 		return nil
 	}
 
-	var rawjson []byte = plaintext[:i+1]
+	var rawjson = plaintext[:i+1]
 	var loginsession *LoginSession
-	var err error = json.Unmarshal(rawjson, &loginsession)
+	var err = json.Unmarshal(rawjson, &loginsession)
 	if err != nil {
 		log.Printf("Correctly MAC'ed token is incorrect JSON: %v", err)
 		stolenkeys()
@@ -230,7 +229,7 @@ func getloginsession(token []byte) *LoginSession {
 		return nil
 	}
 
-	var now int64 = time.Now().Unix()
+	var now = time.Now().Unix()
 	if uint64(now-loginsession.Issued) >= sessionExpirySeconds {
 		log.Printf("Session expired: (issued at %v, expired at %v, now is %v)", loginsession.Issued, loginsession.Issued+int64(sessionExpirySeconds), now)
 		return nil
