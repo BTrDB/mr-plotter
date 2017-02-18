@@ -27,6 +27,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -140,8 +141,8 @@ var configRequiredKeys = map[string]bool{
 	"log_http_requests":       true,
 	"compress_http_responses": true,
 	"plotter_dir":             true,
-	"https_cert_file":         true,
-	"https_key_file":          true,
+	"https_cert_file":         false,
+	"https_key_file":          false,
 
 	"btrdb_endpoints":            false,
 	"max_data_requests":          true,
@@ -211,21 +212,39 @@ func updateTLSConfig(config *Config) {
 		var httpskey []byte
 
 		if h != nil {
-			log.Println("Found HTTPS certificate in etcd; overriding configuration file")
-			log.Println("Found HTTPS key in etcd; overriding configuration file")
+			log.Println("Found HTTPS certificate in etcd")
 			httpscert = h.Cert
 			httpskey = h.Key
-		} else {
+		} else if config.HttpsCertFile != "" && config.HttpsKeyFile != "" {
 			log.Println("HTTPS certificate not found in etcd; falling back to configuration file")
 			httpscert, err = ioutil.ReadFile(config.HttpsCertFile)
 			if err != nil {
 				log.Fatalf("Could not read HTTPS certificate file: %v", err)
 			}
-			log.Println("HTTPS key not found in etcd; falling back to configuration file")
 			httpskey, err = ioutil.ReadFile(config.HttpsKeyFile)
 			if err != nil {
 				log.Fatalf("Could not read HTTPS certificate file: %v", err)
 			}
+		} else {
+			log.Println("HTTPS Certificate is not in etcd and is not in the config file")
+			c, k, e := keys.SelfSignedCertificate([]string{"default.autocert.smartgrid.store"})
+			if e != nil {
+				log.Fatalf("Could not generate self-signed certificate: %v", e)
+			}
+			hardcoded := &keys.HardcodedTLSCertificate{
+				Cert: pem.EncodeToMemory(c),
+				Key:  pem.EncodeToMemory(k),
+			}
+			_, e = keys.UpsertHardcodedTLSCertificateAtomically(context.Background(), etcdConn, hardcoded)
+			if e != nil {
+				log.Fatalf("Could not insert self-signed certificate to etcd: %v", e)
+			}
+			h, e = keys.RetrieveHardcodedTLSCertificate(context.Background(), etcdConn)
+			if err != nil {
+				log.Fatalf("Could not retrieve hardcoded TLS certificate from etcd after insert: %v", e)
+			}
+			httpscert = h.Cert
+			httpskey = h.Key
 		}
 
 		var tlsCertificate tls.Certificate
@@ -340,10 +359,18 @@ func main() {
 			EncryptKey: keybytes[:16],
 			MACKey:     keybytes[16:],
 		}
-		err = keys.UpsertSessionKeys(context.Background(), etcdConn, sessionkeys)
+		_, err = keys.UpsertSessionKeysAtomically(context.Background(), etcdConn, sessionkeys)
 		if err != nil {
 			log.Fatalf("Could not update session key: %v", err)
 		}
+		/* Now read the keys from etcd. Don't just use the bytes in case the
+		   atomic update failed. */
+		sessionkeys, err = keys.RetrieveSessionKeys(context.Background(), etcdConn)
+		if err != nil {
+			log.Fatalf("Could not get session keys from etcd after insert: %v", err)
+		}
+		sessionencryptkey = sessionkeys.EncryptKey
+		sessionmackey = sessionkeys.MACKey
 	}
 
 	if bytes.Equal(sessionencryptkey, sessionmackey) {
