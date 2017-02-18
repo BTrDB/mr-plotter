@@ -111,9 +111,6 @@ type Config struct {
 	HttpsCertFile         string
 	HttpsKeyFile          string
 
-	SessionEncryptKeyFile string
-	SessionMacKeyFile     string
-
 	BtrdbEndpoints          []string
 	NumDataConn             uint16
 	NumBracketConn          uint16
@@ -145,9 +142,6 @@ var configRequiredKeys = map[string]bool{
 	"plotter_dir":             true,
 	"https_cert_file":         true,
 	"https_key_file":          true,
-
-	"session_encrypt_key_file": true,
-	"session_mac_key_file":     true,
 
 	"btrdb_endpoints":            false,
 	"max_data_requests":          true,
@@ -333,20 +327,22 @@ func main() {
 	var sessionmackey []byte
 
 	if sessionkeys != nil {
-		log.Println("Found session encryption key in etcd; overriding configuration file")
-		log.Println("Found session MAC key in etcd; overriding configuration file")
+		log.Println("Found session keys in etcd")
 		sessionencryptkey = sessionkeys.EncryptKey
 		sessionmackey = sessionkeys.MACKey
 	} else {
-		log.Println("Session encryption key not found in etcd; falling back to configuration file")
-		sessionencryptkey, err = ioutil.ReadFile(config.SessionEncryptKeyFile)
-		if err != nil {
-			log.Fatalf("Could not read encryption key file: %v", err)
+		log.Println("Session keys not in etcd; generating session keys...")
+		var keybytes = make([]byte, 32)
+		if _, err = rand.Read(keybytes); err != nil {
+			log.Fatalf("Could not generate session keys: %v", err)
 		}
-		log.Println("Session MAC key not found in etcd; falling back to configuration file")
-		sessionmackey, err = ioutil.ReadFile(config.SessionMacKeyFile)
+		sessionkeys = &keys.SessionKeys{
+			EncryptKey: keybytes[:16],
+			MACKey:     keybytes[16:],
+		}
+		err = keys.UpsertSessionKeys(context.Background(), etcdConn, sessionkeys)
 		if err != nil {
-			log.Fatalf("Could not read MAC key file: %v", err)
+			log.Fatalf("Could not update session key: %v", err)
 		}
 	}
 
