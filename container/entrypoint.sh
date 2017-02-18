@@ -10,15 +10,17 @@ export ETCDCTL_API=3
 
 set -ex
 
+# Install a self-signed certificate
+openssl genrsa -des3 -passout pass:x -out server.pass.key 2048
+openssl rsa -passin pass:x -in server.pass.key -out server.key
+rm server.pass.key
+openssl req -new -key server.key -out server.csr \
+  -subj "/C=US/ST=CA/L=Berkeley/O=UCBerkeley/OU=EECS/CN=default.autocert.smartgrid.store"
+openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
+hardcodecert server.crt server.key
+
 if [[ $1 = "init" ]]
 then
-  openssl genrsa -des3 -passout pass:x -out server.pass.key 2048
-  openssl rsa -passin pass:x -in server.pass.key -out server.key
-  rm server.pass.key
-  openssl req -new -key server.key -out server.csr \
-    -subj "/C=US/ST=CA/L=Berkeley/O=UCBerkeley/OU=EECS/CN=default.autocert.smartgrid.store"
-  openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
-  hardcodecert server.crt server.key
   head -c 16 /dev/urandom > encrypt_key
   head -c 16 /dev/urandom > mac_key
   setsessionkeys encrypt_key mac_key
