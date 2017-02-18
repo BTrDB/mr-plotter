@@ -90,16 +90,19 @@ func checkpassword(ctx context.Context, etcdConn *etcd.Client, user string, pass
 		return nil, err
 	}
 
-	correct, err := acc.CheckPassword(password)
-	if err != nil {
-		return nil, err
+	var correct bool
+	if acc != nil {
+		correct, err = acc.CheckPassword(password)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if correct {
 		return acc, nil
-	} else {
-		return nil, nil
 	}
+
+	return nil, nil
 }
 
 /* Writing to the returned slice results in undefined behavior.

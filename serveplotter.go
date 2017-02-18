@@ -226,8 +226,8 @@ func updateTLSConfig(config *Config) {
 				log.Fatalf("Could not read HTTPS certificate file: %v", err)
 			}
 		} else {
-			log.Println("HTTPS Certificate is not in etcd and is not in the config file")
-			c, k, e := keys.SelfSignedCertificate([]string{"default.autocert.smartgrid.store"})
+			log.Println("HTTPS Certificate is not in etcd and is not in the config file; generating self-signed certificate...")
+			c, k, e := keys.SelfSignedCertificate([]string{})
 			if e != nil {
 				log.Fatalf("Could not generate self-signed certificate: %v", e)
 			}
