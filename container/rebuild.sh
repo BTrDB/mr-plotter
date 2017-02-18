@@ -6,7 +6,15 @@ go build -v
 ver=$(./mr-plotter -version)
 popd
 cp ../mr-plotter .
-docker build -t btrdb/mrplotter:${ver} .
-docker push btrdb/mrplotter:${ver}
-docker tag btrdb/mrplotter:${ver} btrdb/mrplotter:latest
-docker push btrdb/mrplotter:latest
+pushd ../tools/hardcodecert
+go build -v
+popd
+pushd ../tools/setsessionkeys
+go build -v
+popd
+cp ../tools/hardcodecert/hardcodecert .
+cp ../tools/setsessionkeys/setsessionkeys .
+docker build -t btrdb/dev-mrplotter:${ver} .
+docker push btrdb/dev-mrplotter:${ver}
+docker tag btrdb/dev-mrplotter:${ver} btrdb/dev-mrplotter:latest
+docker push btrdb/dev-mrplotter:latest

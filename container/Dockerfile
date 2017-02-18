@@ -22,5 +22,7 @@ RUN mkdir -p $GOPATH/src/github.com/SoftwareDefinedBuildings && \
     go install .
 ADD entrypoint.sh /
 ADD mr-plotter $GOPATH/bin/
+ADD hardcodecert $GOPATH/bin/
+ADD setsessionkeys $GOPATH/bin/
 RUN chmod a+x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
