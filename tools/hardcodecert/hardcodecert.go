@@ -44,10 +44,14 @@ func main() {
 	}
 	defer etcdConn.Close()
 
-	err = keys.UpsertHardcodedTLSCertificate(context.Background(), etcdConn, hardcoded)
+	success, err := keys.UpsertHardcodedTLSCertificateAtomically(context.Background(), etcdConn, hardcoded)
 	if err != nil {
 		log.Fatalf("Could not update hardcoded TLS certificate: %v", err)
 	}
 
-	log.Println("Success")
+	if success {
+		log.Println("Success")
+	} else {
+		log.Println("Already exists")
+	}
 }
