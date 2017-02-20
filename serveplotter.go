@@ -397,10 +397,19 @@ func main() {
 		log.Fatalf("Error: %v\n", err)
 		os.Exit(1)
 	}
-	log.Println("Successfully connected to BTrDB")
 
 	dataTimeout = time.Duration(config.DbDataTimeoutSeconds) * time.Second
 	bracketTimeout = time.Duration(config.DbBracketTimeoutSeconds) * time.Second
+
+	/* Check if BTrDB is OK */
+	log.Println("Checking if BTrDB is responsive...")
+	healthctx, healthcancel := context.WithTimeout(context.Background(), 10*time.Second)
+	_, err = btrdbConn.Info(healthctx)
+	healthcancel()
+	if err != nil {
+		log.Fatalf("BTrDB is not healthy: %v", err)
+		os.Exit(1)
+	}
 
 	dr = NewDataRequester(btrdbConn, config.MaxDataRequests)
 	if dr == nil {
