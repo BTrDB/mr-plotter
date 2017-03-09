@@ -37,6 +37,9 @@ import (
 
 var defaulttagset = map[string]struct{}{accounts.PublicTag: struct{}{}}
 
+const btrdbSeparator = '/'
+const plotterSeparator = '/'
+
 func streamtoleafname(ctx context.Context, s *btrdb.Stream) (string, error) {
 	tags, err := s.Tags(ctx)
 	if err != nil {
@@ -130,11 +133,11 @@ func treetopPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Log
 		}
 
 		/* Extract the top-level element from the collection name. */
-		dotindex := strings.Index(coll, ".")
-		if dotindex == -1 {
+		sepindex := strings.Index(coll, string(btrdbSeparator))
+		if sepindex == -1 {
 			toplevel = coll
 		} else {
-			toplevel = coll[:dotindex]
+			toplevel = coll[:sepindex]
 		}
 		toplevelset[toplevel] = struct{}{}
 	}
@@ -153,7 +156,7 @@ func treetopPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Log
 }
 
 func treebranchPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, toplevel string) ([]string, error) {
-	collprefix := toplevel + "."
+	collprefix := toplevel + string(btrdbSeparator)
 	collections, err := bc.ListCollections(ctx, collprefix)
 	if err != nil {
 		return nil, err
@@ -178,11 +181,11 @@ func treebranchPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *
 			continue
 		}
 
-		dotidx := strings.IndexByte(coll, '.')
+		dotidx := strings.IndexByte(coll, btrdbSeparator)
 		if dotidx == -1 {
 			dotidx = len(coll)
 		}
-		pathcoll := strings.Replace(coll[dotidx:], ".", "/", -1)
+		pathcoll := strings.Replace(coll[dotidx:], string(btrdbSeparator), string(plotterSeparator), -1)
 
 		branches = append(branches, pathcoll)
 	}
@@ -193,7 +196,7 @@ func treebranchPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *
 }
 
 func treeleafPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, branchpath string) ([]string, error) {
-	coll := strings.Replace(branchpath, "/", ".", -1)
+	coll := strings.Replace(branchpath, string(plotterSeparator), string(btrdbSeparator), -1)
 
 	/* Get the streams in the collection. */
 	streams, err := bc.LookupStreams(ctx, coll, false, nil, nil)
@@ -208,7 +211,7 @@ func treeleafPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Lo
 		if err != nil {
 			return nil, err
 		}
-		path := "/" + pathfin
+		path := string(plotterSeparator) + pathfin
 
 		/* Add path to return slice. */
 		leaves = append(leaves, path)
@@ -219,12 +222,12 @@ func treeleafPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Lo
 }
 
 func treeleafMetadata(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, path string) (map[string]interface{}, error) {
-	div := strings.LastIndex(path, "/")
+	div := strings.LastIndex(path, string(plotterSeparator))
 	if div == -1 {
 		return nil, errors.New("Invalid path")
 	}
 	leafname := path[div+1:]
-	collection := strings.Replace(path[:div], "/", ".", -1)
+	collection := strings.Replace(path[:div], string(plotterSeparator), string(btrdbSeparator), -1)
 	s, err := leafnametostream(ctx, bc, collection, leafname)
 	if err != nil {
 		return nil, err
@@ -275,7 +278,7 @@ func uuidMetadata(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Log
 	if _, ok := um.(string); !ok {
 		doc["UnitofMeasure"] = "Unknown"
 	}
-	doc["Path"] = strings.Replace(collection, ".", "/", -1) + "/" + pathfin
+	doc["Path"] = strings.Replace(collection, string(btrdbSeparator), string(plotterSeparator), -1) + string(plotterSeparator) + pathfin
 	doc["uuid"] = uu.String()
 
 	return doc, nil
