@@ -104,12 +104,21 @@ func getprefixes(ctx context.Context, ec *etcd.Client, ls *LoginSession) (map[st
 	return prefixes, nil
 }
 
+func removeBeginSlash(collections []string) {
+	for i := range collections {
+		coll := collections[i]
+		collections[i] = coll[1:]
+	}
+}
+
 /* Returns a sorted slice of top level elements in the stream tree. */
 func treetopPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession) ([]string, error) {
 	collections, err := bc.ListAllCollections(ctx)
 	if err != nil {
 		return nil, err
 	}
+
+	removeBeginSlash(collections)
 
 	prefixes, err := getprefixes(ctx, ec, ls)
 	if err != nil {
@@ -156,11 +165,13 @@ func treetopPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Log
 }
 
 func treebranchPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, toplevel string) ([]string, error) {
-	collprefix := toplevel + string(btrdbSeparator)
+	collprefix := "/" + toplevel + string(btrdbSeparator)
 	collections, err := bc.ListCollections(ctx, collprefix)
 	if err != nil {
 		return nil, err
 	}
+
+	removeBeginSlash(collections)
 
 	prefixes, err := getprefixes(ctx, ec, ls)
 	if err != nil {
@@ -196,7 +207,7 @@ func treebranchPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *
 }
 
 func treeleafPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, branchpath string) ([]string, error) {
-	coll := strings.Replace(branchpath, string(plotterSeparator), string(btrdbSeparator), -1)
+	coll := "/" + strings.Replace(branchpath, string(plotterSeparator), string(btrdbSeparator), -1)
 
 	/* Get the streams in the collection. */
 	streams, err := bc.LookupStreams(ctx, coll, false, nil, nil)
