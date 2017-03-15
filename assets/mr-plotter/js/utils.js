@@ -32,6 +32,11 @@ function getFilepath(datum) {
 
 function splitPath(path) {
     var parts = path.split("/", 1);
+    /* The sourcename is never the empty string. */
+    if (parts[0].length === 0) {
+        parts = path.slice(1).split("/", 1);
+        parts[0] = "/" + parts[0];
+    }
     var sourcename = parts[0];
     var path = path.slice(sourcename.length);
     return [sourcename, path];
