@@ -212,7 +212,7 @@ function updateVertCursorStats(self) {
             var deltananos = delta % 1000000;
             var timearr;
             if (selectedData.length > 0) {
-                var units = self.idata.oldData[self.idata.showingDensity][0].UnitofMeasure;
+                var units = self.idata.oldData[self.idata.showingDensity][0].Unit;
                 var leftPoint = getNearestDataPoint(self, x1millis, x1nanos, selectedData, self.idata.showingDensity, delta * 2);
                 showEntry(cursors.fx1);
                 if (leftPoint.length == 6) { // if we haven't cached the exact time
@@ -298,7 +298,7 @@ function updateHorizCursorStats(self) {
         self.idata.showingHorizCursors = true;
         growMarginIfNecessary(self);
         var scale = self.idata.oldAxisData[self.idata.streamSettings[self.idata.showingDensity].axisid][2];
-        var units = self.idata.oldData[self.idata.showingDensity][0].UnitofMeasure;
+        var units = self.idata.oldData[self.idata.showingDensity][0].Unit;
         var firstVal = scale.invert(firstCursor.coord);
         var domain = scale.domain();
         var scaledelta = (domain[1] - domain[0]) / self.idata.HEIGHT;
