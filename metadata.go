@@ -134,6 +134,14 @@ func treetopPaths(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Log
 
 		/* Extract the top-level element from the collection name. */
 		sepindex := strings.Index(coll, string(btrdbSeparator))
+		/* If the element starts with the separator, then we would get an empty
+		 * toplevel element. To avoid this, split on the next separator. */
+		if sepindex == 0 {
+			sepindex = strings.Index(coll[1:], string(btrdbSeparator))
+			if sepindex != -1 {
+				sepindex++
+			}
+		}
 		if sepindex == -1 {
 			toplevel = coll
 		} else {
