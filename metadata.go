@@ -279,12 +279,12 @@ func uuidMetadata(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Log
 	for k, v := range ann {
 		doc[k] = v
 	}
-	um, ok := doc["UnitofMeasure"]
+	um, ok := doc["Unit"]
 	if !ok {
-		doc["UnitofMeasure"] = "Unknown"
+		doc["Unit"] = "Unknown"
 	}
 	if _, ok := um.(string); !ok {
-		doc["UnitofMeasure"] = "Unknown"
+		doc["Unit"] = "Unknown"
 	}
 	doc["Path"] = strings.Replace(collection, string(btrdbSeparator), string(plotterSeparator), -1) + string(plotterSeparator) + pathfin
 	doc["uuid"] = uu.String()
