@@ -261,7 +261,12 @@ func uuidMetadata(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Log
 		return nil, errors.New("Need permission")
 	}
 
-	ann, _, err := s.Annotations(ctx)
+	ann, _, err := s.CachedAnnotations(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	tags, err := s.Tags(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -275,19 +280,12 @@ func uuidMetadata(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *Log
 		return nil, err
 	}
 
-	var doc = map[string]interface{}{}
-	for k, v := range ann {
-		doc[k] = v
+	var doc = map[string]interface{}{
+		"annotations": ann,
+		"tags":        tags,
+		"path":        strings.Replace(collection, string(btrdbSeparator), string(plotterSeparator), -1) + string(plotterSeparator) + pathfin,
+		"uuid":        uu.String(),
 	}
-	um, ok := doc["Unit"]
-	if !ok {
-		doc["Unit"] = "Unknown"
-	}
-	if _, ok := um.(string); !ok {
-		doc["Unit"] = "Unknown"
-	}
-	doc["Path"] = strings.Replace(collection, string(btrdbSeparator), string(plotterSeparator), -1) + string(plotterSeparator) + pathfin
-	doc["uuid"] = uu.String()
 
 	return doc, nil
 }

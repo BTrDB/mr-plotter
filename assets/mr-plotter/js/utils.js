@@ -22,7 +22,11 @@ var slashRE = new RegExp("/", "g");
 
 function formatPath(metadata) {
     /* Check that the path doesn't contain anything nasty. */
-    return escapeHTMLEntities(metadata.Path).replace(slashRE, "/ "); // so the line breaks where appropriate
+    return escapeHTMLEntities(metadata.path).replace(slashRE, "/ "); // so the line breaks where appropriate
+}
+
+function getUnit(metadata) {
+    return metadata.annotations.unit || "Unknown";
 }
 
 function getFilepath(datum) {
@@ -248,6 +252,7 @@ function getUnitString(unitDict) {
 }
 
 s3ui.formatPath = formatPath;
+s3ui.getUnit = getUnit;
 s3ui.getFilepath = getFilepath;
 s3ui.splitPath = splitPath;
 s3ui.getInfo = getInfo;

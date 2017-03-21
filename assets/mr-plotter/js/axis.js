@@ -44,7 +44,7 @@ function init_axis(self) {
    This updates the "Axes" box, but not the select menu in the "Legend" box. */
 function changeAxis(self, stream, fromAxisID, toAxisID, updateGraph) {
     // Used to be stream.Properties.UnitofMeasure but I changed the schema a bit
-    var unit = stream.Unit;
+    var unit = s3ui.getUnit(stream);
     if (fromAxisID != null) {
         var streamList = self.idata.axisMap[fromAxisID].streams;
         for (var i = 0; i < streamList.length; i++) {
@@ -263,7 +263,7 @@ function updateYAxis (self, axisid) {
 function guessYAxis(self, stream) {
     var axis;
     // Used to be stream.Properties.UnitofMeasure but I changed the schema a bit
-    var unit = stream.Unit;
+    var unit = s3ui.getUnit(stream);
     var backupIndex;
     var yAxes = self.idata.yAxes;
     for (var i = 0; i < yAxes.length; i++) {
