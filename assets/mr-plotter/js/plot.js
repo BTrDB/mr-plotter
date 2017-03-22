@@ -807,10 +807,10 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
                 startIndex++; // make sure we only look at data in the specified range
             }
             endIndex = s3ui.binSearchCmp(streamdata, [endTime, 0], s3ui.cmpTimes);
-            if (endIndex < streamdata.length && s3ui.cmpTimes(streamdata[endIndex], endTime)) {
+            if (endIndex < streamdata.length && s3ui.cmpTimes(streamdata[endIndex], endTime) > 0) {
                 endIndex--; // make sure we only look at data in the specified range
             }
-            for (k = startIndex; k < endIndex; k++) {
+            for (k = startIndex; k <= endIndex; k++) {
                 datapointmin = streamdata[k][2];
                 datapointmax = streamdata[k][4];
                 if (!(totalmin <= datapointmin)) {

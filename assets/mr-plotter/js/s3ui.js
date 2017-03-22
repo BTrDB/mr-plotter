@@ -293,8 +293,16 @@ function init_graph(self, c1, c2) {
                         try {
                             var tz = s3ui.getSelectedTimezone(self);
                             var offset = 60000 * ((new Date()).getTimezoneOffset() - s3ui.getTimezoneOffsetMinutes(tz[0], tz[1]));
-                            var naiveStart = new Date(range[0][0]);
-                            var naiveEnd = new Date(range[1][0] + (range[1][1] > 0 ? 1 : 0));
+                            var startms = range[0][0];
+                            var endms = range[1][0] + (range[1][1] > 0 ? 1 : 0);
+
+                            /* If start and end are within a second, we get an error when plotting this. */
+                            if (startms <= endms && (endms - startms) < 1000) {
+                                endms = startms + 1000;
+                            }
+
+                            var naiveStart = new Date(startms);
+                            var naiveEnd = new Date(endms);
                             if (naiveEnd <= naiveStart) {
                                 self.find(".plotLoading").innerHTML = "Error: All selected streams have no data.";
                                 return;
