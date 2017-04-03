@@ -274,6 +274,14 @@ func main() {
 		filename = os.Args[1]
 	}
 
+	var btrdbSeparatorEnvVar = os.Getenv("MR_PLOTTER_PATH_SEP")
+	if btrdbSeparatorEnvVar != "" {
+		if len(btrdbSeparatorEnvVar) != 1 {
+			log.Fatalln("$MR_PLOTTER_PATH_SEP must be one character")
+		}
+		btrdbSeparator = btrdbSeparatorEnvVar[0]
+	}
+
 	var etcdPrefix = os.Getenv("MR_PLOTTER_ETCD_CONFIG")
 	accounts.SetEtcdKeyPrefix(etcdPrefix)
 	keys.SetEtcdKeyPrefix(etcdPrefix)

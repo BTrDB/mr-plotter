@@ -37,7 +37,8 @@ import (
 
 var defaulttagset = map[string]struct{}{accounts.PublicTag: struct{}{}}
 
-const btrdbSeparator = '/'
+var btrdbSeparator byte = '/'
+
 const plotterSeparator = '/'
 
 func streamtoleafname(ctx context.Context, s *btrdb.Stream) (string, error) {
