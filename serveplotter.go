@@ -195,7 +195,7 @@ func updateTLSConfig(config *Config) {
 			}
 			m := autocert.Manager{
 				Prompt:     autocert.AcceptTOS,
-				Cache:      autocert.DirCache("autocert_cache"),
+				Cache:      keys.NewEtcdCache(etcdConn),
 				HostPolicy: autocert.HostWhitelist(autocertHostname),
 				Email:      email,
 			}

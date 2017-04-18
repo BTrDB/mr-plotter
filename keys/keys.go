@@ -35,6 +35,8 @@ import (
 	"context"
 	"fmt"
 
+	"golang.org/x/crypto/acme/autocert"
+
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/samkumar/etcdstruct"
 )
@@ -42,6 +44,8 @@ import (
 var etcdprefix = ""
 
 const etcdpath = "mrplotter/keys/"
+
+const cachesuffix = "autocert_cache/"
 
 type HardcodedTLSCertificate struct {
 	Cert []byte
@@ -99,9 +103,22 @@ func getHttpsCertKey(ctx context.Context, etcdClient *etcd.Client, key string) (
 
 	if len(hresp.Kvs) == 0 {
 		return "", nil
-	} else {
-		return string(hresp.Kvs[0].Value), nil
 	}
+
+	return string(hresp.Kvs[0].Value), nil
+}
+
+func delHttpsCertKey(ctx context.Context, etcdClient *etcd.Client, key string, isPrefix bool) error {
+	var err error
+	etcdKey := getHttpsCertEtcdKey(key)
+
+	if isPrefix {
+		_, err = etcdClient.Delete(ctx, etcdKey, etcd.WithPrefix())
+	} else {
+		_, err = etcdClient.Delete(ctx, etcdKey)
+	}
+
+	return err
 }
 
 func SetCertificateSource(ctx context.Context, etcdClient *etcd.Client, source string) error {
@@ -126,6 +143,30 @@ func SetAutocertEmail(ctx context.Context, etcdClient *etcd.Client, email string
 
 func GetAutocertEmail(ctx context.Context, etcdClient *etcd.Client) (string, error) {
 	return getHttpsCertKey(ctx, etcdClient, "email")
+}
+
+func getAutocertCacheKey(key string) string {
+	return fmt.Sprintf("%s%s", cachesuffix, key)
+}
+
+func GetAutocertCache(ctx context.Context, etcdClient *etcd.Client, key string) (string, error) {
+	autocertKey := getAutocertCacheKey(key)
+	return getHttpsCertKey(ctx, etcdClient, autocertKey)
+}
+
+func PutAutocertCache(ctx context.Context, etcdClient *etcd.Client, key string, val string) error {
+	autocertKey := getAutocertCacheKey(key)
+	return putHttpsCertKey(ctx, etcdClient, autocertKey, val)
+}
+
+func DeleteAutocertCache(ctx context.Context, etcdClient *etcd.Client, key string) error {
+	autocertKey := getAutocertCacheKey(key)
+	return delHttpsCertKey(ctx, etcdClient, autocertKey, false)
+}
+
+func DropAutocertCache(ctx context.Context, etcdClient *etcd.Client) error {
+	autocertPrefix := getAutocertCacheKey("")
+	return delHttpsCertKey(ctx, etcdClient, autocertPrefix, true)
 }
 
 func RetrieveHardcodedTLSCertificate(ctx context.Context, etcdClient *etcd.Client) (h *HardcodedTLSCertificate, err error) {
@@ -160,4 +201,32 @@ func UpsertSessionKeys(ctx context.Context, etcdClient *etcd.Client, sk *Session
 
 func UpsertSessionKeysAtomically(ctx context.Context, etcdClient *etcd.Client, sk *SessionKeys) (bool, error) {
 	return etcdstruct.UpsertEtcdStructAtomic(ctx, etcdClient, getHttpsCertEtcdKey("session"), sk)
+}
+
+type EtcdCache struct {
+	etcdClient *etcd.Client
+}
+
+func NewEtcdCache(etcdClient *etcd.Client) *EtcdCache {
+	return &EtcdCache{
+		etcdClient: etcdClient,
+	}
+}
+
+func (ec *EtcdCache) Get(ctx context.Context, key string) ([]byte, error) {
+	strval, err := GetAutocertCache(ctx, ec.etcdClient, key)
+	if strval == "" && err == nil {
+		return nil, autocert.ErrCacheMiss
+	}
+
+	return []byte(strval), err
+}
+
+func (ec *EtcdCache) Put(ctx context.Context, key string, val []byte) error {
+	strval := string(val)
+	return PutAutocertCache(ctx, ec.etcdClient, key, strval)
+}
+
+func (ec *EtcdCache) Delete(ctx context.Context, key string) error {
+	return DeleteAutocertCache(ctx, ec.etcdClient, key)
 }
