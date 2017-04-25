@@ -128,7 +128,7 @@ func (dr *DataRequester) MakeDataRequest(ctx context.Context, uuidBytes uuid.UUI
 
 	var exists bool
 	var err error
-	exists, err = stream.Exists(context.TODO())
+	exists, err = stream.Exists(ctx)
 	if err != nil || !exists {
 		w = writ.GetWriter()
 		w.Write([]byte("[]"))
