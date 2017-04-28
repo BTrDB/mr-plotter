@@ -28,7 +28,7 @@ then
 fi
 
 # Update the Javascript code so that the latest version is used
-# MR_PLOTTER_REPO=$GOPATH/src/github.com/SoftwareDefinedBuildings/mr-plotter
+MR_PLOTTER_REPO=$GOPATH/src/github.com/SoftwareDefinedBuildings/mr-plotter
 # cd $MR_PLOTTER_REPO
 # git pull origin v4
 
