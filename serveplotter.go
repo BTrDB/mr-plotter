@@ -1262,8 +1262,11 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 	err = csvquery.MakeCSVQuery(ctx, btrdbConn, cq, cw)
 	if err != nil {
 		goto printerror
-	} else if err = cw.Error(); err != nil {
-		goto printerror
+	} else {
+		cw.Flush()
+		if err = cw.Error(); err != nil {
+			goto printerror
+		}
 	}
 
 	return
