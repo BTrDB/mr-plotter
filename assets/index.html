@@ -22,14 +22,14 @@
     <head>
         <meta charset="utf-8">
         <title>Mr. Plotter</title>
-        
+
         <link rel="stylesheet" type="text/css" href="anytime/css/anytime.5.0.3.css"></link>
         <link rel="stylesheet" type="text/css" href="jquery-simplecolorpicker/css/jquery.simplecolorpicker.css"></link>
         <link rel="stylesheet" type="text/css" href="vakata-jstree/themes/default/style.min.css"></link>
         <link rel="stylesheet" type="text/css" href="bootstrap-3.3.6/css/bootstrap.min.css"></link>
         <link rel="stylesheet" type="text/css" href="mr-plotter/css/s3ui.css"></link>
     </head>
-    
+
     <body>
         <div class="navbar navbar-default" role="navigation">
             <div class="navbar-header">
@@ -38,7 +38,7 @@
             <div class="navbar-collapse collapse">
             </div>
         </div>
-        
+
         <div id="plotter">
             <div class="well">
                 <h4>Loading...</h4>
@@ -68,12 +68,12 @@
                 $(function () {
                         var plotterelem = document.getElementById("plotter");
                         plotterelem.innerHTML = ""; // Remove "Loading..." text
-                        
+
                         /*
                          * This overrides the second callback to select the
                          * psl_alameda/L1MAG stream as soon as the plot is
                          * loaded.
-                         * 
+                         *
                          * If you do not wish to have a stream selected when
                          * the plot is loaded, then just leave overriden_cb2
                          * undefined. You can simply invoke the mr_plotter
@@ -90,12 +90,12 @@
                                     inst.find(".showAll").click();
                                 }
                             };
-                        
+
                         mr_plotter(document.getElementById("plotter"), "mrplotter", undefined, undefined, undefined);
                     });
             </script>
         </div>
-        
+
         <footer>
             <div class="container" style="width: 100%;">
                 <p class="text-muted">
@@ -179,14 +179,14 @@
                                 <li><div class="loginmessage"></div></li>
                                 <li role="separator" class="divider loginstate-start"></li>
                                 <li><div class="loginstate-start loginButton btn btn-primary" style="width: 100%;">Sign In</div></li>
-                                
+
                                 <li>
                                     <div class="loginstate-loggedin btn-group-vertical" style="width: 100%;">
                                         <div class="changepwMenu btn btn-warning" style="width: 100%;">Change Password</div>
                                         <div class="logoffButton btn btn-danger" style="width: 100%;">Sign Out</div>
                                     </div>
                                 </li>
-                                
+
                                 <li role="separator" class="divider loginstate-changepw"></li>
                                 <li><div class="loginstate-changepw changepwButton btn btn-success" style="width: 100%;">Confirm Change</div></li>
                             </ul>
@@ -357,14 +357,53 @@
                                                     <div class="csv-settings">
                                                         <h4>1. Select the streams to include in the CSV file.</h4>
                                                         <div class="csv-streams"></div>
-                                                        <h4>2. Select the resolution at which to get the data.</h4>
+                                                        <h4>2. Select the type of data to query.</h4>
+                                                        <div class="csv-querytype">
+                                                            <div class="btn-group" data-toggle="buttons">
+                                                                <label class="btn btn-primary active csv-querytype-aligned">
+                                                                    <input type="radio" class="csv-querytype-btn-aligned" autocomplete="off" checked> Aligned Windows
+                                                                </label>
+                                                                <label class="btn btn-primary csv-querytype-windows">
+                                                                    <input type="radio" class="csv-querytype-btn-windows" autocomplete="off"> Windows
+                                                                </label>
+                                                                <label class="btn btn-primary csv-querytype-raw">
+                                                                    <input type="radio" class="csv-querytype-btn-raw" autocomplete="off"> Raw Values
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                        <div class="csv-windowsize">
+                                                            <div class="input-group">
+                                                                <span class="input-group-addon">Window Size</span>
+                                                                <input type="text" class="form-control csv-windowsize-text" aria-label="...">
+                                                                <div class="input-group-btn">
+                                                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                                        <span class="csv-unit-current"></span>
+                                                                        <span class="caret"></span>
+                                                                    </button>
+                                                                    <ul class="dropdown-menu">
+                                                                        <li><a class="csv-unit-option csv-unit-option-nanoseconds" href="#!">nanoseconds</a></li>
+                                                                        <li><a class="csv-unit-option" href="#!">microseconds</a></li>
+                                                                        <li><a class="csv-unit-option" href="#!">milliseconds</a></li>
+                                                                        <li><a class="csv-unit-option" href="#!">seconds</a></li>
+                                                                        <li><a class="csv-unit-option" href="#!">minutes</a></li>
+                                                                        <li><a class="csv-unit-option" href="#!">hours</a></li>
+                                                                        <li><a class="csv-unit-option" href="#!">days</a></li>
+                                                                        <li><a class="csv-unit-option" href="#!">weeks</a></li>
+                                                                        <li><a class="csv-unit-option" href="#!">years</a><li>
+                                                                    </ul>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                         <div class="csv-pointwidth">
-                                                            <input type="range" class="pointwidth-selector" min="0" max="62" />
+                                                            <div class="input-group">
+                                                                <span class="csv-pointwidth-descriptor input-group-addon"></span>
+                                                                <input type="range" class="pointwidth-selector form-control" min="0" max="62" />
+                                                            </div>
                                                             <div class="selected-pointwidth"></div>
                                                             <div class="selected-pw-desc"></div>
                                                         </div>
                                                         <h4>3. Click the "Create CSV File" button to generate the CSV file.</h4>
-                                                        
+
                                                         <!-- This form is not visible to the user, but is used to make the POST request for the CSV file. -->
                                                         <form class="csv-form" method="post" style="display: none;" target="_blank" enctype="text/plain">
                                                             <input class="csv-form-data" name="json" />

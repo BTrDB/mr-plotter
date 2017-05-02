@@ -330,8 +330,28 @@ function createPermalink(self, return_raw_document) {
     return true;
 }
 
+function getCSVQueryType(self) {
+    if ($(self.find(".csv-querytype-aligned")).hasClass("active")) {
+        return "aligned";
+    } else if ($(self.find(".csv-querytype-windows")).hasClass("active")) {
+        return "windows";
+    } else if ($(self.find(".csv-querytype-raw")).hasClass("active")) {
+        return "raw";
+    } else {
+        throw "No query type is selected";
+    }
+}
+
+function setPWSelectorValue(self, pwselector, zero) {
+    pwselector.value = zero ? 62 : 63 - self.idata.csvpwestimate;
+    self.find(".csv-windowsize-text").value = Math.pow(2, self.idata.csvpwestimate);
+    $(self.find(".csv-unit-option-nanoseconds")).click(); // Select "nanoseconds"
+    pwselector.onchange();
+}
+
 function buildCSVMenu(self) {
     var settingsObj = {};
+    var queryType = getCSVQueryType(self);
     var graphExport = self.find("div.graphExport");
     var streamsettings = graphExport.querySelector("div.csv-streams");
     $(streamsettings).empty();
@@ -380,36 +400,40 @@ function buildCSVMenu(self) {
     }
 
     var pwselector = graphExport.querySelector(".pointwidth-selector");
+    var pwselectortl = pwselector.parentNode;
     var domain = self.idata.oldXScale;
     var submitButton = graphExport.querySelector("div.csv-button");
-    var $submitButton = $(submitButton);
     var textSpace;
     if (streams.length > 0 && domain != undefined) {
         domain = domain.domain();
         $(pwselector).css("display", "");
         pwselector.onchange = function () {
+                var queryType = getCSVQueryType(self);
                 var pw = Math.pow(2, 62 - this.value);
-                var m1 = this.nextSibling.nextSibling;
-                m1.innerHTML = "Point width: " + s3ui.nanosToUnit(pw) + " [exponent = " + (62 - this.value) + "]";
-                var pps = Math.ceil(1000000 * (domain[1] - domain[0]) / pw);
-                var statusString = "About " + pps + (pps == 1 ? " point per stream" : " points per stream");
-                if (pps > 100000) {
-                    $submitButton.addClass("disabled")
-                    statusString += " <strong>(too many to download)</strong>"
+                var m1 = pwselectortl.nextSibling.nextSibling;
+                var prefix = (queryType === "aligned" ? "Maximum error in window size: " : "Window size: ");
+                m1.innerHTML = prefix + s3ui.nanosToUnit(pw) + " [exponent = " + (62 - this.value) + "]";
+                if (queryType === "aligned") {
+                    m1.nextSibling.nextSibling.innerHTML = "";
                 } else {
-                    $submitButton.removeClass("disabled")
+                    var pps = Math.ceil(1000000 * (domain[1] - domain[0]) / pw);
+                    statusString = "About " + pps + (pps == 1 ? " window per stream" : " windows per stream");
+                    m1.nextSibling.nextSibling.innerHTML = statusString;
                 }
-                m1.nextSibling.nextSibling.innerHTML = statusString;
             };
-        pwselector.value = 63 - self.idata.oldData[streams[0].uuid][2];
-        pwselector.onchange();
+        if (streams.length == 0 || self.idata.oldData[streams[0].uuid] === undefined) {
+            self.idata.csvpwestimate = 0;
+        } else {
+            self.idata.csvpwestimate = self.idata.oldData[streams[0].uuid][2];
+        }
+        setPWSelectorValue(self, pwselector, queryType === "aligned");
 
         submitButton.onclick = function () {
                 createCSVDownload(self, streams, settingsObj, domain, 62 - parseInt(pwselector.value), graphExport);
             };
     } else {
-        $(pwselector).css("display", "none");
-        textSpace = pwselector.nextSibling.nextSibling;
+        $(pwselectortl).css("display", "none");
+        textSpace = pwselectortl.nextSibling.nextSibling;
         textSpace.innerHTML = "";
         textSpace.nextSibling.nextSibling.innerHTML = "";
         submitButton.onclick = function () { return false; };
@@ -684,6 +708,7 @@ s3ui.updatePlotMessage = updatePlotMessage;
 s3ui.getSelectedTimezone = getSelectedTimezone;
 s3ui.createPlotDownload = createPlotDownload;
 s3ui.createPermalink = createPermalink;
+s3ui.setPWSelectorValue = setPWSelectorValue;
 s3ui.buildCSVMenu = buildCSVMenu;
 s3ui.login = login;
 s3ui.loggedin = loggedin;

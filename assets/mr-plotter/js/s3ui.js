@@ -256,6 +256,40 @@ function init_graph(self, c1, c2) {
         };
     var csvForm = self.find(".csv-form");
     csvForm.setAttribute("action", window.location.protocol + "//" + self.backend + "/csv");
+    var csvUnitCurrent = self.find(".csv-unit-current");
+    self.$(".csv-unit-option").click(function () {
+                csvUnitCurrent.innerHTML = this.innerHTML;
+        });
+    $(self.find(".csv-unit-option-nanoseconds")).click(); // Select "nanoseconds"
+    var csvWindowSize = self.find(".csv-windowsize");
+    var csvPointWidth = self.find(".csv-pointwidth");
+    var csvPointWidthDescriptor = self.find(".csv-pointwidth-descriptor");
+    var pwselector = self.find(".pointwidth-selector");
+    pwselector.onchange = function () {}; // this is replaced in buildCSVMenu
+    var csvSetViewAligned = function () {
+            setTimeout(function () {
+                    s3ui.setPWSelectorValue(self, pwselector, true);
+                }, 0);
+            csvPointWidthDescriptor.innerHTML = "Window Size Precision";
+            csvWindowSize.setAttribute("style", "");
+            csvPointWidth.setAttribute("style", "");
+        };
+    self.find(".csv-querytype-aligned").onclick = csvSetViewAligned;
+    self.find(".csv-querytype-windows").onclick = function () {
+            setTimeout(function () {
+                    s3ui.setPWSelectorValue(self, pwselector, false);
+                }, 0);
+            csvPointWidthDescriptor.innerHTML = "Window Size";
+            csvWindowSize.setAttribute("style", "display: none;");
+            csvPointWidth.setAttribute("style", "");
+        };
+    self.find(".csv-querytype-raw").onclick = function () {
+            csvPointWidthDescriptor.innerHTML = "";
+            csvWindowSize.setAttribute("style", "display: none;");
+            csvPointWidth.setAttribute("style", "display: none;");
+        };
+    csvSetViewAligned();
+
     self.find(".makecsv").onclick = function () {
             s3ui.buildCSVMenu(self);
             $(self.find(".csv-modal")).modal("toggle");
