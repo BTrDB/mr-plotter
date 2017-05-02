@@ -447,7 +447,8 @@ function createCSVDownload(self, streams, settingsObj, domain, pwe, graphExport)
             "Labels": streams.map(function (x) { return settingsObj[x]; }),
             "StartTime": domain[0] - self.idata.offset,
             "EndTime": domain[1] - self.idata.offset,
-            "UnitOfTime": "ms",
+            "WindowText": self.find(".csv-windowsize-text").value,
+            "WindowUnit": self.find(".csv-unit-current").innerHTML,
             "PointWidth": pwe,
             "_token": self.requester.getToken()
         };
