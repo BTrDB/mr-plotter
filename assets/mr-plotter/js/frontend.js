@@ -405,15 +405,51 @@ function buildCSVMenu(self) {
     var submitButton = graphExport.querySelector("div.csv-button");
     var textSpace;
     if (streams.length > 0 && domain != undefined) {
+        $(self.find(".csv-unit-option-nanoseconds")).click(); // Select "nanoseconds"
+        var csvWindowSize = self.find(".csv-windowsize");
+        var csvPointWidth = self.find(".csv-pointwidth");
+        var csvPointWidthDescriptor = self.find(".csv-pointwidth-descriptor");
+        var pwselector = self.find(".pointwidth-selector");
+        var queryType = getCSVQueryType(self);
+        self.find(".csv-querytype-aligned").onclick = function () {
+                setTimeout(function () {
+                    pwselector.value = 63 - self.idata.csvpwestimate;
+                    pwselector.onchange();
+                }, 0);
+                queryType = "aligned";
+                csvPointWidthDescriptor.innerHTML = "Window Size";
+                csvWindowSize.setAttribute("style", "display: none;");
+                csvPointWidth.setAttribute("style", "");
+            };
+        self.find(".csv-querytype-windows").onclick = function () {
+                setTimeout(function () {
+                        pwselector.value = 62;
+                        self.find(".csv-windowsize-text").value = Math.pow(2, self.idata.csvpwestimate);
+                        $(self.find(".csv-unit-option-nanoseconds")).click(); // Select "nanoseconds"
+                        pwselector.onchange();
+                    }, 0);
+                queryType = "windows";
+                csvPointWidthDescriptor.innerHTML = "Window Size Precision";
+                csvWindowSize.setAttribute("style", "");
+                csvPointWidth.setAttribute("style", "");
+            };
+        self.find(".csv-querytype-raw").onclick = function () {
+                queryType = "raw";
+                csvPointWidthDescriptor.innerHTML = "";
+                csvWindowSize.setAttribute("style", "display: none;");
+                csvPointWidth.setAttribute("style", "display: none;");
+            };
+
+        self.find(".csv-querytype-" + queryType).onclick();
+
         domain = domain.domain();
         $(pwselector).css("display", "");
         pwselector.onchange = function () {
-                var queryType = getCSVQueryType(self);
                 var pw = Math.pow(2, 62 - this.value);
                 var m1 = pwselectortl.nextSibling.nextSibling;
-                var prefix = (queryType === "aligned" ? "Maximum error in window size: " : "Window size: ");
+                var prefix = (queryType === "windows" ? "Maximum error in window size: " : "Window size: ");
                 m1.innerHTML = prefix + s3ui.nanosToUnit(pw) + " [exponent = " + (62 - this.value) + "]";
-                if (queryType === "aligned") {
+                if (queryType === "windows") {
                     m1.nextSibling.nextSibling.innerHTML = "";
                 } else {
                     var pps = Math.ceil(1000000 * (domain[1] - domain[0]) / pw);
@@ -426,7 +462,7 @@ function buildCSVMenu(self) {
         } else {
             self.idata.csvpwestimate = self.idata.oldData[streams[0].uuid][2];
         }
-        setPWSelectorValue(self, pwselector, queryType === "aligned");
+        setPWSelectorValue(self, pwselector, queryType === "windows");
 
         submitButton.onclick = function () {
                 createCSVDownload(self, streams, settingsObj, domain, 62 - parseInt(pwselector.value), graphExport);
@@ -443,12 +479,14 @@ function buildCSVMenu(self) {
 function createCSVDownload(self, streams, settingsObj, domain, pwe, graphExport) {
     streams = streams.filter(function (x) { return settingsObj.hasOwnProperty(x.uuid); }).map(function (x) { return x.uuid; });
     var dataJSON = {
-            "UUIDS": streams,
-            "Labels": streams.map(function (x) { return settingsObj[x]; }),
             "StartTime": domain[0] - self.idata.offset,
             "EndTime": domain[1] - self.idata.offset,
+            "UUIDS": streams,
+            "Labels": streams.map(function (x) { return settingsObj[x]; }),
+            "QueryType": getCSVQueryType(self),
             "WindowText": self.find(".csv-windowsize-text").value,
             "WindowUnit": self.find(".csv-unit-current").innerHTML,
+            "UnitofTime": "ms",
             "PointWidth": pwe,
             "_token": self.requester.getToken()
         };
@@ -709,7 +747,6 @@ s3ui.updatePlotMessage = updatePlotMessage;
 s3ui.getSelectedTimezone = getSelectedTimezone;
 s3ui.createPlotDownload = createPlotDownload;
 s3ui.createPermalink = createPermalink;
-s3ui.setPWSelectorValue = setPWSelectorValue;
 s3ui.buildCSVMenu = buildCSVMenu;
 s3ui.login = login;
 s3ui.loggedin = loggedin;

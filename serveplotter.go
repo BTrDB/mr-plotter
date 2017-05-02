@@ -26,6 +26,7 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/csv"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -47,6 +48,7 @@ import (
 	"gopkg.in/ini.v1"
 
 	"github.com/SoftwareDefinedBuildings/mr-plotter/accounts"
+	"github.com/SoftwareDefinedBuildings/mr-plotter/csvquery"
 	"github.com/SoftwareDefinedBuildings/mr-plotter/keys"
 	"github.com/SoftwareDefinedBuildings/mr-plotter/permalink"
 
@@ -62,16 +64,6 @@ const (
 	SUCCESS             string = "Success"
 	ERROR_INVALID_TOKEN string = "Invalid token"
 )
-
-type CSVRequest struct {
-	StartTime  int64
-	EndTime    int64
-	UUIDs      []string `json:"UUIDS"`
-	Labels     []string
-	UnitofTime string
-	Token      string `json:"_token,omitempty"`
-	PointWidth uint8
-}
 
 var upgrader = ws.Upgrader{}
 
@@ -90,7 +82,7 @@ var br *DataRequester
 var etcdConn *etcd.Client
 var csvURL string
 var permalinklen int
-var csvMaxPoints int64
+var csvMaxPoints uint64
 var dataTimeout time.Duration
 var bracketTimeout time.Duration
 var permalinkNumBytes int
@@ -125,7 +117,7 @@ type Config struct {
 
 	SessionExpirySeconds          uint64
 	SessionPurgeIntervalSeconds   int64
-	CsvMaxPointsPerStream         int64
+	CsvMaxPointsPerStream         uint64
 	OutstandingRequestLogInterval int64
 	NumGoroutinesLogInterval      int64
 	DbDataTimeoutSeconds          int64
@@ -1073,11 +1065,25 @@ func permalinkHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// RawCSVRequest encapsulates a request to the Mr. Plotter backend for a CSV.
+type RawCSVRequest struct {
+	StartTime  int64
+	EndTime    int64
+	UUIDs      []string `json:"UUIDS"`
+	Labels     []string
+	QueryType  string
+	WindowText string
+	WindowUnit string
+	UnitofTime string
+	Token      string `json:"_token,omitempty"`
+	PointWidth uint8
+}
+
 func csvHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.Header().Set("Allow", "POST")
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Write([]byte("To get a CSV file, send the required data as a JSON document via a POST request."))
+		fmt.Fprint(w, "To get a CSV file, send the required data as a JSON document via a POST request.")
 		return
 	}
 
@@ -1087,52 +1093,49 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = io.ReadFull(r.Body, make([]byte, 5)) // Remove the "json="
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Bad request"))
+		fmt.Fprint(w, "Bad request")
 		return
 	}
 
-	var jsonCSVReq CSVRequest
+	var jsonCSVReq RawCSVRequest
 	var jsonCSVReqDecoder *json.Decoder = json.NewDecoder(r.Body)
 	err = jsonCSVReqDecoder.Decode(&jsonCSVReq)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Malformed request"))
+		fmt.Fprint(w, "Malformed request")
 		return
 	}
 
 	if jsonCSVReq.PointWidth > 62 {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(fmt.Sprintf("Invalid point width: %d", jsonCSVReq.PointWidth)))
+		fmt.Fprintf(w, "Invalid point width: %d", jsonCSVReq.PointWidth)
 		return
 	}
 
-	/* Check the number of points per stream to see if this request is reasonable. */
-	var deltaT int64 = jsonCSVReq.EndTime - jsonCSVReq.StartTime
+	cq := &csvquery.CSVQuery{
+		StartTime: jsonCSVReq.StartTime,
+		EndTime:   jsonCSVReq.EndTime,
+		Depth:     jsonCSVReq.PointWidth,
+		Streams:   make([]*btrdb.Stream, 0, len(jsonCSVReq.UUIDs)),
+		Labels:    jsonCSVReq.Labels,
+	}
 
-	/* Taken from the BTrDB HTTP interface bindings, to make sure I handle the units in the same way. */
 	switch jsonCSVReq.UnitofTime {
+	case "s":
+		cq.StartTime *= 1000000000
+		cq.EndTime *= 1000000000
 	case "":
 		fallthrough
 	case "ms":
-		deltaT *= 1000000
-	case "ns":
+		cq.StartTime *= 1000000
+		cq.EndTime *= 1000000
 	case "us":
-		deltaT *= 1000
-	case "s":
-		deltaT *= 1000000000
+		cq.StartTime *= 1000
+		cq.EndTime *= 1000
+	case "ns":
 	default:
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(fmt.Sprintf("Invalid unit of time: must be 'ns', 'ms', 'us' or 's' (got '%s')", jsonCSVReq.UnitofTime)))
-		return
-	}
-
-	var pps int64 = deltaT >> jsonCSVReq.PointWidth
-	if deltaT&((1<<jsonCSVReq.PointWidth)-1) != 0 {
-		pps += 1
-	}
-	if pps > csvMaxPoints {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(fmt.Sprintf("CSV file too big: estimated %d points", pps)))
 		return
 	}
 
@@ -1147,72 +1150,128 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	switch jsonCSVReq.QueryType {
+	case "aligned":
+		cq.QueryType = csvquery.AlignedWindowsQuery
+	case "windows":
+		cq.QueryType = csvquery.WindowsQuery
+		cq.WindowSize, err = strconv.ParseUint(jsonCSVReq.WindowText, 0, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "Window size is not a valid number: %s", err.Error())
+			return
+		}
+		switch jsonCSVReq.WindowUnit {
+		case "years":
+			cq.WindowSize *= 52
+			fallthrough
+		case "weeks":
+			cq.WindowSize *= 7
+			fallthrough
+		case "days":
+			cq.WindowSize *= 24
+			fallthrough
+		case "hours":
+			cq.WindowSize *= 60
+			fallthrough
+		case "minutes":
+			cq.WindowSize *= 60
+			fallthrough
+		case "seconds":
+			cq.WindowSize *= 1000
+			fallthrough
+		case "milliseconds":
+			cq.WindowSize *= 1000
+			fallthrough
+		case "microseconds":
+			cq.WindowSize *= 1000
+			fallthrough
+		case "nanoseconds":
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "Window size unit is invalid: %s", jsonCSVReq.WindowUnit)
+			return
+		}
+	case "raw":
+		cq.QueryType = csvquery.RawQuery
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Unknown query type %s", jsonCSVReq.QueryType)
+		return
+	}
+
+	/* Check the number of points per stream to see if this request is reasonable. */
+	if csvMaxPoints != 0 {
+		var deltaT = uint64(cq.EndTime - cq.StartTime)
+		var windowSize = cq.WindowSize
+		if windowSize == 0 {
+			windowSize = uint64(1) << cq.Depth
+		}
+		var pps = deltaT / windowSize
+		if (deltaT % windowSize) != 0 {
+			pps++
+		}
+		if pps > csvMaxPoints {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(fmt.Sprintf("CSV file too big: estimated %d points", pps)))
+			return
+		}
+	}
+
 	var ctx context.Context
 	var cancelfunc context.CancelFunc
-	ctx, cancelfunc = context.WithTimeout(context.Background(), dataTimeout)
+	ctx, cancelfunc = context.WithTimeout(r.Context(), dataTimeout)
+	defer cancelfunc()
 
 	for _, uuidstr := range jsonCSVReq.UUIDs {
 		uuidobj := uuid.Parse(uuidstr)
 		if uuidobj == nil {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Malformed UUID"))
+			fmt.Fprint(w, "Malformed UUID")
 			return
 		}
 
 		if !hasPermission(ctx, loginsession, uuidobj) {
-			cancelfunc()
 			w.WriteHeader(http.StatusForbidden)
-			w.Write([]byte("Insufficient permissions"))
+			fmt.Fprint(w, "Insufficient permissions")
 			return
 		}
+
+		s := btrdbConn.StreamFromUUID(uuidobj)
+		ex, err2 := s.Exists(ctx)
+		if err2 != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "%s", err2.Error())
+			return
+		}
+		if !ex {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Stream does not exist")
+			return
+		}
+
+		cq.Streams = append(cq.Streams, s)
 	}
-
-	// TODO actually use the context to cancel the HTTP request
-	cancelfunc()
-
-	// Don't send the token to BTrDB
-	jsonCSVReq.Token = ""
 
 	w.Header().Set("Content-Disposition", "attachment; filename=data.csv")
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Transfer-Encoding", "chunked")
 
-	var csvJSON []byte
-	csvJSON, err = json.Marshal(&jsonCSVReq)
+	cw := csv.NewWriter(w)
+
+	err = csvquery.MakeCSVQuery(ctx, btrdbConn, cq, cw)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("Could not forward request: %v", err)))
-		return
+		goto printerror
+	} else if err = cw.Error(); err != nil {
+		goto printerror
 	}
 
-	var csvReq *http.Request
-	csvReq, err = http.NewRequest("POST", csvURL, bytes.NewReader(csvJSON))
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("Could not perform HTTP request to database: %v", err)))
-		return
-	}
+	return
 
-	csvReq.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(csvReq)
-
-	if err != nil {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		w.Write([]byte(fmt.Sprintf("Could not forward request to database: %v", err)))
-		resp.Body.Close()
-		return
-	}
-
-	var buffer []byte = make([]byte, FORWARD_CHUNKSIZE) // forward the response in 4 KiB chunks
-
-	var bytesRead int
-	var readErr error = nil
-	for readErr == nil {
-		bytesRead, readErr = resp.Body.Read(buffer)
-		w.Write(buffer[:bytesRead])
-	}
-
-	resp.Body.Close()
+printerror:
+	msg := fmt.Sprintf("Could not complete CSV query: %s", err.Error())
+	w.Write([]byte(msg))
+	log.Println(msg)
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
