@@ -42,12 +42,25 @@ var btrdbSeparator byte = '/'
 const plotterSeparator = '/'
 
 func streamtoleafname(ctx context.Context, s *btrdb.Stream) (string, error) {
+	var name string
+	var ok bool
+
+	ann, _, err := s.CachedAnnotations(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	name, ok = ann["name"]
+	if ok {
+		return name, nil
+	}
+
 	tags, err := s.Tags(ctx)
 	if err != nil {
 		return "", err
 	}
 
-	name, ok := tags["name"]
+	name, ok = tags["name"]
 	if ok {
 		return name, nil
 	}

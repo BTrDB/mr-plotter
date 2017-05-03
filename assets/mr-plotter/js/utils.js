@@ -26,7 +26,7 @@ function formatPath(metadata) {
 }
 
 function getUnit(metadata) {
-    return metadata.annotations.unit || "Unknown";
+    return metadata.annotations.unit || metadata.tags.unit || "Unknown";
 }
 
 function getFilepath(datum) {
