@@ -80,11 +80,12 @@ var btrdbConn *btrdb.BTrDB
 var dr *DataRequester
 var br *DataRequester
 var etcdConn *etcd.Client
-var csvURL string
 var permalinklen int
 var csvMaxPoints uint64
 var dataTimeout time.Duration
 var bracketTimeout time.Duration
+var csvTimeout time.Duration
+var mdTimeout time.Duration
 var permalinkNumBytes int
 var permalinkMaxTries int
 
@@ -110,7 +111,6 @@ type Config struct {
 	MaxDataRequests         uint32
 	MaxBracketRequests      uint32
 	MaxCachedTagPermissions uint64
-	CsvUrl                  string
 
 	PermalinkNumBytes int
 	PermalinkMaxTries int
@@ -122,6 +122,8 @@ type Config struct {
 	NumGoroutinesLogInterval      int64
 	DbDataTimeoutSeconds          int64
 	DbBracketTimeoutSeconds       int64
+	DbCsvTimeoutSeconds           int64
+	DbMetadataTimeoutSeconds      int64
 }
 
 var configRequiredKeys = map[string]bool{
@@ -140,7 +142,6 @@ var configRequiredKeys = map[string]bool{
 	"max_data_requests":          true,
 	"max_bracket_requests":       true,
 	"max_cached_tag_permissions": true,
-	"csv_url":                    true,
 
 	"permalink_num_bytes": true,
 	"permalink_max_tries": true,
@@ -152,6 +153,8 @@ var configRequiredKeys = map[string]bool{
 	"num_goroutines_log_interval":      true,
 	"db_data_timeout_seconds":          true,
 	"db_bracket_timeout_seconds":       true,
+	"db_csv_timeout_seconds":           true,
+	"db_metadata_timeout_seconds":      true,
 }
 
 func getEtcdKeySafe(ctx context.Context, key string) []byte {
@@ -388,7 +391,6 @@ func main() {
 
 	setTagPermissionCacheSize(config.MaxCachedTagPermissions)
 
-	csvURL = config.CsvUrl
 	csvMaxPoints = config.CsvMaxPointsPerStream
 
 	log.Println("Connecting to BTrDB cluster...")
@@ -400,6 +402,8 @@ func main() {
 
 	dataTimeout = time.Duration(config.DbDataTimeoutSeconds) * time.Second
 	bracketTimeout = time.Duration(config.DbBracketTimeoutSeconds) * time.Second
+	csvTimeout = time.Duration(config.DbCsvTimeoutSeconds) * time.Second
+	mdTimeout = time.Duration(config.DbMetadataTimeoutSeconds) * time.Second
 
 	/* Check if BTrDB is OK */
 	log.Println("Checking if BTrDB is responsive...")
@@ -410,6 +414,7 @@ func main() {
 		log.Fatalf("BTrDB is not healthy: %v", err)
 		os.Exit(1)
 	}
+	log.Println("BTrDB is OK!")
 
 	dr = NewDataRequester(btrdbConn, config.MaxDataRequests)
 	if dr == nil {
@@ -650,9 +655,13 @@ func datawsHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-			var ctx context.Context
+			var ctx = r.Context()
 			var cancelfunc context.CancelFunc
-			ctx, cancelfunc = context.WithTimeout(context.Background(), dataTimeout)
+			if dataTimeout >= 0 {
+				ctx, cancelfunc = context.WithTimeout(ctx, dataTimeout)
+			} else {
+				ctx, cancelfunc = context.WithCancel(ctx)
+			}
 			if hasPermission(ctx, loginsession, uuidBytes) {
 				dr.MakeDataRequest(ctx, uuidBytes, startTime, endTime, uint8(pw), &cw)
 				cancelfunc()
@@ -697,7 +706,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var wrapper RespWrapper = RespWrapper{w}
+	var wrapper = RespWrapper{w}
 
 	uuidBytes, startTime, endTime, pw, token, _, success := parseDataRequest(string(payload), wrapper)
 
@@ -710,9 +719,13 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		var ctx context.Context
+		var ctx = r.Context()
 		var cancelfunc context.CancelFunc
-		ctx, cancelfunc = context.WithTimeout(context.Background(), dataTimeout)
+		if dataTimeout >= 0 {
+			ctx, cancelfunc = context.WithTimeout(ctx, dataTimeout)
+		} else {
+			ctx, cancelfunc = context.WithCancel(ctx)
+		}
 		if hasPermission(ctx, loginsession, uuidBytes) {
 			dr.MakeDataRequest(ctx, uuidBytes, startTime, endTime, uint8(pw), wrapper)
 			cancelfunc()
@@ -758,9 +771,13 @@ func bracketwsHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			var viewable []uuid.UUID = uuids[:0]
-			var ctx context.Context
+			var ctx = r.Context()
 			var cancelfunc context.CancelFunc
-			ctx, cancelfunc = context.WithTimeout(context.Background(), bracketTimeout)
+			if bracketTimeout >= 0 {
+				ctx, cancelfunc = context.WithTimeout(ctx, bracketTimeout)
+			} else {
+				ctx, cancelfunc = context.WithCancel(ctx)
+			}
 			for _, uuid := range uuids {
 				if hasPermission(ctx, loginsession, uuid) {
 					viewable = append(viewable, uuid)
@@ -819,9 +836,13 @@ func bracketHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		var ctx context.Context
+		var ctx = r.Context()
 		var cancelfunc context.CancelFunc
-		ctx, cancelfunc = context.WithTimeout(context.Background(), dataTimeout)
+		if bracketTimeout >= 0 {
+			ctx, cancelfunc = context.WithTimeout(ctx, bracketTimeout)
+		} else {
+			ctx, cancelfunc = context.WithCancel(ctx)
+		}
 
 		filtereduuids := uuids[:0]
 		for _, uuid := range uuids {
@@ -870,7 +891,13 @@ func treetopHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	ctx, cancelfunc := context.WithTimeout(context.Background(), dataTimeout)
+	var ctx = r.Context()
+	var cancelfunc context.CancelFunc
+	if mdTimeout >= 0 {
+		ctx, cancelfunc = context.WithTimeout(ctx, mdTimeout)
+	} else {
+		ctx, cancelfunc = context.WithCancel(ctx)
+	}
 	toplevel, err := treetopPaths(ctx, etcdConn, btrdbConn, ls)
 	cancelfunc()
 	if err != nil {
@@ -909,7 +936,13 @@ func mdDispatch(w http.ResponseWriter, r *http.Request, dispatch func(context.Co
 			return
 		}
 	}
-	ctx, cancelfunc := context.WithTimeout(context.Background(), dataTimeout)
+	var ctx = r.Context()
+	var cancelfunc context.CancelFunc
+	if mdTimeout >= 0 {
+		ctx, cancelfunc = context.WithTimeout(ctx, mdTimeout)
+	} else {
+		ctx, cancelfunc = context.WithCancel(ctx)
+	}
 	toplevel, err := dispatch(ctx, etcdConn, btrdbConn, ls, string(request))
 	cancelfunc()
 	if err != nil {
@@ -918,18 +951,6 @@ func mdDispatch(w http.ResponseWriter, r *http.Request, dispatch func(context.Co
 	}
 	w.Write(toplevel)
 }
-
-/*
-func treebranchHandler(w http.ResponseWriter, r *http.Request) {
-	mdDispatch(w, r, func(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, toplevel string) ([]byte, error) {
-		levels, err := treebranchMetadata(ctx, ec, bc, ls, toplevel)
-		if err != nil {
-			return nil, err
-		}
-		return json.Marshal(levels)
-	})
-}
-*/
 
 func treebranchHandler(w http.ResponseWriter, r *http.Request) {
 	mdDispatch(w, r, func(ctx context.Context, ec *etcd.Client, bc *btrdb.BTrDB, ls *LoginSession, toplevel string) ([]byte, error) {
@@ -987,7 +1008,7 @@ func permalinkHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := context.Background()
+	ctx := r.Context()
 
 	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
 	if r.Method == "GET" {
@@ -1218,10 +1239,12 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var ctx context.Context
-	var cancelfunc context.CancelFunc
-	ctx, cancelfunc = context.WithTimeout(r.Context(), dataTimeout)
-	defer cancelfunc()
+	var ctx = r.Context()
+	if csvTimeout >= 0 {
+		var cancelfunc context.CancelFunc
+		ctx, cancelfunc = context.WithTimeout(ctx, csvTimeout)
+		defer cancelfunc()
+	}
 
 	for _, uuidstr := range jsonCSVReq.UUIDs {
 		uuidobj := uuid.Parse(uuidstr)
