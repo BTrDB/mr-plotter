@@ -1281,6 +1281,7 @@ func csvHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Transfer-Encoding", "chunked")
 
 	cw := csv.NewWriter(w)
+	cw.UseCRLF = true
 
 	err = csvquery.MakeCSVQuery(ctx, btrdbConn, cq, cw)
 	if err != nil {
