@@ -77,11 +77,122 @@ type CSVQuery struct {
 	Labels []string
 }
 
-type streamquery struct {
-	rawc chan btrdb.RawPoint
+// streambuffer is a buffer for an array of pending requests, allowing the user
+// to individually manipulate the response channels in a type-independent way.
+type streambuffer interface {
+	getTime(i int) int64
+	isOpen(i int) bool
+	readPoint(i int) (bool, error)
+	writePoint(i int, row []string)
+	writeEmptyPoint(i int, row []string)
+	getHeaderRow(labels []string) []string
+}
+
+type stabufentry struct {
 	stac chan btrdb.StatPoint
 	verc chan uint64
 	errc chan error
+	pt   btrdb.StatPoint
+	open bool
+}
+
+type stabuffer []stabufentry
+
+func (sb stabuffer) getTime(i int) int64 {
+	return sb[i].pt.Time
+}
+
+func (sb stabuffer) isOpen(i int) bool {
+	return sb[i].open
+}
+
+func (sb stabuffer) readPoint(i int) (bool, error) {
+	sb[i].pt, sb[i].open = <-sb[i].stac
+	if !sb[i].open {
+		err := <-sb[i].errc
+		return sb[i].open, err
+	}
+	return sb[i].open, nil
+}
+
+func (sb stabuffer) writePoint(i int, row []string) {
+	offset := 2 + (i << 2)
+	row[offset+0] = fmt.Sprintf("%f", sb[i].pt.Min)
+	row[offset+1] = fmt.Sprintf("%f", sb[i].pt.Mean)
+	row[offset+2] = fmt.Sprintf("%f", sb[i].pt.Max)
+	row[offset+3] = fmt.Sprintf("%d", sb[i].pt.Count)
+}
+
+func (sb stabuffer) writeEmptyPoint(i int, row []string) {
+	offset := 2 + (i << 2)
+	row[offset+0] = ""
+	row[offset+1] = ""
+	row[offset+2] = ""
+	row[offset+3] = ""
+}
+
+func (sb stabuffer) getHeaderRow(labels []string) []string {
+	numcols := 2 + (len(sb) << 2)
+	row := make([]string, numcols, numcols)
+	row[0] = "Timestamp (ns)"
+	row[1] = "Date/Time"
+	for i, label := range labels {
+		offset := 2 + (i << 2)
+		row[offset+0] = fmt.Sprintf("%s (Min)", label)
+		row[offset+1] = fmt.Sprintf("%s (Mean)", label)
+		row[offset+2] = fmt.Sprintf("%s (Max)", label)
+		row[offset+3] = fmt.Sprintf("%s (Count)", label)
+	}
+	return row
+}
+
+type rawbufentry struct {
+	rawc chan btrdb.RawPoint
+	verc chan uint64
+	errc chan error
+	pt   btrdb.RawPoint
+	open bool
+}
+
+type rawbuffer []rawbufentry
+
+func (rb rawbuffer) getTime(i int) int64 {
+	return rb[i].pt.Time
+}
+
+func (rb rawbuffer) isOpen(i int) bool {
+	return rb[i].open
+}
+
+func (rb rawbuffer) readPoint(i int) (bool, error) {
+	rb[i].pt, rb[i].open = <-rb[i].rawc
+	if !rb[i].open {
+		err := <-rb[i].errc
+		return rb[i].open, err
+	}
+	return rb[i].open, nil
+}
+
+func (rb rawbuffer) writePoint(i int, row []string) {
+	offset := 2 + i
+	row[offset] = fmt.Sprintf("%f", rb[i].pt.Value)
+}
+
+func (rb rawbuffer) writeEmptyPoint(i int, row []string) {
+	offset := 2 + i
+	row[offset] = ""
+}
+
+func (rb rawbuffer) getHeaderRow(labels []string) []string {
+	numcols := 2 + len(rb)
+	row := make([]string, numcols, numcols)
+	row[0] = "Timestamp (ns)"
+	row[1] = "Date/Time"
+	for i, label := range labels {
+		offset := 2 + i
+		row[offset+0] = label
+	}
+	return row
 }
 
 // MakeCSVQuery performs a CSV query, and outputs the result using the provided
@@ -97,66 +208,47 @@ func MakeCSVQuery(ctx context.Context, b *btrdb.BTrDB, q *CSVQuery, w *csv.Write
 		versions = make([]uint64, numstreams, numstreams)
 	}
 
-	/* State for each stream. */
-	var sq = make([]streamquery, numstreams, numstreams)
-
 	switch q.QueryType {
 	case AlignedWindowsQuery:
+		var sq stabuffer = make([]stabufentry, numstreams, numstreams)
 		for i, s := range q.Streams {
 			sq[i].stac, sq[i].verc, sq[i].errc = s.AlignedWindows(ctx, q.StartTime, q.EndTime, q.Depth, versions[i])
 		}
-		return createStatisticalCSV(sq, q, w)
+		return createCSV(sq, q, w, true)
 	case WindowsQuery:
+		var sq stabuffer = make([]stabufentry, numstreams, numstreams)
 		for i, s := range q.Streams {
 			sq[i].stac, sq[i].verc, sq[i].errc = s.Windows(ctx, q.StartTime, q.EndTime, q.WindowSize, q.Depth, versions[i])
 		}
-		return createStatisticalCSV(sq, q, w)
+		return createCSV(sq, q, w, true)
 	case RawQuery:
+		var sq rawbuffer = make([]rawbufentry, numstreams, numstreams)
 		for i, s := range q.Streams {
 			sq[i].rawc, sq[i].verc, sq[i].errc = s.RawValues(ctx, q.StartTime, q.EndTime, versions[i])
 		}
+		return createCSV(sq, q, w, false)
 	default:
 		return errors.New("Invalid query type")
 	}
-
-	return nil
 }
 
-type statbufentry struct {
-	pt   btrdb.StatPoint
-	open bool
-}
-
-func createStatisticalCSV(sq []streamquery, q *CSVQuery, w *csv.Writer) error {
-	var numstreams = len(sq)
-	var numcols = 2 + (numstreams << 2)
-
+func createCSV(buf streambuffer, q *CSVQuery, w *csv.Writer, statistical bool) error {
 	// Buffer for the row of the CSV that we are writing
-	var row = make([]string, numcols, numcols)
+	var row = buf.getHeaderRow(q.Labels)
 
 	// Write the header row
-	row[0] = "Timestamp (ns)"
-	row[1] = "Date/Time"
-	for i, label := range q.Labels {
-		offset := 2 + (i << 2)
-		row[offset+0] = fmt.Sprintf("%s (Min)", label)
-		row[offset+1] = fmt.Sprintf("%s (Mean)", label)
-		row[offset+2] = fmt.Sprintf("%s (Max)", label)
-		row[offset+3] = fmt.Sprintf("%s (Count)", label)
-	}
-
 	var err = w.Write(row)
 	if err != nil {
 		return err
 	}
 
-	var buf = make([]statbufentry, numstreams, numstreams)
-	var numopen = numstreams
-	for i := range buf {
-		buf[i].pt, buf[i].open = <-sq[i].stac
-		if !buf[i].open {
+	var open bool
+	var numopen = len(q.Streams)
+	for i := range q.Streams {
+		open, err = buf.readPoint(i)
+		if !open {
 			numopen--
-			if err = <-sq[i].errc; err != nil {
+			if err != nil {
 				return err
 			}
 		}
@@ -165,38 +257,31 @@ func createStatisticalCSV(sq []streamquery, q *CSVQuery, w *csv.Writer) error {
 	for {
 		// Compute the time of the next row
 		var earliest int64 = math.MaxInt64
-		for i := range buf {
-			if buf[i].open && buf[i].pt.Time < earliest {
-				earliest = buf[i].pt.Time
+		for i := range q.Streams {
+			if buf.isOpen(i) && buf.getTime(i) < earliest {
+				earliest = buf.getTime(i)
 			}
 		}
 
 		// Compute the next row
 		row[0] = fmt.Sprintf("%d", earliest)
 		row[1] = time.Unix(0, earliest).Format(time.RFC3339Nano)
-		for i := range buf {
-			offset := 2 + (i << 2)
-			if !buf[i].open {
+		for i := range q.Streams {
+			if !buf.isOpen(i) {
 				continue
-			} else if buf[i].pt.Time == earliest {
-				row[offset+0] = fmt.Sprintf("%f", buf[i].pt.Min)
-				row[offset+1] = fmt.Sprintf("%f", buf[i].pt.Mean)
-				row[offset+2] = fmt.Sprintf("%f", buf[i].pt.Max)
-				row[offset+3] = fmt.Sprintf("%d", buf[i].pt.Count)
+			} else if buf.getTime(i) == earliest {
+				buf.writePoint(i, row)
 
 				// We consumed this point, so fetch the next point
-				buf[i].pt, buf[i].open = <-sq[i].stac
-				if !buf[i].open {
+				open, err = buf.readPoint(i)
+				if !open {
 					numopen--
-					if err = <-sq[i].errc; err != nil {
+					if err != nil {
 						return err
 					}
 				}
 			} else {
-				row[offset+0] = ""
-				row[offset+1] = ""
-				row[offset+2] = ""
-				row[offset+3] = ""
+				buf.writeEmptyPoint(i, row)
 			}
 		}
 
