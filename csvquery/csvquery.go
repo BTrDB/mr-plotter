@@ -75,6 +75,15 @@ type CSVQuery struct {
 
 	// Labels contains the name to use for each stream in the output CSV file.
 	Labels []string
+
+	// IncludeVersions specifies whether the version number of each stream
+	// should be included in the CSV header.
+	IncludeVersions bool
+}
+
+func setTimeHeaders(row []string) {
+	row[0] = "Timestamp (ns)"
+	row[1] = "Human-Readable Time (UTC)"
 }
 
 // streambuffer is a buffer for an array of pending requests, allowing the user
@@ -85,7 +94,7 @@ type streambuffer interface {
 	readPoint(i int) (bool, error)
 	writePoint(i int, row []string)
 	writeEmptyPoint(i int, row []string)
-	getHeaderRow(labels []string) []string
+	getHeaderRow(labels []string, includeVersions bool) []string
 }
 
 type stabufentry struct {
@@ -96,6 +105,7 @@ type stabufentry struct {
 	open bool
 }
 
+// stabuffer satisfies the streambuffer interface using statistical points
 type stabuffer []stabufentry
 
 func (sb stabuffer) getTime(i int) int64 {
@@ -131,17 +141,20 @@ func (sb stabuffer) writeEmptyPoint(i int, row []string) {
 	row[offset+3] = ""
 }
 
-func (sb stabuffer) getHeaderRow(labels []string) []string {
+func (sb stabuffer) getHeaderRow(labels []string, includeVersions bool) []string {
 	numcols := 2 + (len(sb) << 2)
 	row := make([]string, numcols, numcols)
-	row[0] = "Timestamp (ns)"
-	row[1] = "Date/Time"
+	setTimeHeaders(row)
+	versionStr := ""
 	for i, label := range labels {
 		offset := 2 + (i << 2)
-		row[offset+0] = fmt.Sprintf("%s (Min)", label)
-		row[offset+1] = fmt.Sprintf("%s (Mean)", label)
-		row[offset+2] = fmt.Sprintf("%s (Max)", label)
-		row[offset+3] = fmt.Sprintf("%s (Count)", label)
+		if includeVersions {
+			versionStr = fmt.Sprintf(", ver. %d", <-sb[i].verc)
+		}
+		row[offset+0] = fmt.Sprintf("%s%s (Min)", label, versionStr)
+		row[offset+1] = fmt.Sprintf("%s%s (Mean)", label, versionStr)
+		row[offset+2] = fmt.Sprintf("%s%s (Max)", label, versionStr)
+		row[offset+3] = fmt.Sprintf("%s%s (Count)", label, versionStr)
 	}
 	return row
 }
@@ -154,6 +167,7 @@ type rawbufentry struct {
 	open bool
 }
 
+// rawbuffer satisfies the streambuffer interface using raw points
 type rawbuffer []rawbufentry
 
 func (rb rawbuffer) getTime(i int) int64 {
@@ -183,14 +197,17 @@ func (rb rawbuffer) writeEmptyPoint(i int, row []string) {
 	row[offset] = ""
 }
 
-func (rb rawbuffer) getHeaderRow(labels []string) []string {
+func (rb rawbuffer) getHeaderRow(labels []string, includeVersions bool) []string {
 	numcols := 2 + len(rb)
 	row := make([]string, numcols, numcols)
-	row[0] = "Timestamp (ns)"
-	row[1] = "Date/Time"
+	setTimeHeaders(row)
+	versionStr := ""
 	for i, label := range labels {
 		offset := 2 + i
-		row[offset+0] = label
+		if includeVersions {
+			versionStr = fmt.Sprintf(", ver. %d", <-rb[i].verc)
+		}
+		row[offset+0] = fmt.Sprintf("%s%s", label, versionStr)
 	}
 	return row
 }
@@ -234,7 +251,7 @@ func MakeCSVQuery(ctx context.Context, b *btrdb.BTrDB, q *CSVQuery, w *csv.Write
 
 func createCSV(buf streambuffer, q *CSVQuery, w *csv.Writer, statistical bool) error {
 	// Buffer for the row of the CSV that we are writing
-	var row = buf.getHeaderRow(q.Labels)
+	var row = buf.getHeaderRow(q.Labels, q.IncludeVersions)
 
 	// Write the header row
 	var err = w.Write(row)
@@ -254,7 +271,7 @@ func createCSV(buf streambuffer, q *CSVQuery, w *csv.Writer, statistical bool) e
 		}
 	}
 
-	for {
+	for numopen != 0 {
 		// Compute the time of the next row
 		var earliest int64 = math.MaxInt64
 		for i := range q.Streams {
@@ -265,7 +282,7 @@ func createCSV(buf streambuffer, q *CSVQuery, w *csv.Writer, statistical bool) e
 
 		// Compute the next row
 		row[0] = fmt.Sprintf("%d", earliest)
-		row[1] = time.Unix(0, earliest).Format(time.RFC3339Nano)
+		row[1] = time.Unix(0, earliest).Format("2006-01-02 15:04:05.000000000")
 		for i := range q.Streams {
 			if !buf.isOpen(i) {
 				continue
@@ -283,10 +300,6 @@ func createCSV(buf streambuffer, q *CSVQuery, w *csv.Writer, statistical bool) e
 			} else {
 				buf.writeEmptyPoint(i, row)
 			}
-		}
-
-		if numopen == 0 {
-			break
 		}
 
 		// Emit the row
