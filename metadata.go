@@ -82,12 +82,18 @@ func leafnametostream(ctx context.Context, bc *btrdb.BTrDB, collection string, l
 		}
 		return s, nil
 	}
-	matching, err := bc.LookupStreams(ctx, collection, false, map[string]*string{"name": &leafname}, nil)
+	matching, err := bc.LookupStreams(ctx, collection, false, nil, map[string]*string{"name": &leafname})
 	if err != nil {
 		return nil, err
 	}
 	if len(matching) == 0 {
-		return nil, nil
+		matching, err = bc.LookupStreams(ctx, collection, false, map[string]*string{"name": &leafname}, nil)
+		if err != nil {
+			return nil, err
+		}
+		if len(matching) == 0 {
+			return nil, nil
+		}
 	}
 	return matching[0], nil
 }
