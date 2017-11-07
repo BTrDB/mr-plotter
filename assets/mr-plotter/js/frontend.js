@@ -395,8 +395,10 @@ function buildCSVMenu(self) {
                     this.onchange();
                 });
         update.exit().remove();
+        document.querySelectorAll('.showIfDataExists').forEach(el => el.style.display = "block");
     } else {
         streamsettings.innerHTML = "You must plot streams in your desired time range before you can generate a CSV file.";
+        document.querySelectorAll('.showIfDataExists').forEach(el => el.style.display = "none");
     }
 
     var pwselector = graphExport.querySelector(".pointwidth-selector");

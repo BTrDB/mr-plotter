@@ -357,72 +357,72 @@
                                                     <div class="csv-settings">
                                                         <h4>1. Select the streams to include in the CSV file.</h4>
                                                         <div class="csv-streams"></div>
-                                                        <h4>2. Select the type of data to query.</h4>
-                                                        <div class="csv-querytype">
-                                                            <div class="btn-group" data-toggle="buttons">
-                                                                <label class="btn btn-primary csv-querytype-windows">
-                                                                    <input type="radio" class="csv-querytype-btn-windows" autocomplete="off"> Windows
-                                                                </label>
-                                                                <label class="btn btn-primary active csv-querytype-aligned">
-                                                                    <input type="radio" class="csv-querytype-btn-aligned" autocomplete="off" checked> Aligned Windows
-                                                                </label>
-                                                                <label class="btn btn-primary csv-querytype-raw">
-                                                                    <input type="radio" class="csv-querytype-btn-raw" autocomplete="off"> Raw Values
-                                                                </label>
-                                                            </div>
-                                                        </div>
-                                                        <div class="csv-windowsize">
-                                                            <div class="input-group">
-                                                                <span class="input-group-addon">Window Size</span>
-                                                                <input type="text" class="form-control csv-windowsize-text" aria-label="...">
-                                                                <div class="input-group-btn">
-                                                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                                                        <span class="csv-unit-current"></span>
-                                                                        <span class="caret"></span>
-                                                                    </button>
-                                                                    <ul class="dropdown-menu">
-                                                                        <li><a class="csv-unit-option csv-unit-option-nanoseconds" href="#!">nanoseconds</a></li>
-                                                                        <li><a class="csv-unit-option" href="#!">microseconds</a></li>
-                                                                        <li><a class="csv-unit-option" href="#!">milliseconds</a></li>
-                                                                        <li><a class="csv-unit-option" href="#!">seconds</a></li>
-                                                                        <li><a class="csv-unit-option" href="#!">minutes</a></li>
-                                                                        <li><a class="csv-unit-option" href="#!">hours</a></li>
-                                                                        <li><a class="csv-unit-option" href="#!">days</a></li>
-                                                                        <li><a class="csv-unit-option" href="#!">weeks</a></li>
-                                                                        <li><a class="csv-unit-option" href="#!">years</a><li>
-                                                                    </ul>
+                                                        <div class="showIfDataExists">
+                                                            <h4>2. Select the type of data to query.</h4>
+                                                            <div class="csv-querytype">
+                                                                <div class="btn-group" data-toggle="buttons">
+                                                                    <label class="btn btn-primary csv-querytype-windows">
+                                                                        <input type="radio" class="csv-querytype-btn-windows" autocomplete="off"> Windows
+                                                                    </label>
+                                                                    <label class="btn btn-primary active csv-querytype-aligned">
+                                                                        <input type="radio" class="csv-querytype-btn-aligned" autocomplete="off" checked> Aligned Windows
+                                                                    </label>
+                                                                    <label class="btn btn-primary csv-querytype-raw">
+                                                                        <input type="radio" class="csv-querytype-btn-raw" autocomplete="off"> Raw Values
+                                                                    </label>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                        <div class="csv-pointwidth">
-                                                            <div class="input-group">
-                                                                <span class="csv-pointwidth-descriptor input-group-addon">Window Size Precision</span>
-                                                                <input type="range" class="pointwidth-selector form-control" min="0" max="62" />
+                                                            <div class="csv-windowsize">
+                                                                <div class="input-group">
+                                                                    <span class="input-group-addon">Window Size</span>
+                                                                    <input type="text" class="form-control csv-windowsize-text" aria-label="...">
+                                                                    <div class="input-group-btn">
+                                                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                                            <span class="csv-unit-current"></span>
+                                                                            <span class="caret"></span>
+                                                                        </button>
+                                                                        <ul class="dropdown-menu">
+                                                                            <li><a class="csv-unit-option csv-unit-option-nanoseconds" href="#!">nanoseconds</a></li>
+                                                                            <li><a class="csv-unit-option" href="#!">microseconds</a></li>
+                                                                            <li><a class="csv-unit-option" href="#!">milliseconds</a></li>
+                                                                            <li><a class="csv-unit-option" href="#!">seconds</a></li>
+                                                                            <li><a class="csv-unit-option" href="#!">minutes</a></li>
+                                                                            <li><a class="csv-unit-option" href="#!">hours</a></li>
+                                                                            <li><a class="csv-unit-option" href="#!">days</a></li>
+                                                                            <li><a class="csv-unit-option" href="#!">weeks</a></li>
+                                                                            <li><a class="csv-unit-option" href="#!">years</a><li>
+                                                                        </ul>
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <div class="selected-pointwidth"></div>
-                                                            <div class="selected-pw-desc"></div>
+                                                            <div class="csv-pointwidth">
+                                                                <div class="input-group">
+                                                                    <span class="csv-pointwidth-descriptor input-group-addon">Window Size Precision</span>
+                                                                    <input type="range" class="pointwidth-selector form-control" min="0" max="62" />
+                                                                </div>
+                                                                <div class="selected-pointwidth"></div>
+                                                                <div class="selected-pw-desc"></div>
+                                                            </div>
+                                                            <h4>3. Select whether to download a CSV or import the data to a Jupyter Notebook.</h4>
+                                                            <p>
+                                                                <input type="hidden" id="resolutions" min='0' max='9' class="windowwidth-selector" value="7"/>
+                                                                <label><input id="export-type-csv" type="radio" name="export-type" value="CSV"><span>CSV</span></input></label><br>
+                                                                <label><input id="export-type-jupyter" type="radio" name="export-type" value="Jupyter"><span>Jupyter</span></input></label>
+                                                            </p>
+                
+                                                            <!-- This form is not visible to the user, but is used to make the POST request for the CSV file. -->
+                                                            <form class="csv-form" method="post" style="display: none;" target="_blank" enctype="text/plain">
+                                                                <input class="csv-form-data" name="json" />
+                                                            </form>
                                                         </div>
-                                                        <h4>3. Select whether to download a CSV or import the data to a Jupyter Notebook.</h4>
-                                                        <p>
-                                                            <input type="hidden" id="resolutions" min='0' max='9' class="windowwidth-selector" value="7"/>
-                                                            <div>Export data to:</div>
-                                                            <label><input id="export-type-csv" type="radio" name="export-type" value="CSV"><span>CSV</span></input></label><br>
-                                                            <label><input id="export-type-jupyter" type="radio" name="export-type" value="Jupyter"><span>Jupyter</span></input></label>
-                                                        </p>
-              
-                                                        <!-- This form is not visible to the user, but is used to make the POST request for the CSV file. -->
-                                                        <form class="csv-form" method="post" style="display: none;" target="_blank" enctype="text/plain">
-                                                            <input class="csv-form-data" name="json" />
-                                                        </form>
                                                     </div>
-                                                </div>
-                                                <div class="modal-footer export-type export-csv">
-                                                    <div class="btn btn-default" data-dismiss="modal">Close</div>
-                                                    <div class="csv-button btn btn-primary">Create CSV File</div>
-                                                </div>
-                                                <div class="modal-footer export-type export-jupyter">
-                                                        <h4>Copy and paste the following text into a Jupyter Lab Notebook with a Python3 kernel:</h4>
+                                                    <div class="modal-footer export-type export-csv">
+                                                        <div class="btn btn-default" data-dismiss="modal">Close</div>
+                                                        <div class="showIfDataExists"><div class="csv-button btn btn-primary">Create CSV File</div></div>
                                                     </div>
+                                                    <div class="showIfDataExists">
+                                                        <div class="modal-footer export-type export-jupyter">
+                                                            <h4>Copy and paste the following text into a Jupyter Lab Notebook with a Python3 kernel:</h4>
                                                             <pre>
                                                                 <code class="csvCodeBlock">
 import pandas as pd
@@ -524,6 +524,9 @@ else:
     print("Aborted download.")
                                                                 </code>
                                                             </pre>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
