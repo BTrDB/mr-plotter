@@ -552,18 +552,7 @@ function prepareCSVDownloadOptions(self, streams, settingsObj, domain, pwe, grap
 }
 
 function createCSVDownload(self, streams, settingsObj, domain, pwe, graphExport) {
-    var dataJSON = {
-            "StartTime": domain[0] - self.idata.offset,
-            "EndTime": domain[1] - self.idata.offset,
-            "UUIDS": streams,
-            "Labels": streams.map(function (x) { return settingsObj[x]; }),
-            "QueryType": getCSVQueryType(self),
-            "WindowText": self.find(".csv-windowsize-text").value,
-            "WindowUnit": self.find(".csv-unit-current").innerHTML,
-            "UnitofTime": "ms",
-            "PointWidth": pwe,
-            "_token": self.requester.getToken()
-        };
+    var dataJSON = prepareCSVDownloadOptions(self, streams, settingsObj, domain, pwe, graphExport);
     var csvform = graphExport.querySelector(".csv-form");
     csvform.querySelector(".csv-form-data").value = JSON.stringify(dataJSON);
     csvform.submit();
