@@ -112,3 +112,16 @@ div.loginmessage {
 .streamTreeOptions > div {
     width: 50%;
 }
+input[name="export-type"] + span {
+    margin-left: 10px;
+}
+.modal-footer.export-jupyter {
+    text-align: left;
+}
+.export-jupyter pre code {
+    white-space: unset;
+}
+.modal-footer.export-type {
+    margin-top: 50px;
+    display: none; /*This will be toggled programmatically*/
+}

@@ -345,7 +345,7 @@
                                 <!-- EXPORT TO CSV -->
                                 <div class="graphExport">
                                     <div class="btn-group-vertical">
-                                        <div class="makecsv btn btn-default">Export Graph to CSV File</div>
+                                        <div class="makecsv btn btn-default">Export Graph Data</div>
                                         <div class="makeGraph btn btn-default">Export Graph to SVG Image</div>
                                     </div>
                                     <div class="download-graph"></div>
@@ -357,62 +357,175 @@
                                                     <div class="csv-settings">
                                                         <h4>1. Select the streams to include in the CSV file.</h4>
                                                         <div class="csv-streams"></div>
-                                                        <h4>2. Select the type of data to query.</h4>
-                                                        <div class="csv-querytype">
-                                                            <div class="btn-group" data-toggle="buttons">
-                                                                <label class="btn btn-primary csv-querytype-windows">
-                                                                    <input type="radio" class="csv-querytype-btn-windows" autocomplete="off"> Windows
-                                                                </label>
-                                                                <label class="btn btn-primary active csv-querytype-aligned">
-                                                                    <input type="radio" class="csv-querytype-btn-aligned" autocomplete="off" checked> Aligned Windows
-                                                                </label>
-                                                                <label class="btn btn-primary csv-querytype-raw">
-                                                                    <input type="radio" class="csv-querytype-btn-raw" autocomplete="off"> Raw Values
-                                                                </label>
-                                                            </div>
-                                                        </div>
-                                                        <div class="csv-windowsize">
-                                                            <div class="input-group">
-                                                                <span class="input-group-addon">Window Size</span>
-                                                                <input type="text" class="form-control csv-windowsize-text" aria-label="...">
-                                                                <div class="input-group-btn">
-                                                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                                                        <span class="csv-unit-current"></span>
-                                                                        <span class="caret"></span>
-                                                                    </button>
-                                                                    <ul class="dropdown-menu">
-                                                                        <li><a class="csv-unit-option csv-unit-option-nanoseconds" href="#!">nanoseconds</a></li>
-                                                                        <li><a class="csv-unit-option" href="#!">microseconds</a></li>
-                                                                        <li><a class="csv-unit-option" href="#!">milliseconds</a></li>
-                                                                        <li><a class="csv-unit-option" href="#!">seconds</a></li>
-                                                                        <li><a class="csv-unit-option" href="#!">minutes</a></li>
-                                                                        <li><a class="csv-unit-option" href="#!">hours</a></li>
-                                                                        <li><a class="csv-unit-option" href="#!">days</a></li>
-                                                                        <li><a class="csv-unit-option" href="#!">weeks</a></li>
-                                                                        <li><a class="csv-unit-option" href="#!">years</a><li>
-                                                                    </ul>
+                                                        <div class="showIfDataExists">
+                                                            <h4>2. Select the type of data to query.</h4>
+                                                            <div class="csv-querytype">
+                                                                <div class="btn-group" data-toggle="buttons">
+                                                                    <label class="btn btn-primary csv-querytype-windows">
+                                                                        <input type="radio" class="csv-querytype-btn-windows" autocomplete="off"> Windows
+                                                                    </label>
+                                                                    <label class="btn btn-primary active csv-querytype-aligned">
+                                                                        <input type="radio" class="csv-querytype-btn-aligned" autocomplete="off" checked> Aligned Windows
+                                                                    </label>
+                                                                    <label class="btn btn-primary csv-querytype-raw">
+                                                                        <input type="radio" class="csv-querytype-btn-raw" autocomplete="off"> Raw Values
+                                                                    </label>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                        <div class="csv-pointwidth">
-                                                            <div class="input-group">
-                                                                <span class="csv-pointwidth-descriptor input-group-addon">Window Size Precision</span>
-                                                                <input type="range" class="pointwidth-selector form-control" min="0" max="62" />
+                                                            <div class="csv-windowsize">
+                                                                <div class="input-group">
+                                                                    <span class="input-group-addon">Window Size</span>
+                                                                    <input type="text" class="form-control csv-windowsize-text" aria-label="...">
+                                                                    <div class="input-group-btn">
+                                                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                                            <span class="csv-unit-current"></span>
+                                                                            <span class="caret"></span>
+                                                                        </button>
+                                                                        <ul class="dropdown-menu">
+                                                                            <li><a class="csv-unit-option csv-unit-option-nanoseconds" href="#!">nanoseconds</a></li>
+                                                                            <li><a class="csv-unit-option" href="#!">microseconds</a></li>
+                                                                            <li><a class="csv-unit-option" href="#!">milliseconds</a></li>
+                                                                            <li><a class="csv-unit-option" href="#!">seconds</a></li>
+                                                                            <li><a class="csv-unit-option" href="#!">minutes</a></li>
+                                                                            <li><a class="csv-unit-option" href="#!">hours</a></li>
+                                                                            <li><a class="csv-unit-option" href="#!">days</a></li>
+                                                                            <li><a class="csv-unit-option" href="#!">weeks</a></li>
+                                                                            <li><a class="csv-unit-option" href="#!">years</a><li>
+                                                                        </ul>
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <div class="selected-pointwidth"></div>
-                                                            <div class="selected-pw-desc"></div>
+                                                            <div class="csv-pointwidth">
+                                                                <div class="input-group">
+                                                                    <span class="csv-pointwidth-descriptor input-group-addon">Window Size Precision</span>
+                                                                    <input type="range" class="pointwidth-selector form-control" min="0" max="62" />
+                                                                </div>
+                                                                <div class="selected-pointwidth"></div>
+                                                                <div class="selected-pw-desc"></div>
+                                                            </div>
+                                                            <h4>3. Select whether to download a CSV or import the data to a Jupyter Notebook.</h4>
+                                                            <p>
+                                                                <input type="hidden" id="resolutions" min='0' max='9' class="windowwidth-selector" value="7"/>
+                                                                <label><input id="export-type-csv" type="radio" name="export-type" value="CSV"><span>CSV</span></input></label><br>
+                                                                <label><input id="export-type-jupyter" type="radio" name="export-type" value="Jupyter"><span>Jupyter</span></input></label>
+                                                            </p>
+                
+                                                            <!-- This form is not visible to the user, but is used to make the POST request for the CSV file. -->
+                                                            <form class="csv-form" method="post" style="display: none;" target="_blank" enctype="text/plain">
+                                                                <input class="csv-form-data" name="json" />
+                                                            </form>
                                                         </div>
-                                                        <h4>3. Click the "Create CSV File" button to generate the CSV file.</h4>
-
-                                                        <!-- This form is not visible to the user, but is used to make the POST request for the CSV file. -->
-                                                        <form class="csv-form" method="post" style="display: none;" target="_blank" enctype="text/plain">
-                                                            <input class="csv-form-data" name="json" />
-                                                        </form>
                                                     </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <div class="btn btn-default" data-dismiss="modal">Close</div>
-                                                    <div class="csv-button btn btn-primary">Create CSV File</div>
+                                                    <div class="modal-footer export-type export-csv">
+                                                        <div class="btn btn-default" data-dismiss="modal">Close</div>
+                                                        <div class="showIfDataExists"><div class="csv-button btn btn-primary">Create CSV File</div></div>
+                                                    </div>
+                                                    <div class="showIfDataExists">
+                                                        <div class="modal-footer export-type export-jupyter">
+                                                            <h4>Copy and paste the following text into a Jupyter Lab Notebook with a Python3 kernel:</h4>
+                                                            <pre>
+                                                                <code class="csvCodeBlock">
+import pandas as pd
+import requests
+import json
+import os
+
+def warn_for_large_dl(opts_dict, threshold=100000, sample_rate_hz=60):
+    total_time = opts_dict["EndTime"] - opts_dict["StartTime"]
+    to_ns = {
+        's': 1000000000,
+        'seconds': 1000000000,
+        'ms': 1000000,
+        'milliseconds': 1000000,
+        '': 1000000,
+        'us': 1000,
+        'microseconds': 1000,
+        'ns': 1,
+        'nanoseconds': 1
+    }
+
+    total_time_ns = total_time * to_ns[opts_dict["UnitofTime"]]
+
+    query_type = opts_dict["QueryType"]
+    if query_type == 'windows':
+        ns_per_point = int(opts_dict['WindowText']) * int(to_ns[opts_dict['WindowUnit']])
+        total_rows = total_time_ns // ns_per_point
+
+    total_obs_at_sample_rate = total_time_ns // (1/sample_rate_hz * to_ns['s'])
+
+    if query_type == 'aligned':
+        total_rows = total_time_ns // (2 ** opts_dict.get("PointWidth", 0))
+        total_rows = min(total_rows, total_obs_at_sample_rate)
+    elif query_type == 'raw':
+        total_rows = total_obs_at_sample_rate
+
+    print('Assuming {}hz sampling, you are downloading approximately {} rows.'.format(sample_rate_hz, int(total_rows)))
+    if (total_rows > threshold):
+        print('This exceeds your threshold of {}'.format(threshold))
+        print('''
+    Either increase your threshold or choose closer start and end times.
+    If you are using QueryType: 'raw' then you must choose a closer start and end time.
+    If you are using QueryType: 'aligned' you may also increase PointWidth to sample less frequently.
+    If you are using QueryType: 'windows' you may also increase WindowText to sample less frequently.
+        ''')
+        return True
+    return False
+    
+def download_pmu_data(opts_dict, domain=None, filename=None):
+    if domain is None:
+        raise ValueError("You must supply a domain to download_pmu_data (e.g. https://viz.predictivegrid.com)")
+    if filename is None:
+        filename = 'pmu_data.csv'
+    url = domain + '/csv'
+    payload = "json=" + json.dumps(opts_dict)
+    print("Starting download...")
+    r = requests.post(url, data=payload, stream=True)
+    with open(filename, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=1024): 
+            if chunk: # filter out keep-alive new chunks
+                f.write(chunk)
+    print("Download finished")
+    return filename
+
+def make_df(csv_filename=None, max_size=100):
+    if csv_filename is None:
+        csv_filename = 'pmu_data.csv'
+    file_size_mb = os.path.getsize(csv_filename) / 1024 / 1024
+    if file_size_mb > max_size:
+        print('The file is {:.2f}mb, which is larger than your threshold of {}mb. You may want to process it manually instead.'.format(file_size_mb, max_size))
+        print('It is located at: {}/{}'.format(os.getcwd(), csv_filename))
+        df = pd.read_csv(csv_filename, chunksize=10000)
+        print('Returning a {} instead'.format(type(df)))
+    else:
+        df = pd.read_csv(csv_filename)
+        print("Created dataframe of shape:", df.shape)
+    return df
+
+# The following dict's values determine the data downloaded. Some fields behave differently depending on QueryType.
+#   "StartTime" : Int    - Represents the start time expressed in Epoch. Units determined by "UnitofTime"
+#   "EndTime"   : Int    - Represents the end time expressed in Epoch. Units determined by "UnitofTime"
+#   "UnitofTime": String - enum represents the unit of time applied to the "StartTime" and "EndTime" fields. One of "s", "ms", "us", "ns", "". "" is an alias for "ms".
+#   "UUIDS"     : List   - list of UUID strings for the streams being downloaded
+#   "Labels"    : List   - list of label strings to use for each stream in the outputted data
+#   "QueryType" : String - enum with one of three values (windows, aligned, raw)
+#   "WindowText": String - Valid only for QueryType "windows." Together with WindowUnit represents the amount of time per data point
+#   "WindowUnit": String - Valid only for QueryType "windows." enum representing the unit of time to use for WindowText. One of "years","weeks","days","hours","minutes","seconds","milliseconds","microseconds","nanoseconds"
+#   "PointWidth": Int    - The point width exponent for AlignedWindows queries, and the maximum depth for Windows queries. It is ignored for QueryType: "raw"
+#   "_token"    : String - The token string issued by the server granting a user access for the current session.
+                                            </code>
+                                            <code class="csvJsonObject"></code>
+                                            <code class="runCommands">
+too_big = warn_for_large_dl(opts_dict, threshold=20000, sample_rate_hz=60)
+if (not too_big):
+    csv_filename = download_pmu_data(opts_dict, domain=domain)
+    df = make_df(csv_filename, max_size=1)
+    print("Done")
+else:
+    print("Aborted download.")
+                                                                </code>
+                                                            </pre>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
