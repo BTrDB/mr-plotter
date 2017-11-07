@@ -435,8 +435,8 @@ function buildCSVMenu(self) {
                     }, 0);
                 queryType = "windows";
                 csvPointWidthDescriptor.innerHTML = "Window Size Precision";
-                csvWindowSize.setAttribute("style", "");
-                csvPointWidth.setAttribute("style", "");
+                csvWindowSize.setAttribute("style", "display: block;");
+                csvPointWidth.setAttribute("style", "display: block;");
             };
         self.find(".csv-querytype-raw").onclick = function () {
                 queryType = "raw";
@@ -452,6 +452,7 @@ function buildCSVMenu(self) {
 
         domain = domain.domain();
         $(pwselector).css("display", "");
+        $(pwselectortl).css("display", "");
         
         var exportCSV = self.find('input#export-type-csv');
         var exportJupyter = self.find('input#export-type-jupyter');
