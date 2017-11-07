@@ -382,6 +382,7 @@ function buildCSVMenu(self) {
                                 settingsObj[this.__data__.uuid] = streamName.value;
                             }
                             streamName.disabled = !streamName.disabled;
+                            updateCSVoptionsHTML();
                         };
                 });
         groups.append("input")
@@ -417,6 +418,7 @@ function buildCSVMenu(self) {
                 setTimeout(function () {
                     pwselector.value = 63 - self.idata.csvpwestimate;
                     pwselector.onchange();
+                    updateCSVoptionsHTML();
                 }, 0);
                 queryType = "aligned";
                 csvPointWidthDescriptor.innerHTML = "Window Size";
@@ -429,6 +431,7 @@ function buildCSVMenu(self) {
                         self.find(".csv-windowsize-text").value = Math.pow(2, self.idata.csvpwestimate);
                         $(self.find(".csv-unit-option-nanoseconds")).click(); // Select "nanoseconds"
                         pwselector.onchange();
+                        updateCSVoptionsHTML();
                     }, 0);
                 queryType = "windows";
                 csvPointWidthDescriptor.innerHTML = "Window Size Precision";
@@ -440,12 +443,62 @@ function buildCSVMenu(self) {
                 csvPointWidthDescriptor.innerHTML = "";
                 csvWindowSize.setAttribute("style", "display: none;");
                 csvPointWidth.setAttribute("style", "display: none;");
+                setTimeout(function () {
+                    updateCSVoptionsHTML();
+                }, 0);
             };
 
         self.find(".csv-querytype-" + queryType).onclick();
 
         domain = domain.domain();
         $(pwselector).css("display", "");
+        
+        var exportCSV = self.find('input#export-type-csv');
+        var exportJupyter = self.find('input#export-type-jupyter');
+
+        function changeExportType(exportType) {
+            var exportFooters = document.querySelectorAll('.modal-footer.export-type');
+            exportFooters.forEach(function toggleFooterViz(node) {
+                if (node.className.indexOf(exportType) >= 0) {
+                    node.style.display = "block";
+                } else {
+                    node.style.display = "none";
+                }
+            });
+        }
+        function updateCSVoptionsHTML() {
+            function selectElementText(el, win) {
+                win = win || window;
+                var doc = win.document, sel, range;
+                if (win.getSelection && doc.createRange) {
+                    sel = win.getSelection();
+                    range = doc.createRange();
+                    range.selectNodeContents(el);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                } else if (doc.body.createTextRange) {
+                    range = doc.body.createTextRange();
+                    range.moveToElementText(el);
+                    range.select();
+                }
+            }
+            var pwe = 62 - parseInt(pwselector.value);
+            var csvOptions = prepareCSVDownloadOptions(
+                self, streams, settingsObj, domain, pwe, graphExport
+            );
+            var csvOptionCodeBlockEl = self.find('code.csvJsonObject');
+            csvOptionCodeBlockEl.innerHTML = "\n" +
+                `opts_dict = ${JSON.stringify(csvOptions, null, 4)}\n\n` +
+                `domain = "${window.location.protocol}//${self.backend}"`;
+            selectElementText(document.querySelector('.export-jupyter pre'));
+        }
+
+        exportCSV.onchange = function chooseCSV() { changeExportType('export-csv'); };
+        exportJupyter.onchange = function chooseJupyter() {
+            updateCSVoptionsHTML();
+            changeExportType('export-jupyter');
+        };
+
         pwselector.onchange = function () {
                 var pw = Math.pow(2, 62 - this.value);
                 var m1 = pwselectortl.nextSibling.nextSibling;
@@ -458,6 +511,7 @@ function buildCSVMenu(self) {
                     statusString = "About " + pps + (pps == 1 ? " window per stream" : " windows per stream");
                     m1.nextSibling.nextSibling.innerHTML = statusString;
                 }
+                updateCSVoptionsHTML();
             };
         if (streams.length == 0 || self.idata.oldData[streams[0].uuid] === undefined) {
             self.idata.csvpwestimate = 0;
@@ -478,8 +532,24 @@ function buildCSVMenu(self) {
     }
 }
 
+function prepareCSVDownloadOptions(self, streams, settingsObj, domain, pwe, graphExport) {
+    streamUUIDs = streams.filter(function (x) { return settingsObj.hasOwnProperty(x.uuid); }).map(function (x) { return x.uuid; });
+    var dataJSON = {
+        "StartTime": domain[0] - self.idata.offset,
+        "EndTime": domain[1] - self.idata.offset,
+        "UUIDS": streamUUIDs,
+        "Labels": streamUUIDs.map(function (x) { return settingsObj[x]; }),
+        "QueryType": getCSVQueryType(self),
+        "WindowText": self.find(".csv-windowsize-text").value,
+        "WindowUnit": self.find(".csv-unit-current").innerHTML,
+        "UnitofTime": "ms",
+        "PointWidth": pwe,
+        "_token": self.requester.getToken()
+    };
+    return dataJSON;
+}
+
 function createCSVDownload(self, streams, settingsObj, domain, pwe, graphExport) {
-    streams = streams.filter(function (x) { return settingsObj.hasOwnProperty(x.uuid); }).map(function (x) { return x.uuid; });
     var dataJSON = {
             "StartTime": domain[0] - self.idata.offset,
             "EndTime": domain[1] - self.idata.offset,
