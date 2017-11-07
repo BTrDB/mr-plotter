@@ -436,6 +436,11 @@ import os
 def warn_for_large_dl(opts_dict, threshold=100000, sample_rate_hz=60):
     total_time = opts_dict["EndTime"] - opts_dict["StartTime"]
     to_ns = {
+        'years': 31556952000000430,
+        'weeks': 604799999999983,
+        'days' : 86400000000000,
+        'hours': 3600000000000,
+        'minutes': 60000000000,
         's': 1000000000,
         'seconds': 1000000000,
         'ms': 1000000,

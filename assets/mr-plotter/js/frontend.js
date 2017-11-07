@@ -498,6 +498,10 @@ function buildCSVMenu(self) {
             updateCSVoptionsHTML();
             changeExportType('export-jupyter');
         };
+        document.querySelector('.csv-windowsize-text').addEventListener('change', updateCSVoptionsHTML, false);
+        $('.window-size.dropdown').on('hidden.bs.dropdown', function () {
+            updateCSVoptionsHTML();
+        });
 
         pwselector.onchange = function () {
                 var pw = Math.pow(2, 62 - this.value);
