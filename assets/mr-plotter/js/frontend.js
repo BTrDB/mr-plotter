@@ -396,10 +396,6 @@ function buildCSVMenu(self) {
                     this.onchange();
                 });
         update.exit().remove();
-        document.querySelectorAll('.showIfDataExists').forEach(el => el.style.display = "block");
-    } else {
-        streamsettings.innerHTML = "You must plot streams in your desired time range before you can generate a CSV file.";
-        document.querySelectorAll('.showIfDataExists').forEach(el => el.style.display = "none");
     }
 
     var pwselector = graphExport.querySelector(".pointwidth-selector");
@@ -408,6 +404,7 @@ function buildCSVMenu(self) {
     var submitButton = graphExport.querySelector("div.csv-button");
     var textSpace;
     if (streams.length > 0 && domain != undefined) {
+        document.querySelectorAll('.toggleIfDataExists').forEach(el => { el.classList.add('show'); el.classList.remove('hide'); });
         $(self.find(".csv-unit-option-nanoseconds")).click(); // Select "nanoseconds"
         var csvWindowSize = self.find(".csv-windowsize");
         var csvPointWidth = self.find(".csv-pointwidth");
@@ -461,9 +458,11 @@ function buildCSVMenu(self) {
             var exportFooters = document.querySelectorAll('.modal-footer.export-type');
             exportFooters.forEach(function toggleFooterViz(node) {
                 if (node.className.indexOf(exportType) >= 0) {
-                    node.style.display = "block";
+                    node.classList.add('show');
+                    node.classList.remove('hide');
                 } else {
-                    node.style.display = "none";
+                    node.classList.add('hide');
+                    node.classList.remove('show');
                 }
             });
         }
@@ -525,6 +524,8 @@ function buildCSVMenu(self) {
                 createCSVDownload(self, streams, settingsObj, domain, 62 - parseInt(pwselector.value), graphExport);
             };
     } else {
+        document.querySelectorAll('.toggleIfDataExists').forEach(el => { el.classList.add('hide'); el.classList.remove('show'); });
+        streamsettings.innerHTML = "You must plot streams in your desired time range before you can generate a CSV file.";
         $(pwselectortl).css("display", "none");
         textSpace = pwselectortl.nextSibling.nextSibling;
         textSpace.innerHTML = "";

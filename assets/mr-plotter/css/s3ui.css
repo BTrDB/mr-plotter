@@ -121,7 +121,14 @@ input[name="export-type"] + span {
 .export-jupyter pre code {
     white-space: unset;
 }
-.modal-footer.export-type {
-    margin-top: 50px;
-    display: none; /*This will be toggled programmatically*/
+.toggleIfDataExists.show, .modal-footer.show {
+    display: block;
+}
+.toggleIfDataExists.hide, .modal-footer.hide {
+    display: none;
+}
+.modal-footer .btn + .toggleIfDataExists.show {
+    display: inline-block !important; /* unfortunately a library decided to use !important so now we have to compete with them */
+    margin-bottom: 0;
+    margin-left: 5px;
 }
