@@ -357,7 +357,7 @@
                                                     <div class="csv-settings">
                                                         <h4>1. Select the streams to include in the CSV file.</h4>
                                                         <div class="csv-streams"></div>
-                                                        <div class="showIfDataExists">
+                                                        <div class="toggleIfDataExists">
                                                             <h4>2. Select the type of data to query.</h4>
                                                             <div class="csv-querytype">
                                                                 <div class="btn-group" data-toggle="buttons">
@@ -376,7 +376,7 @@
                                                                 <div class="input-group">
                                                                     <span class="input-group-addon">Window Size</span>
                                                                     <input type="text" class="form-control csv-windowsize-text" aria-label="...">
-                                                                    <div class="input-group-btn">
+                                                                    <div class="input-group-btn window-size dropdown">
                                                                         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                                                             <span class="csv-unit-current"></span>
                                                                             <span class="caret"></span>
@@ -416,15 +416,18 @@
                                                             </form>
                                                         </div>
                                                     </div>
-                                                    <div class="modal-footer export-type export-csv">
+                                                </div>
+                                                <div class="toggleIfDataExists">
+                                                    <div class="modal-footer export-type export-csv hide">
                                                         <div class="btn btn-default" data-dismiss="modal">Close</div>
-                                                        <div class="showIfDataExists"><div class="csv-button btn btn-primary">Create CSV File</div></div>
+                                                        <div class="csv-button btn btn-primary">Create CSV File</div>
                                                     </div>
-                                                    <div class="showIfDataExists">
-                                                        <div class="modal-footer export-type export-jupyter">
-                                                            <h4>Copy and paste the following text into a Jupyter Lab Notebook with a Python3 kernel:</h4>
-                                                            <pre>
-                                                                <code class="csvCodeBlock">
+                                                </div>
+                                                <div class="toggleIfDataExists">
+                                                    <div class="modal-footer export-type export-jupyter hide">
+                                                        <h4>Copy and paste the following text into a Jupyter Lab Notebook with a Python3 kernel:</h4>
+                                                        <pre>
+                                                            <code class="csvCodeBlock">
 import pandas as pd
 import requests
 import json
@@ -433,6 +436,11 @@ import os
 def warn_for_large_dl(opts_dict, threshold=100000, sample_rate_hz=60):
     total_time = opts_dict["EndTime"] - opts_dict["StartTime"]
     to_ns = {
+        'years': 31556952000000430,
+        'weeks': 604799999999983,
+        'days' : 86400000000000,
+        'hours': 3600000000000,
+        'minutes': 60000000000,
         's': 1000000000,
         'seconds': 1000000000,
         'ms': 1000000,
@@ -512,9 +520,9 @@ def make_df(csv_filename=None, max_size=100):
 #   "WindowUnit": String - Valid only for QueryType "windows." enum representing the unit of time to use for WindowText. One of "years","weeks","days","hours","minutes","seconds","milliseconds","microseconds","nanoseconds"
 #   "PointWidth": Int    - The point width exponent for AlignedWindows queries, and the maximum depth for Windows queries. It is ignored for QueryType: "raw"
 #   "_token"    : String - The token string issued by the server granting a user access for the current session.
-                                            </code>
-                                            <code class="csvJsonObject"></code>
-                                            <code class="runCommands">
+                                                            </code>
+                                                            <code class="csvJsonObject"></code>
+                                                            <code class="runCommands">
 too_big = warn_for_large_dl(opts_dict, threshold=20000, sample_rate_hz=60)
 if (not too_big):
     csv_filename = download_pmu_data(opts_dict, domain=domain)
@@ -522,9 +530,9 @@ if (not too_big):
     print("Done")
 else:
     print("Aborted download.")
-                                                                </code>
-                                                            </pre>
-                                                        </div>
+
+                                                            </code>
+                                                        </pre>
                                                     </div>
                                                 </div>
                                             </div>
