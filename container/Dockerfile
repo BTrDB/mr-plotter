@@ -18,7 +18,6 @@ RUN mkdir -p $GOPATH/src/github.com/BTrDB && \
     cd $GOPATH/src/github.com/BTrDB && \
     git clone https://github.com/BTrDB/mr-plotter.git && \
     cd mr-plotter && \
-    git checkout v4 && \
     go get -d ./... && \
     go install .
 ADD entrypoint.sh /
