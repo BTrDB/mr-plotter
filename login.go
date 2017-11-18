@@ -36,7 +36,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/SoftwareDefinedBuildings/mr-plotter/accounts"
+	"github.com/BTrDB/mr-plotter/accounts"
 	etcd "github.com/coreos/etcd/clientv3"
 )
 

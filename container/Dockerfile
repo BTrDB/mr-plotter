@@ -14,9 +14,9 @@ ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local
 ENV GOTRACEBACK=all
 ENV GOGC=40
 RUN go get github.com/maruel/panicparse/cmd/pp
-RUN mkdir -p $GOPATH/src/github.com/SoftwareDefinedBuildings && \
-    cd $GOPATH/src/github.com/SoftwareDefinedBuildings && \
-    git clone https://github.com/SoftwareDefinedBuildings/mr-plotter.git && \
+RUN mkdir -p $GOPATH/src/github.com/BTrDB && \
+    cd $GOPATH/src/github.com/BTrDB && \
+    git clone https://github.com/BTrDB/mr-plotter.git && \
     cd mr-plotter && \
     git checkout v4 && \
     go get -d ./... && \

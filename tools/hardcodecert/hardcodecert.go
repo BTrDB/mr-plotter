@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/SoftwareDefinedBuildings/mr-plotter/keys"
+	"github.com/BTrDB/mr-plotter/keys"
 	etcd "github.com/coreos/etcd/clientv3"
 )
 

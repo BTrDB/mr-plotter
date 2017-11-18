@@ -47,10 +47,10 @@ import (
 	"gopkg.in/btrdb.v4"
 	"gopkg.in/ini.v1"
 
-	"github.com/SoftwareDefinedBuildings/mr-plotter/accounts"
-	"github.com/SoftwareDefinedBuildings/mr-plotter/csvquery"
-	"github.com/SoftwareDefinedBuildings/mr-plotter/keys"
-	"github.com/SoftwareDefinedBuildings/mr-plotter/permalink"
+	"github.com/BTrDB/mr-plotter/accounts"
+	"github.com/BTrDB/mr-plotter/csvquery"
+	"github.com/BTrDB/mr-plotter/keys"
+	"github.com/BTrDB/mr-plotter/permalink"
 
 	etcd "github.com/coreos/etcd/clientv3"
 	httpHandlers "github.com/gorilla/handlers"
