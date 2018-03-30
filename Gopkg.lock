@@ -2,17 +2,31 @@
 
 
 [[projects]]
+  branch = "master"
   name = "github.com/coreos/etcd"
   packages = [
     "auth/authpb",
     "clientv3",
+    "clientv3/balancer",
     "etcdserver/api/v3rpc/rpctypes",
     "etcdserver/etcdserverpb",
     "mvcc/mvccpb",
+    "pkg/logutil",
     "pkg/types"
   ]
-  revision = "28f3f26c0e303392556035b694f75768d449d33d"
-  version = "v3.3.1"
+  revision = "8767e39bec1f99f51a232a246d81697d5754596e"
+
+[[projects]]
+  name = "github.com/coreos/go-systemd"
+  packages = ["journal"]
+  revision = "40e2722dffead74698ca12a750f64ef313ddce05"
+  version = "v16"
+
+[[projects]]
+  name = "github.com/coreos/pkg"
+  packages = ["capnslog"]
+  revision = "3ac0863d7acf3bc44daf49afef8919af12f704ef"
+  version = "v3"
 
 [[projects]]
   branch = "master"
@@ -112,7 +126,7 @@
     "bcrypt",
     "blowfish"
   ]
-  revision = "432090b8f568c018896cd8a0fb0345872bbac6ce"
+  revision = "88942b9c40a4c9d203b82b3731787b672d6e809b"
 
 [[projects]]
   branch = "master"
@@ -126,7 +140,7 @@
     "lex/httplex",
     "trace"
   ]
-  revision = "cbe0f9307d0156177f9dd5dc85da1a31abc5f2fb"
+  revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -156,7 +170,7 @@
     "googleapis/api/annotations",
     "googleapis/rpc/status"
   ]
-  revision = "2b5a72b8730b0b16380010cfe5286c42108d88e7"
+  revision = "ab0870e398d5dd054b868c0db1481ab029b9a9f2"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -186,30 +200,30 @@
     "tap",
     "transport"
   ]
-  revision = "8e4536a86ab602859c20df5ebfd0bd4228d08655"
-  version = "v1.10.0"
+  revision = "1e2570b1b19ade82d8dbb31bba4e65e9f9ef5b34"
+  version = "v1.11.1"
 
 [[projects]]
   branch = "v4"
   name = "gopkg.in/BTrDB/btrdb.v4"
   packages = ["grpcinterface"]
-  revision = "a081822124114f8c0dbb77beef32db986ba019d9"
+  revision = "df89cdcf83585ca6dae298aa7d4ee6249643722f"
 
 [[projects]]
   branch = "v4"
   name = "gopkg.in/btrdb.v4"
   packages = ["."]
-  revision = "a081822124114f8c0dbb77beef32db986ba019d9"
+  revision = "df89cdcf83585ca6dae298aa7d4ee6249643722f"
 
 [[projects]]
   name = "gopkg.in/ini.v1"
   packages = ["."]
-  revision = "32e4c1e6bc4e7d0d8451aa6b75200d19e37a536a"
-  version = "v1.32.0"
+  revision = "6333e38ac20b8949a8dd68baa3650f4dee8f39f0"
+  version = "v1.33.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "318741364ae79bd5d54f03cd7757e7f251e1ee8cfc583d8092a743431a2faba5"
+  inputs-digest = "04675e8eec9280f8e9e683689c7d228c4acd63998dcc4fd9d6bc6caf087eaba9"
   solver-name = "gps-cdcl"
   solver-version = 1
