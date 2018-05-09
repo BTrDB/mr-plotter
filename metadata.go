@@ -30,12 +30,10 @@ import (
 
 	"gopkg.in/btrdb.v4"
 
-	"github.com/BTrDB/mr-plotter/accounts"
+	acl "github.com/BTrDB/smartgridstore/acl"
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/pborman/uuid"
 )
-
-var defaulttagset = map[string]struct{}{accounts.PublicTag: struct{}{}}
 
 var btrdbSeparator byte = '/'
 
@@ -98,7 +96,24 @@ func leafnametostream(ctx context.Context, bc *btrdb.BTrDB, collection string, l
 	return matching[0], nil
 }
 
+var publicGroup *acl.Group
+
 func getprefixes(ctx context.Context, ec *etcd.Client, ls *LoginSession) (map[string]struct{}, error) {
+	if publicGroup == nil {
+		aclEngine := acl.NewACLEngine("btrdb", ec)
+		var err error
+		publicGroup, err = aclEngine.GetGroup("public")
+		if err != nil {
+			panic(err)
+		}
+	}
+	if ls == nil {
+		m := make(map[string]struct{})
+		for _, p := range publicGroup.Prefixes {
+			m[p] = struct{}{}
+		}
+		return m, nil
+	}
 	return ls.Prefixes, nil
 }
 

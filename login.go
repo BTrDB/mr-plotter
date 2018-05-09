@@ -93,7 +93,12 @@ func checkpassword(ctx context.Context, etcdConn *etcd.Client, user string, pass
 	if !okay {
 		return nil, nil
 	}
-	return u, nil
+	for _, c := range u.Capabilities {
+		if c == "plotter" {
+			return u, nil
+		}
+	}
+	return nil, nil
 }
 
 /* Writing to the returned slice results in undefined behavior.
