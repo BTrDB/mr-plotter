@@ -36,7 +36,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/BTrDB/mr-plotter/accounts"
+	acl "github.com/BTrDB/smartgridstore/acl"
 	etcd "github.com/coreos/etcd/clientv3"
 )
 
@@ -46,17 +46,17 @@ var aes_encrypt_cipher cipher.Block
 var hmac_key []byte
 
 type LoginSession struct {
-	Issued int64
-	Tags   map[string]struct{}
-	User   string
+	Issued   int64
+	Prefixes map[string]struct{}
+	User     string
 }
 
-func (loginsession *LoginSession) TagSlice() []string {
-	taglist := make([]string, len(loginsession.Tags))
-	for tag := range loginsession.Tags {
-		taglist = append(taglist, tag)
+func (loginsession *LoginSession) PrefixSlice() []string {
+	prefixlist := make([]string, len(loginsession.Prefixes))
+	for pfx := range loginsession.Prefixes {
+		prefixlist = append(prefixlist, pfx)
 	}
-	return taglist
+	return prefixlist
 }
 
 func setSessionExpiry(seconds uint64) {
@@ -84,25 +84,16 @@ func setMACKey(key []byte) error {
 	return nil
 }
 
-func checkpassword(ctx context.Context, etcdConn *etcd.Client, user string, password []byte) (*accounts.MrPlotterAccount, error) {
-	acc, err := accounts.RetrieveAccount(ctx, etcdConn, user)
+func checkpassword(ctx context.Context, etcdConn *etcd.Client, user string, password []byte) (*acl.User, error) {
+	ae := acl.NewACLEngine("btrdb", etcdConn)
+	okay, u, err := ae.AuthenticateUser(user, string(password))
 	if err != nil {
 		return nil, err
 	}
-
-	var correct bool
-	if acc != nil {
-		correct, err = acc.CheckPassword(password)
-		if err != nil {
-			return nil, err
-		}
+	if !okay {
+		return nil, nil
 	}
-
-	if correct {
-		return acc, nil
-	}
-
-	return nil, nil
+	return u, nil
 }
 
 /* Writing to the returned slice results in undefined behavior.
@@ -118,9 +109,12 @@ func userlogin(ctx context.Context, etcdConn *etcd.Client, user string, password
 
 	// Create a new session
 	loginsession := &LoginSession{
-		Issued: time.Now().Unix(),
-		Tags:   acc.Tags,
-		User:   user,
+		Issued:   time.Now().Unix(),
+		Prefixes: make(map[string]struct{}),
+		User:     user,
+	}
+	for _, p := range acc.Prefixes {
+		loginsession.Prefixes[p] = struct{}{}
 	}
 
 	// Construct the JSON plaintext for this login session
@@ -250,48 +244,48 @@ func userlogoff(token []byte) bool {
 	return true
 }
 
-func usertags(token []byte) []string {
+func userprefixes(token []byte) []string {
 	loginsession := getloginsession(token)
 	if loginsession == nil {
 		return nil
 	}
 
-	return loginsession.TagSlice()
+	return loginsession.PrefixSlice()
 }
 
-func userchangepassword(ctx context.Context, etcdConn *etcd.Client, token []byte, oldpw []byte, newpw []byte) string {
-	loginsession := getloginsession(token)
-	if loginsession == nil {
-		return ERROR_INVALID_TOKEN
-	}
-
-	acc, err := accounts.RetrieveAccount(ctx, etcdConn, loginsession.User)
-	if err != nil {
-		return "Server error"
-	}
-
-	correct, err := acc.CheckPassword(oldpw)
-	if err != nil {
-		return "Server error"
-	}
-
-	if !correct {
-		return "Incorrect password"
-	}
-
-	err = acc.SetPassword(newpw)
-	if err != nil {
-		return "Server error"
-	}
-
-	success, err := accounts.UpsertAccountAtomically(ctx, etcdConn, acc)
-	if err != nil {
-		return "Server error"
-	}
-
-	if success {
-		return SUCCESS
-	} else {
-		return "Transaction failed; try again"
-	}
-}
+// func userchangepassword(ctx context.Context, etcdConn *etcd.Client, token []byte, oldpw []byte, newpw []byte) string {
+// 	loginsession := getloginsession(token)
+// 	if loginsession == nil {
+// 		return ERROR_INVALID_TOKEN
+// 	}
+//
+// 	acc, err := accounts.RetrieveAccount(ctx, etcdConn, loginsession.User)
+// 	if err != nil {
+// 		return "Server error"
+// 	}
+//
+// 	correct, err := acc.CheckPassword(oldpw)
+// 	if err != nil {
+// 		return "Server error"
+// 	}
+//
+// 	if !correct {
+// 		return "Incorrect password"
+// 	}
+//
+// 	err = acc.SetPassword(newpw)
+// 	if err != nil {
+// 		return "Server error"
+// 	}
+//
+// 	success, err := accounts.UpsertAccountAtomically(ctx, etcdConn, acc)
+// 	if err != nil {
+// 		return "Server error"
+// 	}
+//
+// 	if success {
+// 		return SUCCESS
+// 	} else {
+// 		return "Transaction failed; try again"
+// 	}
+// }

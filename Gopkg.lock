@@ -3,6 +3,15 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/BTrDB/smartgridstore"
+  packages = [
+    "acl",
+    "admincli"
+  ]
+  revision = "e4e341a4940119cbea61fded598a29aa96483c92"
+
+[[projects]]
+  branch = "master"
   name = "github.com/coreos/etcd"
   packages = [
     "auth/authpb",
@@ -12,9 +21,11 @@
     "etcdserver/etcdserverpb",
     "mvcc/mvccpb",
     "pkg/logutil",
-    "pkg/types"
+    "pkg/types",
+    "raft",
+    "raft/raftpb"
   ]
-  revision = "8767e39bec1f99f51a232a246d81697d5754596e"
+  revision = "ef23564ebffa4863bf538d29bab1ed735980bac6"
 
 [[projects]]
   name = "github.com/coreos/go-systemd"
@@ -62,8 +73,8 @@
     "ptypes/struct",
     "ptypes/timestamp"
   ]
-  revision = "925541529c1fa6821df4e44ce2723319eb2be768"
-  version = "v1.0.0"
+  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
+  version = "v1.1.0"
 
 [[projects]]
   name = "github.com/gorilla/handlers"
@@ -114,8 +125,33 @@
 [[projects]]
   name = "github.com/ugorji/go"
   packages = ["codec"]
-  revision = "9831f2c3ac1068a78f50999a30db84270f647af6"
-  version = "v1.1"
+  revision = "b4c50a2b199d93b13dc15e78929cfb23bfdf21ab"
+  version = "v1.1.1"
+
+[[projects]]
+  name = "go.uber.org/atomic"
+  packages = ["."]
+  revision = "1ea20fb1cbb1cc08cbd0d913a96dead89aa18289"
+  version = "v1.3.2"
+
+[[projects]]
+  name = "go.uber.org/multierr"
+  packages = ["."]
+  revision = "3c4937480c32f4c13a875a1829af76c98ca3d40a"
+  version = "v1.1.0"
+
+[[projects]]
+  name = "go.uber.org/zap"
+  packages = [
+    ".",
+    "buffer",
+    "internal/bufferpool",
+    "internal/color",
+    "internal/exit",
+    "zapcore"
+  ]
+  revision = "eeedf312bc6c57391d84767a4cd413f02a917974"
+  version = "v1.8.0"
 
 [[projects]]
   branch = "master"
@@ -126,21 +162,21 @@
     "bcrypt",
     "blowfish"
   ]
-  revision = "88942b9c40a4c9d203b82b3731787b672d6e809b"
+  revision = "4ec37c66abab2c7e02ae775328b2ff001c3f025a"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = [
     "context",
+    "http/httpguts",
     "http2",
     "http2/hpack",
     "idna",
     "internal/timeseries",
-    "lex/httplex",
     "trace"
   ]
-  revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
+  revision = "f73e4c9ed3b7ebdd5f699a16a880c2b1994e50dd"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -170,7 +206,7 @@
     "googleapis/api/annotations",
     "googleapis/rpc/status"
   ]
-  revision = "ab0870e398d5dd054b868c0db1481ab029b9a9f2"
+  revision = "86e600f69ee4704c6efbf6a2a40a5c10700e76c2"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -179,6 +215,7 @@
     "balancer",
     "balancer/base",
     "balancer/roundrobin",
+    "channelz",
     "codes",
     "connectivity",
     "credentials",
@@ -200,8 +237,8 @@
     "tap",
     "transport"
   ]
-  revision = "1e2570b1b19ade82d8dbb31bba4e65e9f9ef5b34"
-  version = "v1.11.1"
+  revision = "41344da2231b913fa3d983840a57a6b1b7b631a1"
+  version = "v1.12.0"
 
 [[projects]]
   branch = "v4"
@@ -218,12 +255,12 @@
 [[projects]]
   name = "gopkg.in/ini.v1"
   packages = ["."]
-  revision = "6333e38ac20b8949a8dd68baa3650f4dee8f39f0"
-  version = "v1.33.0"
+  revision = "6529cf7c58879c08d927016dde4477f18a0634cb"
+  version = "v1.36.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "04675e8eec9280f8e9e683689c7d228c4acd63998dcc4fd9d6bc6caf087eaba9"
+  inputs-digest = "5f3be4ef276e149da8956970e3f6e27c5171962f3ed592528a01531cc3123095"
   solver-name = "gps-cdcl"
   solver-version = 1

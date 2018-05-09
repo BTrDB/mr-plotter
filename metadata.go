@@ -99,29 +99,7 @@ func leafnametostream(ctx context.Context, bc *btrdb.BTrDB, collection string, l
 }
 
 func getprefixes(ctx context.Context, ec *etcd.Client, ls *LoginSession) (map[string]struct{}, error) {
-	var tagset map[string]struct{}
-	if ls == nil {
-		tagset = defaulttagset
-	} else {
-		tagset = ls.Tags
-	}
-
-	prefixes := make(map[string]struct{})
-	for tagname := range tagset {
-		tagdef, err := accounts.RetrieveTagDef(ctx, ec, tagname)
-		if err != nil {
-			return nil, err
-		}
-
-		// Tags that are not defined do not grant any permissions
-		if tagdef != nil {
-			for pfx := range tagdef.PathPrefix {
-				prefixes[pfx] = struct{}{}
-			}
-		}
-	}
-
-	return prefixes, nil
+	return ls.Prefixes, nil
 }
 
 /* Returns a sorted slice of top level elements in the stream tree. */

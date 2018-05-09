@@ -389,7 +389,7 @@ func main() {
 		log.Fatalf("Invalid MAC key: %v", err)
 	}
 
-	setTagPermissionCacheSize(config.MaxCachedTagPermissions)
+	//setTagPermissionCacheSize(config.MaxCachedTagPermissions)
 
 	csvMaxPoints = config.CsvMaxPointsPerStream
 
@@ -434,7 +434,7 @@ func main() {
 	permalinkNumBytes = config.PermalinkNumBytes
 	permalinklen = base64.URLEncoding.EncodedLen(permalinkNumBytes)
 
-	go permCacheDaemon(context.Background(), etcdConn)
+	//go permCacheDaemon(context.Background(), etcdConn)
 
 	http.Handle("/", http.FileServer(http.Dir(config.PlotterDir)))
 	http.HandleFunc("/dataws", datawsHandler)
@@ -1406,70 +1406,74 @@ func changepwHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var err error
-	var jsonChangePassword map[string]interface{}
-	var tokenint interface{}
-	var token string
-	var oldpasswordint interface{}
-	var oldpassword string
-	var newpasswordint interface{}
-	var newpassword string
-	var ok bool
-	var tokenslice []byte
+	w.Write([]byte("Error: Password changes not supported"))
+	return
 
-	r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
-	var pwDecoder *json.Decoder = json.NewDecoder(r.Body)
-
-	err = pwDecoder.Decode(&jsonChangePassword)
-	if err != nil {
-		w.Write([]byte(fmt.Sprintf("Error: received invalid JSON: %v", err)))
-		return
-	}
-
-	tokenint, ok = jsonChangePassword["token"]
-	if !ok {
-		w.Write([]byte("Error: JSON must contain field 'token'"))
-		return
-	}
-
-	oldpasswordint, ok = jsonChangePassword["oldpassword"]
-	if !ok {
-		w.Write([]byte("Error: JSON must contain field 'oldpassword'"))
-		return
-	}
-
-	newpasswordint, ok = jsonChangePassword["newpassword"]
-	if !ok {
-		w.Write([]byte("Error: JSON must contain field 'newpassword'"))
-		return
-	}
-
-	token, ok = tokenint.(string)
-	if !ok {
-		w.Write([]byte("Error: field 'token' must be a string"))
-		return
-	}
-
-	oldpassword, ok = oldpasswordint.(string)
-	if !ok {
-		w.Write([]byte("Error: field 'oldpassword' must be a string"))
-		return
-	}
-
-	newpassword, ok = newpasswordint.(string)
-	if !ok {
-		w.Write([]byte("Error: field 'newpassword' must be a string"))
-		return
-	}
-
-	tokenslice, err = base64.StdEncoding.DecodeString(token)
-	if err != nil {
-		w.Write([]byte(ERROR_INVALID_TOKEN))
-		return
-	}
-
-	success := userchangepassword(context.TODO(), etcdConn, tokenslice, []byte(oldpassword), []byte(newpassword))
-	w.Write([]byte(success))
+	//
+	// var err error
+	// var jsonChangePassword map[string]interface{}
+	// var tokenint interface{}
+	// var token string
+	// var oldpasswordint interface{}
+	// var oldpassword string
+	// var newpasswordint interface{}
+	// var newpassword string
+	// var ok bool
+	// var tokenslice []byte
+	//
+	// r.Body = http.MaxBytesReader(w, r.Body, MAX_REQSIZE)
+	// var pwDecoder *json.Decoder = json.NewDecoder(r.Body)
+	//
+	// err = pwDecoder.Decode(&jsonChangePassword)
+	// if err != nil {
+	// 	w.Write([]byte(fmt.Sprintf("Error: received invalid JSON: %v", err)))
+	// 	return
+	// }
+	//
+	// tokenint, ok = jsonChangePassword["token"]
+	// if !ok {
+	// 	w.Write([]byte("Error: JSON must contain field 'token'"))
+	// 	return
+	// }
+	//
+	// oldpasswordint, ok = jsonChangePassword["oldpassword"]
+	// if !ok {
+	// 	w.Write([]byte("Error: JSON must contain field 'oldpassword'"))
+	// 	return
+	// }
+	//
+	// newpasswordint, ok = jsonChangePassword["newpassword"]
+	// if !ok {
+	// 	w.Write([]byte("Error: JSON must contain field 'newpassword'"))
+	// 	return
+	// }
+	//
+	// token, ok = tokenint.(string)
+	// if !ok {
+	// 	w.Write([]byte("Error: field 'token' must be a string"))
+	// 	return
+	// }
+	//
+	// oldpassword, ok = oldpasswordint.(string)
+	// if !ok {
+	// 	w.Write([]byte("Error: field 'oldpassword' must be a string"))
+	// 	return
+	// }
+	//
+	// newpassword, ok = newpasswordint.(string)
+	// if !ok {
+	// 	w.Write([]byte("Error: field 'newpassword' must be a string"))
+	// 	return
+	// }
+	//
+	// tokenslice, err = base64.StdEncoding.DecodeString(token)
+	// if err != nil {
+	// 	w.Write([]byte(ERROR_INVALID_TOKEN))
+	// 	return
+	// }
+	//
+	// success := userchangepassword(context.TODO(), etcdConn, tokenslice, []byte(oldpassword), []byte(newpassword))
+	// w.Write([]byte(success))
 }
 
 func checktokenHandler(w http.ResponseWriter, r *http.Request) {
