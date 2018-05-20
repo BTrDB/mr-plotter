@@ -14,11 +14,12 @@ ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local
 ENV GOTRACEBACK=all
 ENV GOGC=40
 RUN go get github.com/maruel/panicparse/cmd/pp
+RUN go get -u github.com/golang/dep/cmd/dep
 RUN mkdir -p $GOPATH/src/github.com/BTrDB && \
     cd $GOPATH/src/github.com/BTrDB && \
     git clone https://github.com/BTrDB/mr-plotter.git && \
     cd mr-plotter && \
-    go get -d ./... && \
+    dep ensure && \
     go install .
 ADD entrypoint.sh /
 ADD mr-plotter $GOPATH/bin/

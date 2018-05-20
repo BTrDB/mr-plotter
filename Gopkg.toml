@@ -49,9 +49,6 @@
   branch = "master"
   name = "github.com/samkumar/etcdstruct"
 
-[[constraint]]
-  branch = "master"
-  name = "github.com/samkumar/reqcache"
 
 [[constraint]]
   name = "github.com/ugorji/go"
