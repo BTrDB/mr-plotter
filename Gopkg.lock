@@ -8,7 +8,7 @@
     "acl",
     "admincli"
   ]
-  revision = "e4e341a4940119cbea61fded598a29aa96483c92"
+  revision = "e009bd6780e0072fb157480e667ec7cedb0d04cf"
 
 [[projects]]
   branch = "master"
@@ -21,23 +21,24 @@
     "etcdserver/etcdserverpb",
     "mvcc/mvccpb",
     "pkg/logutil",
+    "pkg/systemd",
     "pkg/types",
     "raft",
     "raft/raftpb"
   ]
-  revision = "ef23564ebffa4863bf538d29bab1ed735980bac6"
+  revision = "20cf7f4d5b7af698dd216b228a53d3e192e32d1f"
 
 [[projects]]
   name = "github.com/coreos/go-systemd"
   packages = ["journal"]
-  revision = "40e2722dffead74698ca12a750f64ef313ddce05"
-  version = "v16"
+  revision = "39ca1b05acc7ad1220e09f133283b8859a8b71ab"
+  version = "v17"
 
 [[projects]]
   name = "github.com/coreos/pkg"
   packages = ["capnslog"]
-  revision = "3ac0863d7acf3bc44daf49afef8919af12f704ef"
-  version = "v3"
+  revision = "97fdf19511ea361ae1c100dd393cc47f8dcfa1e1"
+  version = "v4"
 
 [[projects]]
   branch = "master"
@@ -49,7 +50,7 @@
   branch = "master"
   name = "github.com/glycerine/rbtree"
   packages = ["."]
-  revision = "cd7940bb26b149ce2faf398e7c63fff01aa7b394"
+  revision = "ab9e014bd7763e7a83480ad8e9c5e6e5e8b79e72"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -95,8 +96,8 @@
     "runtime/internal",
     "utilities"
   ]
-  revision = "07f5e79768022f9a3265235f0db4ac8c3f675fec"
-  version = "v1.3.1"
+  revision = "92583770e3f01b09a0d3e9bdf64321d8bebd48f2"
+  version = "v1.4.1"
 
 [[projects]]
   branch = "master"
@@ -162,7 +163,7 @@
     "bcrypt",
     "blowfish"
   ]
-  revision = "4ec37c66abab2c7e02ae775328b2ff001c3f025a"
+  revision = "159ae71589f303f9fbfd7528413e0fe944b9c1cb"
 
 [[projects]]
   branch = "master"
@@ -176,7 +177,7 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "f73e4c9ed3b7ebdd5f699a16a880c2b1994e50dd"
+  revision = "9ef9f5bb98a1fdc41f8cf6c250a4404b4085e389"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -206,7 +207,7 @@
     "googleapis/api/annotations",
     "googleapis/rpc/status"
   ]
-  revision = "86e600f69ee4704c6efbf6a2a40a5c10700e76c2"
+  revision = "694d95ba50e67b2e363f3483057db5d4910c18f9"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -244,13 +245,13 @@
   branch = "v4"
   name = "gopkg.in/BTrDB/btrdb.v4"
   packages = ["grpcinterface"]
-  revision = "df89cdcf83585ca6dae298aa7d4ee6249643722f"
+  revision = "737f1fe4e06ad8ebc539d5f2797a489eb15b62c8"
 
 [[projects]]
   branch = "v4"
   name = "gopkg.in/btrdb.v4"
   packages = ["."]
-  revision = "df89cdcf83585ca6dae298aa7d4ee6249643722f"
+  revision = "737f1fe4e06ad8ebc539d5f2797a489eb15b62c8"
 
 [[projects]]
   name = "gopkg.in/ini.v1"
