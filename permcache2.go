@@ -15,10 +15,19 @@ type CollectionQuery struct {
 var permcache = reqcache.NewLRUCache(1024, queryCollection, nil)
 
 func hasPermission(ctx context.Context, session *LoginSession, uuidBytes uuid.UUID) bool {
-	coll, err := permcache.Get(ctx, CollectionQuery{uu: uuidBytes.Array()})
+  checkPublicGroup()
+  coll, err := permcache.Get(ctx, CollectionQuery{uu: uuidBytes.Array()})
   if err != nil {
     log.Fatalf("error getting from permcache: %v", err)
   }
+  if session == nil {
+		for _, p := range publicGroup.Prefixes {
+			if strings.HasPrefix(coll.(string), p) {
+        return true
+      }
+		}
+		return false
+	}
   for pfx, _ := range session.Prefixes {
     if strings.HasPrefix(coll.(string), pfx) {
       return true

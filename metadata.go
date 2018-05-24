@@ -98,15 +98,18 @@ func leafnametostream(ctx context.Context, bc *btrdb.BTrDB, collection string, l
 
 var publicGroup *acl.Group
 
-func getprefixes(ctx context.Context, ec *etcd.Client, ls *LoginSession) (map[string]struct{}, error) {
+func checkPublicGroup() {
 	if publicGroup == nil {
-		aclEngine := acl.NewACLEngine("btrdb", ec)
+		aclEngine := acl.NewACLEngine("btrdb", etcdConn)
 		var err error
 		publicGroup, err = aclEngine.GetGroup("public")
 		if err != nil {
 			panic(err)
 		}
 	}
+}
+func getprefixes(ctx context.Context, ec *etcd.Client, ls *LoginSession) (map[string]struct{}, error) {
+	checkPublicGroup()
 	if ls == nil {
 		m := make(map[string]struct{})
 		for _, p := range publicGroup.Prefixes {
