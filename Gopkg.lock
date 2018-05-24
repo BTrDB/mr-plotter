@@ -8,7 +8,7 @@
     "acl",
     "admincli"
   ]
-  revision = "e009bd6780e0072fb157480e667ec7cedb0d04cf"
+  revision = "2bca82c42fde387728e53d0338b3bb650ac39145"
 
 [[projects]]
   branch = "master"
@@ -177,7 +177,7 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "9ef9f5bb98a1fdc41f8cf6c250a4404b4085e389"
+  revision = "dfa909b99c79129e1100513e5cd36307665e5723"
 
 [[projects]]
   name = "golang.org/x/text"
