@@ -169,12 +169,16 @@ func getEtcdKeySafe(ctx context.Context, key string) []byte {
 }
 
 var mrPlotterTLSConfig = &tls.Config{}
+var certHandlerPassthrough func(http.Handler) http.Handler
 
 func updateTLSConfig(config *Config) {
 	/* First, check if an autocert hostname is specified, and use it if so. */
 	certSource, err := keys.GetCertificateSource(context.Background(), etcdConn)
 	if err != nil {
 		log.Fatalf("Could not check for certificate source in etcd: %v", err)
+	}
+	certHandlerPassthrough = func(h http.Handler) http.Handler {
+		return h
 	}
 	if certSource == "autocert" {
 		autocertHostname, err := keys.GetAutocertHostname(context.Background(), etcdConn)
@@ -194,6 +198,8 @@ func updateTLSConfig(config *Config) {
 				HostPolicy: autocert.HostWhitelist(autocertHostname),
 				Email:      email,
 			}
+			m.HTTPHandler(nil) //prime it to try HTTP-01 challenge
+			certHandlerPassthrough = m.HTTPHandler
 			mrPlotterTLSConfig.GetCertificate = m.GetCertificate
 			return
 		}
@@ -460,6 +466,7 @@ func main() {
 	if config.CompressHttpResponses {
 		mrPlotterHandler = httpHandlers.CompressHandler(mrPlotterHandler)
 	}
+	mrPlotterHandler = certHandlerPassthrough(mrPlotterHandler)
 
 	var portStrHTTP = fmt.Sprintf(":%d", config.HttpPort)
 	var portStrHTTPS = fmt.Sprintf(":%d", config.HttpsPort)
@@ -485,6 +492,7 @@ func main() {
 				http.Redirect(w, r, url.String(), http.StatusFound)
 			})
 			var loggedRedirect = httpHandlers.CompressHandler(httpHandlers.CombinedLoggingHandler(os.Stdout, redirect))
+			loggedRedirect = certHandlerPassthrough(loggedRedirect)
 			log.Fatal(http.ListenAndServe(portStrHTTP, loggedRedirect))
 		} else {
 			log.Fatal(http.ListenAndServe(portStrHTTP, mrPlotterHandler))
