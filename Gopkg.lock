@@ -8,7 +8,7 @@
     "acl",
     "admincli"
   ]
-  revision = "2bca82c42fde387728e53d0338b3bb650ac39145"
+  revision = "0368b9f992a2a79e3d20f7d40b754201b410adea"
 
 [[projects]]
   branch = "master"
@@ -26,7 +26,7 @@
     "raft",
     "raft/raftpb"
   ]
-  revision = "20cf7f4d5b7af698dd216b228a53d3e192e32d1f"
+  revision = "438e6750ee4dd3861c83514e405adf2f3e437e4c"
 
 [[projects]]
   name = "github.com/coreos/go-systemd"
@@ -50,7 +50,7 @@
   branch = "master"
   name = "github.com/glycerine/rbtree"
   packages = ["."]
-  revision = "ab9e014bd7763e7a83480ad8e9c5e6e5e8b79e72"
+  revision = "80eebfe947f79f7b746dc7a2ef39fd98db275853"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -163,7 +163,7 @@
     "bcrypt",
     "blowfish"
   ]
-  revision = "159ae71589f303f9fbfd7528413e0fe944b9c1cb"
+  revision = "df8d4716b3472e4a531c33cedbe537dae921a1a9"
 
 [[projects]]
   branch = "master"
@@ -177,7 +177,7 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "dfa909b99c79129e1100513e5cd36307665e5723"
+  revision = "1e491301e022f8f977054da4c2d852decd59571f"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -207,7 +207,7 @@
     "googleapis/api/annotations",
     "googleapis/rpc/status"
   ]
-  revision = "694d95ba50e67b2e363f3483057db5d4910c18f9"
+  revision = "81158efcc9f219c511e4d3c0d61a0e6e49c01a24"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -256,8 +256,8 @@
 [[projects]]
   name = "gopkg.in/ini.v1"
   packages = ["."]
-  revision = "6529cf7c58879c08d927016dde4477f18a0634cb"
-  version = "v1.36.0"
+  revision = "06f5f3d67269ccec1fe5fe4134ba6e982984f7f5"
+  version = "v1.37.0"
 
 [solve-meta]
   analyzer-name = "dep"
