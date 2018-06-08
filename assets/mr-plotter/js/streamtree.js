@@ -372,7 +372,6 @@ function pathsToTree(self, pathPrefix, streamList, loadNext) {
                         /* We need to load more data when this node is expanded... */
                         childNode.id = "other_" + self.idata.numOtherLoadables++;
                         childNode.data.children = loadNext(fullPath);
-                        childNode.children = true;
                     }
                 }
             }
