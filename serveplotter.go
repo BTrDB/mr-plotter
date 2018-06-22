@@ -198,7 +198,6 @@ func updateTLSConfig(config *Config) {
 				HostPolicy: autocert.HostWhitelist(autocertHostname),
 				Email:      email,
 			}
-			m.HTTPHandler(nil) //prime it to try HTTP-01 challenge
 			certHandlerPassthrough = m.HTTPHandler
 			mrPlotterTLSConfig.GetCertificate = m.GetCertificate
 			return
