@@ -63,10 +63,6 @@
   name = "golang.org/x/crypto"
 
 [[constraint]]
-  branch = "v4"
-  name = "gopkg.in/btrdb.v4"
-
-[[constraint]]
   name = "gopkg.in/ini.v1"
   version = "1.32.0"
 

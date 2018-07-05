@@ -253,14 +253,11 @@
 [[projects]]
   branch = "v4"
   name = "gopkg.in/BTrDB/btrdb.v4"
-  packages = ["grpcinterface"]
-  revision = "ab0302f6a6e3a403427261ae082608bd3afe734c"
-
-[[projects]]
-  branch = "v4"
-  name = "gopkg.in/btrdb.v4"
-  packages = ["."]
-  revision = "ab0302f6a6e3a403427261ae082608bd3afe734c"
+  packages = [
+    ".",
+    "grpcinterface"
+  ]
+  revision = "6cd4be5e776b98ce2480811e2d17f5b5cb663bfe"
 
 [[projects]]
   name = "gopkg.in/ini.v1"
@@ -271,6 +268,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "82938905785e545eb6f9f4421f24530a23dc1c8497a710ea3042fababe59d5de"
+  inputs-digest = "51c8eed7fff14bf6b5554d5918da068eae408c118ef8d9407b63db5149c42ed4"
   solver-name = "gps-cdcl"
   solver-version = 1

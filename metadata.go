@@ -28,7 +28,7 @@ import (
 	"sort"
 	"strings"
 
-	"gopkg.in/btrdb.v4"
+	"gopkg.in/BTrDB/btrdb.v4"
 
 	acl "github.com/BTrDB/smartgridstore/acl"
 	etcd "github.com/coreos/etcd/clientv3"

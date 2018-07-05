@@ -44,7 +44,7 @@ import (
 
 	"golang.org/x/crypto/acme/autocert"
 
-	"gopkg.in/btrdb.v4"
+	"gopkg.in/BTrDB/btrdb.v4"
 	"gopkg.in/ini.v1"
 
 	"github.com/BTrDB/mr-plotter/accounts"

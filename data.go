@@ -28,7 +28,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"gopkg.in/btrdb.v4"
+	"gopkg.in/BTrDB/btrdb.v4"
 
 	ws "github.com/gorilla/websocket"
 	uuid "github.com/pborman/uuid"
