@@ -259,6 +259,7 @@ func updateTLSConfig(config *Config) {
 }
 
 func main() {
+
 	var config Config
 	var err error
 	var filename string

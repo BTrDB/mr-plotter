@@ -21,8 +21,10 @@ RUN mkdir -p $GOPATH/src/github.com/BTrDB && \
     cd mr-plotter && \
     dep ensure && \
     go install .
+RUN rm ${GOPATH}/bin/mr-plotter
 ADD entrypoint.sh /
 ADD mr-plotter $GOPATH/bin/
+ADD mr-plotter /
 ADD hardcodecert $GOPATH/bin/
 ADD setsessionkeys $GOPATH/bin/
 RUN chmod a+x /entrypoint.sh

@@ -34,4 +34,4 @@ MR_PLOTTER_REPO=$GOPATH/src/github.com/BTrDB/mr-plotter
 
 # Run mr-plotter
 cd $GOPATH/bin
-mr-plotter $MR_PLOTTER_REPO/plotter.ini |& pp
+./mr-plotter $MR_PLOTTER_REPO/plotter.ini |& pp

@@ -8,7 +8,7 @@
     "acl",
     "admincli"
   ]
-  revision = "0368b9f992a2a79e3d20f7d40b754201b410adea"
+  revision = "172397a6828105ddfe94973b3517b71435b22d0e"
 
 [[projects]]
   branch = "master"
@@ -17,6 +17,8 @@
     "auth/authpb",
     "clientv3",
     "clientv3/balancer",
+    "clientv3/balancer/picker",
+    "clientv3/balancer/resolver/endpoint",
     "etcdserver/api/v3rpc/rpctypes",
     "etcdserver/etcdserverpb",
     "mvcc/mvccpb",
@@ -26,7 +28,7 @@
     "raft",
     "raft/raftpb"
   ]
-  revision = "438e6750ee4dd3861c83514e405adf2f3e437e4c"
+  revision = "dbccfe06fb58ea02a5070f7ae892a0f0adff1922"
 
 [[projects]]
   name = "github.com/coreos/go-systemd"
@@ -88,6 +90,12 @@
   packages = ["."]
   revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
   version = "v1.2.0"
+
+[[projects]]
+  name = "github.com/grpc-ecosystem/go-grpc-middleware"
+  packages = ["util/backoffutils"]
+  revision = "c250d6563d4d4c20252cd865923440e829844f4e"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/grpc-ecosystem/grpc-gateway"
@@ -163,7 +171,7 @@
     "bcrypt",
     "blowfish"
   ]
-  revision = "df8d4716b3472e4a531c33cedbe537dae921a1a9"
+  revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
 
 [[projects]]
   branch = "master"
@@ -177,7 +185,7 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "1e491301e022f8f977054da4c2d852decd59571f"
+  revision = "ed29d75add3d7c4bf7ca65aac0c6df3d1420216f"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -207,7 +215,7 @@
     "googleapis/api/annotations",
     "googleapis/rpc/status"
   ]
-  revision = "81158efcc9f219c511e4d3c0d61a0e6e49c01a24"
+  revision = "ff3583edef7de132f219f0efc00e097cabcc0ec0"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -216,16 +224,17 @@
     "balancer",
     "balancer/base",
     "balancer/roundrobin",
-    "channelz",
     "codes",
     "connectivity",
     "credentials",
     "encoding",
     "encoding/proto",
-    "grpclb/grpc_lb_v1/messages",
     "grpclog",
     "health/grpc_health_v1",
     "internal",
+    "internal/backoff",
+    "internal/channelz",
+    "internal/grpcrand",
     "keepalive",
     "metadata",
     "naming",
@@ -238,20 +247,20 @@
     "tap",
     "transport"
   ]
-  revision = "41344da2231b913fa3d983840a57a6b1b7b631a1"
-  version = "v1.12.0"
+  revision = "168a6198bcb0ef175f7dacec0b8691fc141dc9b8"
+  version = "v1.13.0"
 
 [[projects]]
   branch = "v4"
   name = "gopkg.in/BTrDB/btrdb.v4"
   packages = ["grpcinterface"]
-  revision = "737f1fe4e06ad8ebc539d5f2797a489eb15b62c8"
+  revision = "ab0302f6a6e3a403427261ae082608bd3afe734c"
 
 [[projects]]
   branch = "v4"
   name = "gopkg.in/btrdb.v4"
   packages = ["."]
-  revision = "737f1fe4e06ad8ebc539d5f2797a489eb15b62c8"
+  revision = "ab0302f6a6e3a403427261ae082608bd3afe734c"
 
 [[projects]]
   name = "gopkg.in/ini.v1"
