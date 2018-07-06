@@ -93,10 +93,8 @@ func checkpassword(ctx context.Context, etcdConn *etcd.Client, user string, pass
 	if !okay {
 		return nil, nil
 	}
-	for _, c := range u.Capabilities {
-		if c == "plotter" {
-			return u, nil
-		}
+	if u.HasCapability("plotter") {
+		return u, nil
 	}
 	return nil, nil
 }
@@ -118,8 +116,14 @@ func userlogin(ctx context.Context, etcdConn *etcd.Client, user string, password
 		Prefixes: make(map[string]struct{}),
 		User:     user,
 	}
-	for _, p := range acc.Prefixes {
-		loginsession.Prefixes[p] = struct{}{}
+	for _, g := range acc.FullGroups {
+		for _, cap := range g.Capabilities {
+			if cap == "plotter" {
+				for _, p := range g.Prefixes {
+					loginsession.Prefixes[p] = struct{}{}
+				}
+			}
+		}
 	}
 
 	// Construct the JSON plaintext for this login session
