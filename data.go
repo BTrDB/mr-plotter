@@ -45,7 +45,7 @@ func splitTime(time int64) (millis int64, nanos int32) {
 	nanos = int32(time % 1000000)
 	if nanos < 0 {
 		nanos += 1000000
-		millis++
+		millis--
 	}
 	return
 }
