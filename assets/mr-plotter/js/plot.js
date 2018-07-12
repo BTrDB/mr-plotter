@@ -802,6 +802,10 @@ function drawYAxes(self, data, streams, streamSettings, startDate, endDate, xSca
                 continue;
             }
             streamdata = data[axis.streams[j].uuid][1];
+            if (streamdata.length === 0) {
+                // no data for this stream, so skip it
+                continue;
+            }
             startIndex = s3ui.binSearchCmp(streamdata, [startTime, 0], s3ui.cmpTimes);
             if (startIndex < streamdata.length && s3ui.cmpTimes(streamdata[startIndex], [startTime, 0]) < 0) {
                 startIndex++; // make sure we only look at data in the specified range
