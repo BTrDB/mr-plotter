@@ -8,7 +8,7 @@
     "acl",
     "admincli"
   ]
-  revision = "172397a6828105ddfe94973b3517b71435b22d0e"
+  revision = "4cc0678d52c6c9d0e8851574b5e918317401b94e"
 
 [[projects]]
   branch = "master"
@@ -28,7 +28,7 @@
     "raft",
     "raft/raftpb"
   ]
-  revision = "dbccfe06fb58ea02a5070f7ae892a0f0adff1922"
+  revision = "2921ab670fa646c2cbb3ba53b5c5bc11ea47632f"
 
 [[projects]]
   name = "github.com/coreos/go-systemd"
@@ -61,8 +61,8 @@
     "proto",
     "protoc-gen-gogo/descriptor"
   ]
-  revision = "1adfc126b41513cc696b209667c8656ea7aac67c"
-  version = "v1.0.0"
+  revision = "636bf0302bc95575d69441b25a2603156ffdddf1"
+  version = "v1.1.1"
 
 [[projects]]
   name = "github.com/golang/protobuf"
@@ -76,14 +76,14 @@
     "ptypes/struct",
     "ptypes/timestamp"
   ]
-  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
-  version = "v1.1.0"
+  revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
+  version = "v1.2.0"
 
 [[projects]]
   name = "github.com/gorilla/handlers"
   packages = ["."]
-  revision = "90663712d74cb411cbef281bc1e08c19d1a76145"
-  version = "v1.3.0"
+  revision = "7e0847f9db758cdebd26c149d0ae9d5d0b9c98ce"
+  version = "v1.4.0"
 
 [[projects]]
   name = "github.com/gorilla/websocket"
@@ -159,8 +159,8 @@
     "internal/exit",
     "zapcore"
   ]
-  revision = "eeedf312bc6c57391d84767a4cd413f02a917974"
-  version = "v1.8.0"
+  revision = "ff33455a0e382e8a81d14dd7c922020b6b5e7982"
+  version = "v1.9.1"
 
 [[projects]]
   branch = "master"
@@ -171,7 +171,7 @@
     "bcrypt",
     "blowfish"
   ]
-  revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
+  revision = "614d502a4dac94afa3a6ce146bd1736da82514c6"
 
 [[projects]]
   branch = "master"
@@ -185,7 +185,13 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "ed29d75add3d7c4bf7ca65aac0c6df3d1420216f"
+  revision = "922f4815f713f213882e8ef45e0d315b164d705c"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/sys"
+  packages = ["unix"]
+  revision = "3b58ed4ad3395d483fc92d5d14123ce2c3581fec"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -215,7 +221,7 @@
     "googleapis/api/annotations",
     "googleapis/rpc/status"
   ]
-  revision = "ff3583edef7de132f219f0efc00e097cabcc0ec0"
+  revision = "c66870c02cf823ceb633bcd05be3c7cda29976f4"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -234,7 +240,9 @@
     "internal",
     "internal/backoff",
     "internal/channelz",
+    "internal/envconfig",
     "internal/grpcrand",
+    "internal/transport",
     "keepalive",
     "metadata",
     "naming",
@@ -244,11 +252,10 @@
     "resolver/passthrough",
     "stats",
     "status",
-    "tap",
-    "transport"
+    "tap"
   ]
-  revision = "168a6198bcb0ef175f7dacec0b8691fc141dc9b8"
-  version = "v1.13.0"
+  revision = "32fb0ac620c32ba40a4626ddf94d90d12cce3455"
+  version = "v1.14.0"
 
 [[projects]]
   branch = "v4"
@@ -257,13 +264,13 @@
     ".",
     "grpcinterface"
   ]
-  revision = "6cd4be5e776b98ce2480811e2d17f5b5cb663bfe"
+  revision = "596e21fb2a6f0c61034f88a0b7e64df1d3a4a2a0"
 
 [[projects]]
   name = "gopkg.in/ini.v1"
   packages = ["."]
-  revision = "06f5f3d67269ccec1fe5fe4134ba6e982984f7f5"
-  version = "v1.37.0"
+  revision = "358ee7663966325963d4e8b2e1fbd570c5195153"
+  version = "v1.38.1"
 
 [solve-meta]
   analyzer-name = "dep"
