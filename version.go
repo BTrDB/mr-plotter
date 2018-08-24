@@ -9,4 +9,4 @@ PATCH version when you make backwards-compatible bug fixes.
 */
 const VersionMajor = 4
 const VersionMinor = 14
-const VersionPatch = 2
+const VersionPatch = 3
