@@ -11,6 +11,8 @@ export ETCDCTL_API=3
 set -ex
 
 # Install a self-signed certificate
+if [[ "$SKIP_CERT_GEN" != "Y" ]]
+then
 openssl genrsa -des3 -passout pass:x -out server.pass.key 2048
 openssl rsa -passin pass:x -in server.pass.key -out server.key
 rm server.pass.key
@@ -18,6 +20,7 @@ openssl req -new -key server.key -out server.csr \
   -subj "/C=US/ST=CA/L=Berkeley/O=UCBerkeley/OU=EECS/CN=default.autocert.smartgrid.store"
 openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
 hardcodecert server.crt server.key
+fi
 
 if [[ $1 = "init" ]]
 then
@@ -27,11 +30,6 @@ then
   exit 0
 fi
 
-# Update the Javascript code so that the latest version is used
-MR_PLOTTER_REPO=$GOPATH/src/github.com/BTrDB/mr-plotter
-# cd $MR_PLOTTER_REPO
-# git pull origin v4
-
 # Run mr-plotter
-cd $GOPATH/bin
-./mr-plotter $MR_PLOTTER_REPO/plotter.ini |& pp
+cd /srv/mr-plotter
+mr-plotter plotter.ini
