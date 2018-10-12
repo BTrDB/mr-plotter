@@ -8,27 +8,13 @@
     "acl",
     "admincli"
   ]
-  revision = "4cc0678d52c6c9d0e8851574b5e918317401b94e"
+  revision = "c080adc8a26a38f6ad913415b6e4d497c3e2c1d5"
 
 [[projects]]
   branch = "master"
   name = "github.com/coreos/etcd"
-  packages = [
-    "auth/authpb",
-    "clientv3",
-    "clientv3/balancer",
-    "clientv3/balancer/picker",
-    "clientv3/balancer/resolver/endpoint",
-    "etcdserver/api/v3rpc/rpctypes",
-    "etcdserver/etcdserverpb",
-    "mvcc/mvccpb",
-    "pkg/logutil",
-    "pkg/systemd",
-    "pkg/types",
-    "raft",
-    "raft/raftpb"
-  ]
-  revision = "2921ab670fa646c2cbb3ba53b5c5bc11ea47632f"
+  packages = ["clientv3"]
+  revision = "1cab49ef784afe16ee665d6e16f2fc5fa31d8974"
 
 [[projects]]
   name = "github.com/coreos/go-systemd"
@@ -80,6 +66,12 @@
   version = "v1.2.0"
 
 [[projects]]
+  name = "github.com/google/uuid"
+  packages = ["."]
+  revision = "d460ce9f8df2e77fb1ba55ca87fafed96c607494"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/gorilla/handlers"
   packages = ["."]
   revision = "7e0847f9db758cdebd26c149d0ae9d5d0b9c98ce"
@@ -88,8 +80,8 @@
 [[projects]]
   name = "github.com/gorilla/websocket"
   packages = ["."]
-  revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
-  version = "v1.2.0"
+  revision = "66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d"
+  version = "v1.4.0"
 
 [[projects]]
   name = "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -104,8 +96,8 @@
     "runtime/internal",
     "utilities"
   ]
-  revision = "92583770e3f01b09a0d3e9bdf64321d8bebd48f2"
-  version = "v1.4.1"
+  revision = "aeab1d96e0f1368d243e2e5f526aa29d495517bb"
+  version = "v1.5.1"
 
 [[projects]]
   branch = "master"
@@ -116,8 +108,8 @@
 [[projects]]
   name = "github.com/pborman/uuid"
   packages = ["."]
-  revision = "e790cca94e6cc75c7064b1332e63811d4aae1a53"
-  version = "v1.1"
+  revision = "adf5a7427709b9deb95d29d3fa8a2bf9cfd388f1"
+  version = "v1.2"
 
 [[projects]]
   branch = "master"
@@ -136,6 +128,25 @@
   packages = ["codec"]
   revision = "b4c50a2b199d93b13dc15e78929cfb23bfdf21ab"
   version = "v1.1.1"
+
+[[projects]]
+  branch = "master"
+  name = "go.etcd.io/etcd"
+  packages = [
+    "auth/authpb",
+    "clientv3/balancer",
+    "clientv3/balancer/picker",
+    "clientv3/balancer/resolver/endpoint",
+    "etcdserver/api/v3rpc/rpctypes",
+    "etcdserver/etcdserverpb",
+    "mvcc/mvccpb",
+    "pkg/logutil",
+    "pkg/systemd",
+    "pkg/types",
+    "raft",
+    "raft/raftpb"
+  ]
+  revision = "1cab49ef784afe16ee665d6e16f2fc5fa31d8974"
 
 [[projects]]
   name = "go.uber.org/atomic"
@@ -171,7 +182,7 @@
     "bcrypt",
     "blowfish"
   ]
-  revision = "614d502a4dac94afa3a6ce146bd1736da82514c6"
+  revision = "7c1a557ab941a71c619514f229f0b27ccb0c27cf"
 
 [[projects]]
   branch = "master"
@@ -185,13 +196,13 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "922f4815f713f213882e8ef45e0d315b164d705c"
+  revision = "49bb7cea24b1df9410e1712aa6433dae904ff66a"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "3b58ed4ad3395d483fc92d5d14123ce2c3581fec"
+  revision = "fa43e7bc11baaae89f3f902b2b4d832b68234844"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -221,7 +232,7 @@
     "googleapis/api/annotations",
     "googleapis/rpc/status"
   ]
-  revision = "c66870c02cf823ceb633bcd05be3c7cda29976f4"
+  revision = "af9cb2a35e7f169ec875002c1829c9b315cddc04"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -254,8 +265,8 @@
     "status",
     "tap"
   ]
-  revision = "32fb0ac620c32ba40a4626ddf94d90d12cce3455"
-  version = "v1.14.0"
+  revision = "8dea3dc473e90c8179e519d91302d0597c0ca1d1"
+  version = "v1.15.0"
 
 [[projects]]
   branch = "v4"
@@ -269,8 +280,8 @@
 [[projects]]
   name = "gopkg.in/ini.v1"
   packages = ["."]
-  revision = "358ee7663966325963d4e8b2e1fbd570c5195153"
-  version = "v1.38.1"
+  revision = "7b294651033cd7d9e7f0d9ffa1b75ed1e198e737"
+  version = "v1.38.3"
 
 [solve-meta]
   analyzer-name = "dep"
