@@ -2,19 +2,19 @@
 
 
 [[projects]]
-  branch = "master"
   name = "github.com/BTrDB/smartgridstore"
   packages = [
     "acl",
     "admincli"
   ]
-  revision = "c080adc8a26a38f6ad913415b6e4d497c3e2c1d5"
+  revision = "00654509db88c3979ffcbecfbf25b26b057f07f1"
+  version = "v4.15.3"
 
 [[projects]]
   branch = "master"
   name = "github.com/coreos/etcd"
   packages = ["clientv3"]
-  revision = "1cab49ef784afe16ee665d6e16f2fc5fa31d8974"
+  revision = "7a759c18d294698f537f8be91927354818a71e51"
 
 [[projects]]
   name = "github.com/coreos/go-systemd"
@@ -146,7 +146,7 @@
     "raft",
     "raft/raftpb"
   ]
-  revision = "1cab49ef784afe16ee665d6e16f2fc5fa31d8974"
+  revision = "7a759c18d294698f537f8be91927354818a71e51"
 
 [[projects]]
   name = "go.uber.org/atomic"
@@ -182,7 +182,7 @@
     "bcrypt",
     "blowfish"
   ]
-  revision = "7c1a557ab941a71c619514f229f0b27ccb0c27cf"
+  revision = "0c41d7ab0a0ee717d4590a44bcb987dfd9e183eb"
 
 [[projects]]
   branch = "master"
@@ -280,8 +280,8 @@
 [[projects]]
   name = "gopkg.in/ini.v1"
   packages = ["."]
-  revision = "7b294651033cd7d9e7f0d9ffa1b75ed1e198e737"
-  version = "v1.38.3"
+  revision = "9c8236e659b76e87bf02044d06fde8683008ff3e"
+  version = "v1.39.0"
 
 [solve-meta]
   analyzer-name = "dep"
