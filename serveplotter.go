@@ -344,6 +344,10 @@ func main() {
 		}()
 		updateTLSConfig(&config)
 		start <- struct{}{}
+	} else {
+		certHandlerPassthrough = func(h http.Handler) http.Handler {
+			return h
+		}
 	}
 
 	var sessionkeys *keys.SessionKeys
