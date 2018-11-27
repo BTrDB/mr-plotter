@@ -2,55 +2,70 @@
 
 
 [[projects]]
+  branch = "master"
+  digest = "1:3e80ec9c7072b0a307477c137f46d2237e8c8c8024943516807084dfcda3aae3"
   name = "github.com/BTrDB/smartgridstore"
   packages = [
     "acl",
-    "admincli"
+    "admincli",
   ]
-  revision = "00654509db88c3979ffcbecfbf25b26b057f07f1"
-  version = "v4.15.3"
+  pruneopts = "UT"
+  revision = "06fd5be90ad307b5eda4aa8bc9f38973890eb189"
 
 [[projects]]
   branch = "master"
+  digest = "1:dd5262de012e75706bef5c5d701f6599b27d75a478d3bcb058c267b377e0eeaf"
   name = "github.com/coreos/etcd"
   packages = ["clientv3"]
+  pruneopts = "UT"
   revision = "7a759c18d294698f537f8be91927354818a71e51"
 
 [[projects]]
+  digest = "1:e3b55611cb86797357cc1cd2b3d38faf07ae3c4079f04b32e84d497422ab0d60"
   name = "github.com/coreos/go-systemd"
   packages = ["journal"]
+  pruneopts = "UT"
   revision = "39ca1b05acc7ad1220e09f133283b8859a8b71ab"
   version = "v17"
 
 [[projects]]
+  digest = "1:39ff4d4d6baca1ac63c6a03404b761d664be14a71bb5a4aca8fef643d0f66fef"
   name = "github.com/coreos/pkg"
   packages = ["capnslog"]
+  pruneopts = "UT"
   revision = "97fdf19511ea361ae1c100dd393cc47f8dcfa1e1"
   version = "v4"
 
 [[projects]]
   branch = "master"
+  digest = "1:e3cc0fb0191d4e485bf4c5e491af30a69aa30d2fe71b6ab9540f5ff788638fc1"
   name = "github.com/glycerine/go-capnproto"
   packages = ["."]
+  pruneopts = "UT"
   revision = "6f6ad2aa5034b3da7b23fcbdca4a499a22339b7d"
 
 [[projects]]
   branch = "master"
+  digest = "1:fbcf1dc8aedf3276e4590a539debcf8d6b641331519a74c4bd83714ad3db6bb3"
   name = "github.com/glycerine/rbtree"
   packages = ["."]
+  pruneopts = "UT"
   revision = "80eebfe947f79f7b746dc7a2ef39fd98db275853"
 
 [[projects]]
+  digest = "1:bfc758d5a03d57d97226fac6934551c01bd76612adb119c177395b057a0a46db"
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
     "proto",
-    "protoc-gen-gogo/descriptor"
+    "protoc-gen-gogo/descriptor",
   ]
+  pruneopts = "UT"
   revision = "636bf0302bc95575d69441b25a2603156ffdddf1"
   version = "v1.1.1"
 
 [[projects]]
+  digest = "1:fa5e9e1af8a8645086811ec5ab003806026babc57c8bb3a6f7e1ab34b80e2ff1"
   name = "github.com/golang/protobuf"
   packages = [
     "jsonpb",
@@ -60,77 +75,99 @@
     "ptypes/any",
     "ptypes/duration",
     "ptypes/struct",
-    "ptypes/timestamp"
+    "ptypes/timestamp",
   ]
+  pruneopts = "UT"
   revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
   version = "v1.2.0"
 
 [[projects]]
+  digest = "1:3a26588bc48b96825977c1b3df964f8fd842cd6860cc26370588d3563433cf11"
   name = "github.com/google/uuid"
   packages = ["."]
+  pruneopts = "UT"
   revision = "d460ce9f8df2e77fb1ba55ca87fafed96c607494"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:664d37ea261f0fc73dd17f4a1f5f46d01fbb0b0d75f6375af064824424109b7d"
   name = "github.com/gorilla/handlers"
   packages = ["."]
+  pruneopts = "UT"
   revision = "7e0847f9db758cdebd26c149d0ae9d5d0b9c98ce"
   version = "v1.4.0"
 
 [[projects]]
+  digest = "1:7b5c6e2eeaa9ae5907c391a91c132abfd5c9e8a784a341b5625e750c67e6825d"
   name = "github.com/gorilla/websocket"
   packages = ["."]
+  pruneopts = "UT"
   revision = "66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d"
   version = "v1.4.0"
 
 [[projects]]
+  digest = "1:f11ab206621794e7021bbb6d1bb26e82fd12a8893740805db14bdce4b4abe566"
   name = "github.com/grpc-ecosystem/go-grpc-middleware"
   packages = ["util/backoffutils"]
+  pruneopts = "UT"
   revision = "c250d6563d4d4c20252cd865923440e829844f4e"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:3cbc83a159e161c6cf3e64590ae19da29069ecd8d92f9400ab6fda15e93cbc5f"
   name = "github.com/grpc-ecosystem/grpc-gateway"
   packages = [
     "runtime",
     "runtime/internal",
-    "utilities"
+    "utilities",
   ]
+  pruneopts = "UT"
   revision = "aeab1d96e0f1368d243e2e5f526aa29d495517bb"
   version = "v1.5.1"
 
 [[projects]]
   branch = "master"
+  digest = "1:cfc2b2ae62813a9b9e8e74b34e7babb1d08ec56c27db6474a25bcde4fd66e0c1"
   name = "github.com/huichen/murmur"
   packages = ["."]
+  pruneopts = "UT"
   revision = "e0489551cf5116e27d7cc69d97a53cdbdd028acf"
 
 [[projects]]
+  digest = "1:e5d0bd87abc2781d14e274807a470acd180f0499f8bf5bb18606e9ec22ad9de9"
   name = "github.com/pborman/uuid"
   packages = ["."]
+  pruneopts = "UT"
   revision = "adf5a7427709b9deb95d29d3fa8a2bf9cfd388f1"
   version = "v1.2"
 
 [[projects]]
   branch = "master"
+  digest = "1:c6b10f3335d0d35ac36210145c0224a6a88fe4117deabf295c7345ca036cb852"
   name = "github.com/samkumar/etcdstruct"
   packages = ["."]
+  pruneopts = "UT"
   revision = "824d9135213e18162751f0f87c3d7607ef71f448"
 
 [[projects]]
   branch = "master"
+  digest = "1:f41b5d729a63046fcd858ed881d1cf4a93ea279709c3d14441c8dd1c5f9522d0"
   name = "github.com/samkumar/reqcache"
   packages = ["."]
+  pruneopts = "UT"
   revision = "664d78bf3ac181aa1a0a3cc2b5401c4c1b325a89"
 
 [[projects]]
+  digest = "1:03aa6e485e528acb119fb32901cf99582c380225fc7d5a02758e08b180cb56c3"
   name = "github.com/ugorji/go"
   packages = ["codec"]
+  pruneopts = "UT"
   revision = "b4c50a2b199d93b13dc15e78929cfb23bfdf21ab"
   version = "v1.1.1"
 
 [[projects]]
   branch = "master"
+  digest = "1:d36ac8fa013fc2c1a69fd04b9c8d9f36a200e16909aee29592a101ac1330b290"
   name = "go.etcd.io/etcd"
   packages = [
     "auth/authpb",
@@ -144,23 +181,29 @@
     "pkg/systemd",
     "pkg/types",
     "raft",
-    "raft/raftpb"
+    "raft/raftpb",
   ]
+  pruneopts = "UT"
   revision = "7a759c18d294698f537f8be91927354818a71e51"
 
 [[projects]]
+  digest = "1:3c1a69cdae3501bf75e76d0d86dc6f2b0a7421bc205c0cb7b96b19eed464a34d"
   name = "go.uber.org/atomic"
   packages = ["."]
+  pruneopts = "UT"
   revision = "1ea20fb1cbb1cc08cbd0d913a96dead89aa18289"
   version = "v1.3.2"
 
 [[projects]]
+  digest = "1:60bf2a5e347af463c42ed31a493d817f8a72f102543060ed992754e689805d1a"
   name = "go.uber.org/multierr"
   packages = ["."]
+  pruneopts = "UT"
   revision = "3c4937480c32f4c13a875a1829af76c98ca3d40a"
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:c52caf7bd44f92e54627a31b85baf06a68333a196b3d8d241480a774733dcf8b"
   name = "go.uber.org/zap"
   packages = [
     ".",
@@ -168,24 +211,28 @@
     "internal/bufferpool",
     "internal/color",
     "internal/exit",
-    "zapcore"
+    "zapcore",
   ]
+  pruneopts = "UT"
   revision = "ff33455a0e382e8a81d14dd7c922020b6b5e7982"
   version = "v1.9.1"
 
 [[projects]]
   branch = "master"
+  digest = "1:4d2d4c25ade9a47aee073249abe73ac441e73d6748286bac404c0bfddc6cdd4a"
   name = "golang.org/x/crypto"
   packages = [
     "acme",
     "acme/autocert",
     "bcrypt",
-    "blowfish"
+    "blowfish",
   ]
+  pruneopts = "UT"
   revision = "0c41d7ab0a0ee717d4590a44bcb987dfd9e183eb"
 
 [[projects]]
   branch = "master"
+  digest = "1:505dbee0833715a72a529bb57c354826ad42a4496fad787fa143699b4de1a6d0"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -194,17 +241,21 @@
     "http2/hpack",
     "idna",
     "internal/timeseries",
-    "trace"
+    "trace",
   ]
+  pruneopts = "UT"
   revision = "49bb7cea24b1df9410e1712aa6433dae904ff66a"
 
 [[projects]]
   branch = "master"
+  digest = "1:0a40b0bdd57a93e741d8557465be3a2edeec408e9b6399586ad65bbe8e355796"
   name = "golang.org/x/sys"
   packages = ["unix"]
+  pruneopts = "UT"
   revision = "fa43e7bc11baaae89f3f902b2b4d832b68234844"
 
 [[projects]]
+  digest = "1:a2ab62866c75542dd18d2b069fec854577a20211d7c0ea6ae746072a1dccdd18"
   name = "golang.org/x/text"
   packages = [
     "collate",
@@ -220,21 +271,25 @@
     "unicode/bidi",
     "unicode/cldr",
     "unicode/norm",
-    "unicode/rangetable"
+    "unicode/rangetable",
   ]
+  pruneopts = "UT"
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:ec1919b8b80839559effbe3eabcebf92238d12d3dd9182e51deb5da3ed12e5e9"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api/annotations",
-    "googleapis/rpc/status"
+    "googleapis/rpc/status",
   ]
+  pruneopts = "UT"
   revision = "af9cb2a35e7f169ec875002c1829c9b315cddc04"
 
 [[projects]]
+  digest = "1:c52f29435ecb5b76c37e7f0098b6a50dbe60f8624d820827d0fede75c40199a1"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -263,29 +318,48 @@
     "resolver/passthrough",
     "stats",
     "status",
-    "tap"
+    "tap",
   ]
+  pruneopts = "UT"
   revision = "8dea3dc473e90c8179e519d91302d0597c0ca1d1"
   version = "v1.15.0"
 
 [[projects]]
   branch = "v4"
+  digest = "1:f78da76b976d190b4f364eb1bd4fc49aeb0092477067ab5aa15cb5f6f3f4c7da"
   name = "gopkg.in/BTrDB/btrdb.v4"
   packages = [
     ".",
-    "grpcinterface"
+    "grpcinterface",
   ]
+  pruneopts = "UT"
   revision = "596e21fb2a6f0c61034f88a0b7e64df1d3a4a2a0"
 
 [[projects]]
+  digest = "1:15e27372d379b45b18ac917b9dafc45c45485239490ece18cca97a12f9591146"
   name = "gopkg.in/ini.v1"
   packages = ["."]
+  pruneopts = "UT"
   revision = "9c8236e659b76e87bf02044d06fde8683008ff3e"
   version = "v1.39.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "51c8eed7fff14bf6b5554d5918da068eae408c118ef8d9407b63db5149c42ed4"
+  input-imports = [
+    "github.com/BTrDB/smartgridstore/acl",
+    "github.com/coreos/etcd/clientv3",
+    "github.com/glycerine/go-capnproto",
+    "github.com/gorilla/handlers",
+    "github.com/gorilla/websocket",
+    "github.com/pborman/uuid",
+    "github.com/samkumar/etcdstruct",
+    "github.com/samkumar/reqcache",
+    "github.com/ugorji/go/codec",
+    "golang.org/x/crypto/acme/autocert",
+    "golang.org/x/crypto/bcrypt",
+    "gopkg.in/BTrDB/btrdb.v4",
+    "gopkg.in/ini.v1",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
