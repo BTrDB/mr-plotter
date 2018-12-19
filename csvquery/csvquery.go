@@ -28,7 +28,7 @@ import (
 	"math"
 	"time"
 
-	btrdb "gopkg.in/BTrDB/btrdb.v4"
+	btrdb "gopkg.in/BTrDB/btrdb.v5"
 )
 
 const (

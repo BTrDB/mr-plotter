@@ -10,23 +10,23 @@
     "admincli",
   ]
   pruneopts = "UT"
-  revision = "06fd5be90ad307b5eda4aa8bc9f38973890eb189"
+  revision = "704ee19cb86c0143fddca4b1a77c15edbcebefd2"
 
 [[projects]]
   branch = "master"
-  digest = "1:dd5262de012e75706bef5c5d701f6599b27d75a478d3bcb058c267b377e0eeaf"
+  digest = "1:3d000b02ceedf0e50a6db5fc00dede2155b1841208dd595b4a5099e367dcb916"
   name = "github.com/coreos/etcd"
   packages = ["clientv3"]
   pruneopts = "UT"
-  revision = "7a759c18d294698f537f8be91927354818a71e51"
+  revision = "bfa2c15c55e95cb8cec92f7ad99368eb03df4c35"
 
 [[projects]]
-  digest = "1:e3b55611cb86797357cc1cd2b3d38faf07ae3c4079f04b32e84d497422ab0d60"
+  digest = "1:5c1e58f68ac83cf9c05c6c6748cd91b830dd94be9d2e6480add3c6524bb86b68"
   name = "github.com/coreos/go-systemd"
   packages = ["journal"]
   pruneopts = "UT"
-  revision = "39ca1b05acc7ad1220e09f133283b8859a8b71ab"
-  version = "v17"
+  revision = "9002847aa1425fb6ac49077c0a630b3b67e0fbfd"
+  version = "v18"
 
 [[projects]]
   digest = "1:39ff4d4d6baca1ac63c6a03404b761d664be14a71bb5a4aca8fef643d0f66fef"
@@ -82,12 +82,12 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:3a26588bc48b96825977c1b3df964f8fd842cd6860cc26370588d3563433cf11"
+  digest = "1:236d7e1bdb50d8f68559af37dbcf9d142d56b431c9b2176d41e2a009b664cda8"
   name = "github.com/google/uuid"
   packages = ["."]
   pruneopts = "UT"
-  revision = "d460ce9f8df2e77fb1ba55ca87fafed96c607494"
-  version = "v1.0.0"
+  revision = "9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8"
+  version = "v1.1.0"
 
 [[projects]]
   digest = "1:664d37ea261f0fc73dd17f4a1f5f46d01fbb0b0d75f6375af064824424109b7d"
@@ -167,7 +167,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d36ac8fa013fc2c1a69fd04b9c8d9f36a200e16909aee29592a101ac1330b290"
+  digest = "1:68157626749347eb82461174b93508f4d699f8020248c7317876f110416c74c2"
   name = "go.etcd.io/etcd"
   packages = [
     "auth/authpb",
@@ -184,7 +184,7 @@
     "raft/raftpb",
   ]
   pruneopts = "UT"
-  revision = "7a759c18d294698f537f8be91927354818a71e51"
+  revision = "bfa2c15c55e95cb8cec92f7ad99368eb03df4c35"
 
 [[projects]]
   digest = "1:3c1a69cdae3501bf75e76d0d86dc6f2b0a7421bc205c0cb7b96b19eed464a34d"
@@ -219,7 +219,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:4d2d4c25ade9a47aee073249abe73ac441e73d6748286bac404c0bfddc6cdd4a"
+  digest = "1:64cbf54de6183132e134a9c38a95e6c06c43f0031a3140cc6a86d441f4fbecbb"
   name = "golang.org/x/crypto"
   packages = [
     "acme",
@@ -228,11 +228,11 @@
     "blowfish",
   ]
   pruneopts = "UT"
-  revision = "0c41d7ab0a0ee717d4590a44bcb987dfd9e183eb"
+  revision = "505ab145d0a99da450461ae2c1a9f6cd10d1f447"
 
 [[projects]]
   branch = "master"
-  digest = "1:505dbee0833715a72a529bb57c354826ad42a4496fad787fa143699b4de1a6d0"
+  digest = "1:7a2e3d6819e7a97a877f8604e737901c6941e76d56ae98a51a1ca2f13de351fb"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -244,15 +244,15 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "49bb7cea24b1df9410e1712aa6433dae904ff66a"
+  revision = "351d144fa1fc0bd934e2408202be0c29f25e35a0"
 
 [[projects]]
   branch = "master"
-  digest = "1:0a40b0bdd57a93e741d8557465be3a2edeec408e9b6399586ad65bbe8e355796"
+  digest = "1:9399de11945e643d7131cf070736122b76800d92d57a80494bd9a4e73e6979f3"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "UT"
-  revision = "fa43e7bc11baaae89f3f902b2b4d832b68234844"
+  revision = "70b957f3b65e069b4930ea94e2721eefa0f8f695"
 
 [[projects]]
   digest = "1:a2ab62866c75542dd18d2b069fec854577a20211d7c0ea6ae746072a1dccdd18"
@@ -279,35 +279,40 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ec1919b8b80839559effbe3eabcebf92238d12d3dd9182e51deb5da3ed12e5e9"
+  digest = "1:6c6b70cf6d2788d9f7dc6589bc88e0e1c7edc40612294431ebb7d09536d12240"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api/annotations",
     "googleapis/rpc/status",
   ]
   pruneopts = "UT"
-  revision = "af9cb2a35e7f169ec875002c1829c9b315cddc04"
+  revision = "bd91e49a0898e27abb88c339b432fa53d7497ac0"
 
 [[projects]]
-  digest = "1:c52f29435ecb5b76c37e7f0098b6a50dbe60f8624d820827d0fede75c40199a1"
+  digest = "1:8f56475624fb72854d06ca16c2f7032e3cea14a63074e9c199ba8d46431c1127"
   name = "google.golang.org/grpc"
   packages = [
     ".",
     "balancer",
     "balancer/base",
     "balancer/roundrobin",
+    "binarylog/grpc_binarylog_v1",
     "codes",
     "connectivity",
     "credentials",
+    "credentials/internal",
     "encoding",
     "encoding/proto",
     "grpclog",
     "health/grpc_health_v1",
     "internal",
     "internal/backoff",
+    "internal/binarylog",
     "internal/channelz",
     "internal/envconfig",
     "internal/grpcrand",
+    "internal/grpcsync",
+    "internal/syscall",
     "internal/transport",
     "keepalive",
     "metadata",
@@ -321,27 +326,27 @@
     "tap",
   ]
   pruneopts = "UT"
-  revision = "8dea3dc473e90c8179e519d91302d0597c0ca1d1"
-  version = "v1.15.0"
+  revision = "df014850f6dee74ba2fc94874043a9f3f75fbfd8"
+  version = "v1.17.0"
 
 [[projects]]
-  branch = "v4"
-  digest = "1:f78da76b976d190b4f364eb1bd4fc49aeb0092477067ab5aa15cb5f6f3f4c7da"
-  name = "gopkg.in/BTrDB/btrdb.v4"
+  branch = "v5"
+  digest = "1:5b543fa7ece5f994c332160affb1f76e611864e9405624b70523a5be47f8d18b"
+  name = "gopkg.in/BTrDB/btrdb.v5"
   packages = [
     ".",
     "grpcinterface",
   ]
   pruneopts = "UT"
-  revision = "596e21fb2a6f0c61034f88a0b7e64df1d3a4a2a0"
+  revision = "d3bedabdb69ceb8cf9ebcf827eef6e29a15896ff"
 
 [[projects]]
-  digest = "1:15e27372d379b45b18ac917b9dafc45c45485239490ece18cca97a12f9591146"
+  digest = "1:6295a00553abd595aa3c647d36b58eae91410f107ad554873aaaf7c71ca55855"
   name = "gopkg.in/ini.v1"
   packages = ["."]
   pruneopts = "UT"
-  revision = "9c8236e659b76e87bf02044d06fde8683008ff3e"
-  version = "v1.39.0"
+  revision = "ffaaebdac6e54ce73b4e196b8406920921304ec9"
+  version = "v1.39.2"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -358,7 +363,7 @@
     "github.com/ugorji/go/codec",
     "golang.org/x/crypto/acme/autocert",
     "golang.org/x/crypto/bcrypt",
-    "gopkg.in/BTrDB/btrdb.v4",
+    "gopkg.in/BTrDB/btrdb.v5",
     "gopkg.in/ini.v1",
   ]
   solver-name = "gps-cdcl"

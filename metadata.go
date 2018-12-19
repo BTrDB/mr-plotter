@@ -28,7 +28,7 @@ import (
 	"sort"
 	"strings"
 
-	"gopkg.in/BTrDB/btrdb.v4"
+	"gopkg.in/BTrDB/btrdb.v5"
 
 	acl "github.com/BTrDB/smartgridstore/acl"
 	etcd "github.com/coreos/etcd/clientv3"
@@ -85,7 +85,7 @@ func leafnametostream(ctx context.Context, bc *btrdb.BTrDB, collection string, l
 		return nil, err
 	}
 	if len(matching) == 0 {
-		matching, err = bc.LookupStreams(ctx, collection, false, map[string]*string{"name": &leafname}, nil)
+		matching, err = bc.LookupStreams(ctx, collection, false, map[string]string{"name": leafname}, nil)
 		if err != nil {
 			return nil, err
 		}
